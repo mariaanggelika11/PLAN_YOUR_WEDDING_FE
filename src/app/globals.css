@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  border-color: rgb(231 229 228);
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  background: #faf8f5;
+  color: #1d2939;
+}
+button,
+a,
+input,
+select,
+textarea {
+  transition: all 0.2s ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #b86b77;
+  outline-offset: 1px;
+}
+::selection {
+  background: #f4d9dd;
+  color: #1d2939;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
