@@ -1,31 +1,82 @@
 import { mockUsers } from "@/constants/mockData";
+import { ApiError, apiRequest } from "@/services/api";
 import type { AuthSession, LoginCredentials } from "@/types/auth";
 import type { User, UserRole } from "@/types";
 
 const SESSION_KEY = "pyw_auth_session";
-const MOCK_PASSWORD = "Wedding123";
 
-export class AuthError extends Error {}
+interface ApiResponse<T> {
+  status: boolean;
+  message: string;
+  data: T;
+}
 
-// TODO API: Ganti mock login dengan POST /auth/login dan simpan JWT + refresh token secara aman.
-export async function login(credentials: LoginCredentials): Promise<AuthSession> {
-  await wait(600);
-  const user = mockUsers.find(
-    (item) => item.email.toLowerCase() === credentials.email.toLowerCase(),
-  );
-  if (!user || credentials.password !== MOCK_PASSWORD)
-    throw new AuthError("Email atau password tidak sesuai.");
-  if (user.status === "SUSPENDED")
-    throw new AuthError("Akun Anda sedang ditangguhkan. Hubungi administrator.");
+interface BackendRole {
+  id: number;
+  roleName: string;
+}
 
-  const session: AuthSession = {
-    user,
-    accessToken: `mock-access-token-${user.id}`,
-    refreshToken: `mock-refresh-token-${user.id}`,
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+interface BackendLoginData {
+  access_token: string;
+  user: {
+    id: number;
+    username: string;
+    name: string;
   };
-  persistSession(session, credentials.rememberMe);
-  return session;
+  roles: BackendRole | null;
+  listRoles: BackendRole[];
+}
+
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+export async function login(credentials: LoginCredentials): Promise<AuthSession> {
+  try {
+    const encryption = await apiRequest<ApiResponse<{ cipherText: string }>>(
+      "/cryptography/encrypt",
+      {
+        method: "POST",
+        body: JSON.stringify({ plainText: credentials.password }),
+      },
+    );
+
+    const loginResponse = await apiRequest<ApiResponse<BackendLoginData>>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: credentials.username.trim(),
+        password: encryption.data.cipherText,
+      }),
+    });
+
+    const backendSession = loginResponse.data;
+    const role = mapBackendRole(backendSession.roles?.roleName);
+    const session: AuthSession = {
+      user: {
+        id: String(backendSession.user.id),
+        name: backendSession.user.name,
+        username: backendSession.user.username,
+        email: "",
+        role,
+        status: "ACTIVE",
+      },
+      accessToken: backendSession.access_token,
+      expiresAt: getJwtExpiry(backendSession.access_token),
+    };
+
+    persistSession(session, credentials.rememberMe);
+    return session;
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    if (error instanceof ApiError) {
+      if (error.status === 401) throw new AuthError("Username atau password tidak sesuai.");
+      throw new AuthError(error.message);
+    }
+    throw new AuthError("Login gagal. Silakan coba kembali.");
+  }
 }
 
 export function getSession(): AuthSession | null {
@@ -33,19 +84,24 @@ export function getSession(): AuthSession | null {
   const raw =
     window.localStorage.getItem(SESSION_KEY) ?? window.sessionStorage.getItem(SESSION_KEY);
   if (!raw) return null;
+
   try {
-    return JSON.parse(raw) as AuthSession;
+    const session = JSON.parse(raw) as AuthSession;
+    if (!session.accessToken || !session.user?.role) throw new Error("Invalid session");
+    if (session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()) {
+      clearSession();
+      return null;
+    }
+    return session;
   } catch {
+    clearSession();
     return null;
   }
 }
 
 export function logout() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(SESSION_KEY);
-  window.sessionStorage.removeItem(SESSION_KEY);
-  document.cookie = "pyw_role=; path=/; max-age=0; samesite=lax";
-  window.dispatchEvent(new Event("pyw-auth-change"));
+  clearSession();
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("pyw-auth-change"));
 }
 
 export function getDashboardRoute(role: UserRole) {
@@ -54,6 +110,15 @@ export function getDashboardRoute(role: UserRole) {
     : role === "VENDOR"
       ? "/vendor/dashboard"
       : "/customer/dashboard";
+}
+
+function mapBackendRole(roleName?: string): UserRole {
+  const normalized = roleName?.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (normalized === "ADMIN" || normalized === "ADMINISTRATOR") return "ADMIN";
+  if (normalized === "VENDOR") return "VENDOR";
+  if (normalized === "CUSTOMER") return "CUSTOMER";
+  if (!normalized) throw new AuthError("Akun belum memiliki role utama.");
+  throw new AuthError(`Role utama \"${roleName}\" belum didukung oleh aplikasi.`);
 }
 
 function persistSession(session: AuthSession, rememberMe: boolean) {
@@ -66,15 +131,30 @@ function persistSession(session: AuthSession, rememberMe: boolean) {
   window.dispatchEvent(new Event("pyw-auth-change"));
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function clearSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SESSION_KEY);
+  window.sessionStorage.removeItem(SESSION_KEY);
+  document.cookie = "pyw_role=; path=/; max-age=0; samesite=lax";
 }
 
-// TODO API: Kirim data registrasi customer ke backend
+function getJwtExpiry(token: string): string | undefined {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return undefined;
+    const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(base64)) as { exp?: number };
+    return payload.exp ? new Date(payload.exp * 1000).toISOString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Registrasi belum tersedia sebagai endpoint publik pada backend.
 export async function registerCustomer(): Promise<User> {
   return mockUsers[0];
 }
-// TODO API: Kirim data registrasi vendor ke backend
+
 export async function registerVendor(): Promise<User> {
   return mockUsers[1];
 }

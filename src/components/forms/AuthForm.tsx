@@ -17,7 +17,9 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    if (!form.get("email")) return setError("Email wajib diisi.");
+    const identityField = type === "login" ? "username" : "email";
+    if (!form.get(identityField))
+      return setError(type === "login" ? "Username wajib diisi." : "Email wajib diisi.");
     if (type !== "forgot" && String(form.get("password") ?? "").length < 8)
       return setError("Password minimal 8 karakter.");
     if (
@@ -30,7 +32,7 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
     try {
       if (type === "login") {
         const session = await login({
-          email: String(form.get("email")),
+          username: String(form.get("username")),
           password: String(form.get("password")),
           rememberMe: form.get("rememberMe") === "on",
         });
@@ -63,14 +65,25 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
         </>
       )}
       {type === "customer" && <AppInput label="Nama lengkap" name="name" required />}
-      <AppInput
-        label="Email"
-        name="email"
-        type="email"
-        placeholder="nama@email.com"
-        error={error}
-        required
-      />
+      {type === "login" ? (
+        <AppInput
+          label="Username"
+          name="username"
+          placeholder="Masukkan username"
+          autoComplete="username"
+          error={error}
+          required
+        />
+      ) : (
+        <AppInput
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="nama@email.com"
+          error={error}
+          required
+        />
+      )}
       {(type === "customer" || type === "vendor") && (
         <AppInput
           label={type === "vendor" ? "Nomor telepon bisnis" : "Nomor HP"}
@@ -87,6 +100,7 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
             name="password"
             type={showPassword ? "text" : "password"}
             helper="Minimal 8 karakter."
+            autoComplete={type === "login" ? "current-password" : "new-password"}
             required
           />
           <button
