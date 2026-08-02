@@ -3,7 +3,7 @@ import type { User, UserRole } from "./index";
 export type { UserRole };
 
 export interface LoginCredentials {
-  username: string;
+  email: string;
   password: string;
   rememberMe: boolean;
 }

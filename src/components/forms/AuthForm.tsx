@@ -17,9 +17,7 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const identityField = type === "login" ? "username" : "email";
-    if (!form.get(identityField))
-      return setError(type === "login" ? "Username wajib diisi." : "Email wajib diisi.");
+    if (!form.get("email")) return setError("Email wajib diisi.");
     if (type !== "forgot" && String(form.get("password") ?? "").length < 8)
       return setError("Password minimal 8 karakter.");
     if (
@@ -32,7 +30,7 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
     try {
       if (type === "login") {
         const session = await login({
-          username: String(form.get("username")),
+          email: String(form.get("email")),
           password: String(form.get("password")),
           rememberMe: form.get("rememberMe") === "on",
         });
@@ -67,10 +65,11 @@ export function AuthForm({ type }: { type: "login" | "customer" | "vendor" | "fo
       {type === "customer" && <AppInput label="Nama lengkap" name="name" required />}
       {type === "login" ? (
         <AppInput
-          label="Username"
-          name="username"
-          placeholder="Masukkan username"
-          autoComplete="username"
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="nama@email.com"
+          autoComplete="email"
           error={error}
           required
         />

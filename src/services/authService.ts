@@ -20,8 +20,8 @@ interface BackendLoginData {
   access_token: string;
   user: {
     id: number;
-    username: string;
-    name: string;
+    email: string;
+    fullname: string;
   };
   roles: BackendRole | null;
   listRoles: BackendRole[];
@@ -47,7 +47,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthSession>
     const loginResponse = await apiRequest<ApiResponse<BackendLoginData>>("/auth/login", {
       method: "POST",
       body: JSON.stringify({
-        username: credentials.username.trim(),
+        email: credentials.email.trim().toLowerCase(),
         password: encryption.data.cipherText,
       }),
     });
@@ -57,9 +57,8 @@ export async function login(credentials: LoginCredentials): Promise<AuthSession>
     const session: AuthSession = {
       user: {
         id: String(backendSession.user.id),
-        name: backendSession.user.name,
-        username: backendSession.user.username,
-        email: "",
+        name: backendSession.user.fullname,
+        email: backendSession.user.email,
         role,
         status: "ACTIVE",
       },
@@ -72,7 +71,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthSession>
   } catch (error) {
     if (error instanceof AuthError) throw error;
     if (error instanceof ApiError) {
-      if (error.status === 401) throw new AuthError("Username atau password tidak sesuai.");
+      if (error.status === 401) throw new AuthError("Email atau password tidak sesuai.");
       throw new AuthError(error.message);
     }
     throw new AuthError("Login gagal. Silakan coba kembali.");
@@ -99,9 +98,18 @@ export function getSession(): AuthSession | null {
   }
 }
 
-export function logout() {
-  clearSession();
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("pyw-auth-change"));
+export async function logout(): Promise<void> {
+  const accessToken = getSession()?.accessToken;
+
+  try {
+    await apiRequest<ApiResponse<null>>("/auth/logout", {
+      method: "POST",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+  } finally {
+    clearSession();
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("pyw-auth-change"));
+  }
 }
 
 export function getDashboardRoute(role: UserRole) {

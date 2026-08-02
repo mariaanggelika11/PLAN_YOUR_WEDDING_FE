@@ -277,6 +277,7 @@ function NotificationMenu() {
 function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { user, logout } = useAuth();
   const fallbackUser = mockUsers.find((item) => item.role.toLowerCase() === role);
   const currentUser = user ?? fallbackUser;
@@ -288,10 +289,15 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     .join("")
     .toUpperCase();
 
-  function handleLogout() {
-    logout();
-    router.replace("/login");
-    router.refresh();
+  async function handleLogout() {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   }
 
   return (
@@ -299,6 +305,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
       <button
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
+        type="button"
         className="flex items-center gap-2 rounded-xl border bg-white p-1.5 pr-2 shadow-sm hover:border-rose-200"
       >
         <span className="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-rose-200 to-amber-100 text-xs font-bold text-ink">
@@ -330,11 +337,13 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
             );
           })}
           <button
-            onClick={handleLogout}
+            disabled={isLoggingOut}
+            onClick={() => void handleLogout()}
+            type="button"
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
           >
             <LogOut size={15} />
-            Keluar
+            {isLoggingOut ? "Sedang keluar..." : "Keluar"}
           </button>
         </div>
       )}

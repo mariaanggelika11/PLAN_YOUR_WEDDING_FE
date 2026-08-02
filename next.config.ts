@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   async rewrites() {
-    const backendUrl = (process.env.BACKEND_API_URL ?? "https://bulmar.tech").replace(/\/$/, "");
+    const backendUrl = (
+      process.env.BACKEND_API_URL ?? "https://api-planyourwedding.bulmar.tech"
+    ).replace(/\/$/, "");
 
     return [
       {
