@@ -1,4 +1,4 @@
-import { AuthForm } from "@/components/forms/AuthForm";
+import { RegistrationForm } from "@/components/forms/RegistrationForm";
 import { AuthPage } from "@/components/layout/AuthPage";
 export default function RegisterVendorPage() {
   return (
@@ -6,7 +6,7 @@ export default function RegisterVendorPage() {
       title="Daftar sebagai vendor"
       description="Lengkapi informasi awal bisnis untuk membuka Seller Center."
     >
-      <AuthForm type="vendor" />
+      <RegistrationForm type="vendor" />
     </AuthPage>
   );
 }

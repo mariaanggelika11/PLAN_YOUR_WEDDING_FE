@@ -2,8 +2,9 @@ import Link from "next/link";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
 import { DashboardCard } from "@/components/cards/Cards";
-import { PageHeader, SectionHeader } from "@/components/common/Headers";
+import { SectionHeader } from "@/components/common/Headers";
 import { EntityForm, type FormField } from "@/components/forms/EntityForm";
+import { ProfileForm } from "@/components/forms/ProfileForm";
 import { DetailGrid, PlaceholderPanel } from "@/features/shared/DetailBlocks";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { DataTable } from "@/components/tables/DataTable";
@@ -19,22 +20,9 @@ import {
 } from "@/constants/mockData";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
+import { ROUTES } from "@/constants/routes";
+import { FeaturePage as Page } from "@/features/shared/FeaturePage";
 
-const profileFields: FormField[] = [
-  { label: "Nama bisnis", name: "businessName", required: true },
-  { label: "Nama pemilik", name: "ownerName", required: true },
-  { label: "Email bisnis", name: "email", type: "email" },
-  { label: "Nomor telepon bisnis", name: "phone", type: "tel", required: true },
-  { label: "Alamat bisnis", name: "address", required: true },
-  { label: "Kota", name: "city" },
-  { label: "Provinsi", name: "province" },
-  { label: "Deskripsi", name: "description", type: "textarea" },
-  { label: "Area layanan", name: "serviceArea" },
-  { label: "Portfolio images", name: "portfolio", type: "file" },
-  { label: "Tautan media sosial", name: "social" },
-  { label: "Informasi rekening bank", name: "bank" },
-  { label: "Dokumen legal", name: "legal", type: "file", required: true },
-];
 const productFields: FormField[] = [
   { label: "Nama paket", name: "name", required: true },
   {
@@ -62,16 +50,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
   if (page === "profile")
     return (
       <Page title="Profil Bisnis" description="Informasi ini tampil di halaman toko vendor.">
-        <EntityForm
-          fields={profileFields}
-          steps={[
-            "Informasi Pemilik",
-            "Informasi Bisnis",
-            "Lokasi & Layanan",
-            "Portofolio & Dokumen",
-            "Rekening",
-          ]}
-        />
+        <ProfileForm type="vendor" />
       </Page>
     );
   if (page === "category") return <CategoryPage />;
@@ -145,22 +124,6 @@ export function VendorPage({ slug }: { slug: string[] }) {
     );
   return <EmptyState title="Halaman tidak ditemukan" />;
 }
-function Page({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid gap-7">
-      <PageHeader title={title} description={description} />
-      {children}
-    </div>
-  );
-}
 function VendorDashboard() {
   // TODO API: Ambil ringkasan dashboard vendor dari backend
   return (
@@ -175,7 +138,7 @@ function VendorDashboard() {
             </p>
           </div>
           <AppButton asChild>
-            <Link href="/vendor/products/create">Buat paket baru</Link>
+            <Link href={ROUTES.vendor.createProduct}>Buat paket baru</Link>
           </AppButton>
         </div>
       </section>
@@ -248,7 +211,7 @@ function ProductsPage() {
       <div className="flex gap-3">
         <AppInput label="Cari produk" placeholder="Nama paket" />
         <AppButton asChild>
-          <Link href="/vendor/products/create">Buat paket</Link>
+          <Link href={ROUTES.vendor.createProduct}>Buat paket</Link>
         </AppButton>
       </div>
       <DataTable
@@ -260,7 +223,7 @@ function ProductsPage() {
           <StatusBadge status={p.status} />,
           <div className="flex gap-2" key={p.id}>
             <AppButton asChild variant="secondary">
-              <Link href={`/vendor/products/${p.id}/edit`}>Edit</Link>
+              <Link href={ROUTES.vendor.editProduct(p.id)}>Edit</Link>
             </AppButton>
             <ConfirmModal
               trigger={<AppButton variant="danger">Nonaktifkan</AppButton>}
@@ -295,7 +258,7 @@ function OrdersPage() {
           o.location,
           <StatusBadge status={o.paymentStatus} />,
           <StatusBadge status={o.status} />,
-          <Link className="font-semibold text-blush" href={`/vendor/orders/${o.id}`}>
+          <Link className="font-semibold text-blush" href={ROUTES.vendor.order(o.id)}>
             Detail
           </Link>,
         ])}

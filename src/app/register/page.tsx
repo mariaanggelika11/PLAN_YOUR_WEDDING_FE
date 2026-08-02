@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Store, Users } from "lucide-react";
 import { AppButton } from "@/components/ui/AppButton";
+import { ROUTES } from "@/constants/routes";
 export default function RegisterPage() {
   return (
     <main className="grid min-h-screen place-items-center px-5 py-12">
@@ -12,13 +13,13 @@ export default function RegisterPage() {
             icon={<Users />}
             title="Customer / Couple"
             text="Cari vendor, booking paket, dan kelola seluruh persiapan wedding."
-            href="/register/customer"
+            href={ROUTES.registerCustomer}
           />
           <RoleCard
             icon={<Store />}
             title="Vendor / Seller"
             text="Tampilkan layanan, terima booking, dan kembangkan bisnis Anda."
-            href="/register/vendor"
+            href={ROUTES.registerVendor}
           />
         </div>
       </div>

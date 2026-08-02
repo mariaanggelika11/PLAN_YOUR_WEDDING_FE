@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { APP_BRAND } from "@/constants/menu";
 import { cn } from "@/utils/cn";
 
@@ -12,11 +11,7 @@ export function BrandMark({
   className?: string;
 }) {
   return (
-    <Link
-      href="/"
-      aria-label={APP_BRAND.name}
-      className={cn("group flex min-w-0 items-center gap-2.5", className)}
-    >
+    <div className={cn("group flex min-w-0 items-center gap-2.5", className)}>
       <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-gradient-to-br from-blush via-rose-400 to-champagne shadow-lg shadow-rose-200/50 transition group-hover:-rotate-3 group-hover:scale-105">
         <svg
           aria-hidden="true"
@@ -46,6 +41,6 @@ export function BrandMark({
           </span>
         </span>
       )}
-    </Link>
+    </div>
   );
 }

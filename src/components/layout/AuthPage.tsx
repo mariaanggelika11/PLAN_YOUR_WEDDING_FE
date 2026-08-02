@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ROUTES } from "@/constants/routes";
 export function AuthPage({
   title,
   description,
@@ -11,7 +12,7 @@ export function AuthPage({
   return (
     <main className="grid min-h-screen place-items-center px-5 py-12">
       <div className="w-full max-w-md rounded-3xl border bg-white p-7 shadow-soft">
-        <Link href="/" className="text-sm font-semibold text-blush">
+        <Link href={ROUTES.home} className="text-sm font-semibold text-blush">
           ← Kembali ke beranda
         </Link>
         <h1 className="mt-7 text-3xl font-semibold">{title}</h1>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/forms/AuthForm";
 import { AuthPage } from "@/components/layout/AuthPage";
+import { ROUTES } from "@/constants/routes";
 export default function LoginPage() {
   return (
     <AuthPage
@@ -10,7 +11,7 @@ export default function LoginPage() {
       <AuthForm type="login" />
       <p className="text-center text-sm text-stone-500">
         Belum punya akun?{" "}
-        <Link className="font-semibold text-blush" href="/register">
+        <Link className="font-semibold text-blush" href={ROUTES.register}>
           Daftar
         </Link>
       </p>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   CheckCircle2,
   Copy,
@@ -12,9 +13,10 @@ import {
 } from "lucide-react";
 import { AppButton } from "@/components/ui/AppButton";
 import { DashboardCard, ProductCard, VendorCard } from "@/components/cards/Cards";
-import { PageHeader, SectionHeader } from "@/components/common/Headers";
+import { SectionHeader } from "@/components/common/Headers";
 import { OrderTimeline, PriceBreakdown } from "@/components/common/Commerce";
 import { EntityForm, type FormField } from "@/components/forms/EntityForm";
+import { ProfileForm } from "@/components/forms/ProfileForm";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { DataTable } from "@/components/tables/DataTable";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/states/States";
@@ -31,27 +33,9 @@ import {
 } from "@/constants/mockData";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
+import { ROUTES } from "@/constants/routes";
+import { FeaturePage } from "@/features/shared/FeaturePage";
 
-const profileFields: FormField[] = [
-  { label: "Nama lengkap", name: "name", required: true },
-  { label: "Nomor HP", name: "phone", type: "tel", required: true },
-  { label: "Alamat", name: "address" },
-  { label: "Tanggal wedding", name: "date", type: "date", required: true },
-  { label: "Lokasi wedding", name: "location", required: true },
-  { label: "Kota", name: "city" },
-  { label: "Provinsi", name: "province" },
-  {
-    label: "Jenis acara",
-    name: "eventType",
-    type: "select",
-    options: ["Akad", "Resepsi", "Akad & Resepsi"],
-  },
-  { label: "Tema wedding", name: "theme" },
-  { label: "Estimasi tamu", name: "guests", type: "number" },
-  { label: "Estimasi budget", name: "budget", type: "number" },
-  { label: "Kategori vendor yang dibutuhkan", name: "categories" },
-  { label: "Preferensi lokasi vendor", name: "preferredLocation" },
-];
 const checkoutFields: FormField[] = [
   { label: "Tanggal acara", name: "date", type: "date", required: true },
   { label: "Lokasi acara", name: "location", required: true },
@@ -65,15 +49,8 @@ export function CustomerPage({ slug }: { slug: string[] }) {
   if (page === "dashboard") return <CustomerDashboard />;
   if (page === "profile")
     return (
-      <Page
-        title="Profil Wedding"
-        description="Lengkapi informasi agar rekomendasi vendor lebih relevan."
-      >
-        <EntityForm
-          fields={profileFields}
-          steps={["Informasi Pasangan", "Detail Acara", "Preferensi Vendor"]}
-          note="Data ini membantu vendor menyiapkan penawaran yang sesuai."
-        />
+      <Page title="Profil Wedding" description="Kelola informasi profile customer Anda.">
+        <ProfileForm type="customer" />
       </Page>
     );
   if (page === "marketplace")
@@ -113,6 +90,7 @@ export function CustomerPage({ slug }: { slug: string[] }) {
   if (page === "notifications") return <NotificationPage />;
   return <EmptyState title="Halaman tidak ditemukan" />;
 }
+
 function Page({
   title,
   description,
@@ -120,15 +98,15 @@ function Page({
 }: {
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div className="grid gap-7">
-      <PageHeader title={title} description={description} />
+    <FeaturePage title={title} description={description} showHeader={false}>
       {children}
-    </div>
+    </FeaturePage>
   );
 }
+
 function CustomerDashboard() {
   // TODO API: Ambil ringkasan dashboard customer dari backend
   return (
@@ -274,7 +252,7 @@ function VendorDetail() {
           <p className="mt-1 text-2xl font-semibold">{formatCurrency(mockProducts[0].price)}</p>
           <div className="mt-5 grid gap-2">
             <AppButton asChild>
-              <Link href="/customer/checkout">Book sekarang</Link>
+              <Link href={ROUTES.customer.checkout}>Book sekarang</Link>
             </AppButton>
             <AppButton variant="secondary">
               <MessageCircle size={16} /> Chat vendor
@@ -334,7 +312,7 @@ function ProductDetail() {
         <aside className="h-fit lg:sticky lg:top-24">
           <PriceBreakdown subtotal={product.price} />
           <AppButton asChild className="mt-3 w-full">
-            <Link href="/customer/checkout">Booking sekarang</Link>
+            <Link href={ROUTES.customer.checkout}>Booking sekarang</Link>
           </AppButton>
         </aside>
       </div>
@@ -417,7 +395,7 @@ function Orders() {
           formatDate(o.eventDate),
           formatCurrency(o.total),
           <StatusBadge status={o.status} />,
-          <Link className="font-semibold text-blush" href={`/customer/orders/${o.id}`}>
+          <Link className="font-semibold text-blush" href={ROUTES.customer.order(o.id)}>
             Detail
           </Link>,
         ])}

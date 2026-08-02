@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AppButton } from "@/components/ui/AppButton";
 import { DashboardCard } from "@/components/cards/Cards";
-import { PageHeader } from "@/components/common/Headers";
 import { DetailGrid, PlaceholderPanel } from "@/features/shared/DetailBlocks";
 import { DataTable } from "@/components/tables/DataTable";
 import { StatusBadge } from "@/components/badges/StatusBadge";
@@ -19,11 +18,20 @@ import {
 } from "@/constants/mockData";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
+import { ROUTES } from "@/constants/routes";
+import { FeaturePage as Page } from "@/features/shared/FeaturePage";
+import { AdminProfileForm } from "@/components/forms/AdminProfileForm";
 
 export function AdminPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
   // TODO API: Tampilkan loading, error, empty, dan success state sesuai hasil request admin.
   if (page === "dashboard") return <AdminDashboard />;
+  if (page === "profile")
+    return (
+      <Page title="Profile Admin" description="Kelola informasi akun administrator.">
+        <AdminProfileForm />
+      </Page>
+    );
   if (page === "vendor-verification" && slug[1]) return <VendorVerificationDetail />;
   if (page === "vendor-verification") return <VendorVerification />;
   if (page === "payment-verification" && slug[1]) return <PaymentDetail />;
@@ -151,22 +159,6 @@ export function AdminPage({ slug }: { slug: string[] }) {
   if (page === "audit-logs") return <AuditLogs />;
   return <EmptyState title="Halaman tidak ditemukan" />;
 }
-function Page({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid gap-7">
-      <PageHeader title={title} description={description} />
-      {children}
-    </div>
-  );
-}
 function AdminDashboard() {
   const s = mockAdminSummary;
   /* TODO API: Ambil ringkasan dashboard admin dari backend */ return (
@@ -181,7 +173,7 @@ function AdminDashboard() {
             </p>
           </div>
           <AppButton asChild>
-            <Link href="/admin/vendor-verification">Buka antrean verifikasi</Link>
+            <Link href={ROUTES.admin.vendors}>Buka antrean verifikasi</Link>
           </AppButton>
         </div>
       </section>
@@ -224,7 +216,7 @@ function VendorVerification() {
           v.city,
           "3 Juni 2026",
           <StatusBadge status={v.status} />,
-          <Link className="font-semibold text-blush" href={`/admin/vendor-verification/${v.id}`}>
+          <Link className="font-semibold text-blush" href={ROUTES.admin.vendorVerification(v.id)}>
             Detail
           </Link>,
         ])}
@@ -288,7 +280,7 @@ function PaymentVerification() {
           formatCurrency(p.amount),
           <StatusBadge status={p.status} />,
           formatDate(p.uploadedAt),
-          <Link className="font-semibold text-blush" href={`/admin/payment-verification/${p.id}`}>
+          <Link className="font-semibold text-blush" href={ROUTES.admin.paymentVerification(p.id)}>
             Detail
           </Link>,
         ])}

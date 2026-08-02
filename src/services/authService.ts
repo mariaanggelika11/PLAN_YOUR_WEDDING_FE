@@ -1,15 +1,12 @@
-import { mockUsers } from "@/constants/mockData";
+import { API_ROUTES } from "@/constants/apiRoutes";
+import { dashboardRoute } from "@/constants/routes";
 import { ApiError, apiRequest } from "@/services/api";
+import { encryptText } from "@/services/cryptographyService";
+import type { ApiResponse } from "@/types/api";
 import type { AuthSession, LoginCredentials } from "@/types/auth";
-import type { User, UserRole } from "@/types";
+import type { UserRole } from "@/types";
 
 const SESSION_KEY = "pyw_auth_session";
-
-interface ApiResponse<T> {
-  status: boolean;
-  message: string;
-  data: T;
-}
 
 interface BackendRole {
   id: number;
@@ -36,19 +33,13 @@ export class AuthError extends Error {
 
 export async function login(credentials: LoginCredentials): Promise<AuthSession> {
   try {
-    const encryption = await apiRequest<ApiResponse<{ cipherText: string }>>(
-      "/cryptography/encrypt",
-      {
-        method: "POST",
-        body: JSON.stringify({ plainText: credentials.password }),
-      },
-    );
+    const cipherText = await encryptText(credentials.password);
 
-    const loginResponse = await apiRequest<ApiResponse<BackendLoginData>>("/auth/login", {
+    const loginResponse = await apiRequest<ApiResponse<BackendLoginData>>(API_ROUTES.auth.login, {
       method: "POST",
       body: JSON.stringify({
         email: credentials.email.trim().toLowerCase(),
-        password: encryption.data.cipherText,
+        password: cipherText,
       }),
     });
 
@@ -102,7 +93,7 @@ export async function logout(): Promise<void> {
   const accessToken = getSession()?.accessToken;
 
   try {
-    await apiRequest<ApiResponse<null>>("/auth/logout", {
+    await apiRequest<ApiResponse<null>>(API_ROUTES.auth.logout, {
       method: "POST",
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
@@ -113,15 +104,14 @@ export async function logout(): Promise<void> {
 }
 
 export function getDashboardRoute(role: UserRole) {
-  return role === "ADMIN"
-    ? "/admin/dashboard"
-    : role === "VENDOR"
-      ? "/vendor/dashboard"
-      : "/customer/dashboard";
+  return dashboardRoute(role.toLowerCase() as "admin" | "vendor" | "customer");
 }
 
 function mapBackendRole(roleName?: string): UserRole {
-  const normalized = roleName?.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const normalized = roleName
+    ?.trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
   if (normalized === "ADMIN" || normalized === "ADMINISTRATOR") return "ADMIN";
   if (normalized === "VENDOR") return "VENDOR";
   if (normalized === "CUSTOMER") return "CUSTOMER";
@@ -156,13 +146,4 @@ function getJwtExpiry(token: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-// Registrasi belum tersedia sebagai endpoint publik pada backend.
-export async function registerCustomer(): Promise<User> {
-  return mockUsers[0];
-}
-
-export async function registerVendor(): Promise<User> {
-  return mockUsers[1];
 }

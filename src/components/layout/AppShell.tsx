@@ -17,11 +17,12 @@ import { useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/common/BrandMark";
 import { mockNotifications, mockUsers } from "@/constants/mockData";
 import { USER_MENU_ITEMS, type NavigationItem } from "@/constants/menu";
+import { roleRoute, ROUTES, type AppRole } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/utils/cn";
 
 interface AppShellProps {
-  role: "customer" | "vendor" | "admin";
+  role: AppRole;
   label: string;
   nav: NavigationItem[];
   children: ReactNode;
@@ -30,7 +31,7 @@ interface AppShellProps {
 export function AppShell({ role, label, nav, children }: AppShellProps) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const dark = role === "admin";
+  const dark = false;
 
   // TODO API: Ambil data user login dari backend
   // TODO API: Ambil jumlah notifikasi belum dibaca dari backend
@@ -43,7 +44,6 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
         label={label}
         nav={nav}
         pathname={pathname}
-        onToggle={() => setSidebarCollapsed((current) => !current)}
       />
       <div
         className={cn(
@@ -79,14 +79,12 @@ function DesktopSidebar({
   label,
   nav,
   pathname,
-  onToggle,
 }: {
   collapsed: boolean;
   dark: boolean;
   label: string;
   nav: NavigationItem[];
   pathname: string;
-  onToggle: () => void;
 }) {
   return (
     <aside
@@ -96,22 +94,8 @@ function DesktopSidebar({
         dark ? "border-slate-800 bg-[#101828] text-white" : "bg-white",
       )}
     >
-      <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between")}>
+      <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-start")}>
         <BrandMark compact={collapsed} dark={dark} />
-        {!collapsed && (
-          <button
-            aria-label="Sembunyikan sidebar"
-            onClick={onToggle}
-            className={cn(
-              "grid size-9 place-items-center rounded-xl border transition",
-              dark
-                ? "border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
-                : "bg-white text-stone-400 hover:border-blush hover:text-blush",
-            )}
-          >
-            <PanelLeftClose size={17} />
-          </button>
-        )}
       </div>
       {!collapsed && (
         <p
@@ -295,7 +279,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     try {
       await logout();
     } finally {
-      router.replace("/login");
+      router.replace(ROUTES.login);
       router.refresh();
     }
   }
@@ -328,7 +312,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
             return (
               <Link
                 className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-stone-50"
-                href={`/${role}/${item.path}`}
+                href={roleRoute(role, item.path)}
                 key={item.path}
               >
                 <Icon size={15} />

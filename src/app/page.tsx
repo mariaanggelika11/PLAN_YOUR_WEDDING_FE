@@ -19,6 +19,7 @@ import { SectionHeader } from "@/components/common/Headers";
 import { VendorCard } from "@/components/cards/Cards";
 import { mockCategories, mockVendors } from "@/constants/mockData";
 import { APP_BRAND } from "@/constants/menu";
+import { ROUTES } from "@/constants/routes";
 
 const stats = [
   ["800+", "Vendor terverifikasi"],
@@ -77,7 +78,7 @@ export default function HomePage() {
               </span>
             </label>
             <AppButton asChild className="rounded-2xl px-8">
-              <Link href="/customer/marketplace">
+              <Link href={ROUTES.customer.marketplace}>
                 Cari Vendor <ArrowRight size={16} />
               </Link>
             </AppButton>
@@ -99,7 +100,7 @@ export default function HomePage() {
             title="Semua kebutuhan dalam satu marketplace"
             description="Mulai dari venue hingga detail terakhir perayaan Anda."
           />
-          <Link className="text-sm font-semibold text-blush" href="/customer/marketplace">
+          <Link className="text-sm font-semibold text-blush" href={ROUTES.customer.marketplace}>
             Lihat semua kategori →
           </Link>
         </div>
@@ -107,7 +108,7 @@ export default function HomePage() {
           {mockCategories.slice(0, 12).map((category, index) => (
             <Link
               className="group rounded-3xl border bg-white p-5 text-sm font-medium shadow-sm hover:-translate-y-1 hover:border-rose-200 hover:bg-rose-50 hover:text-blush hover:shadow-lg"
-              href="/customer/marketplace"
+              href={ROUTES.customer.marketplace}
               key={category.id}
             >
               <span className="mb-5 grid size-10 place-items-center rounded-2xl bg-stone-100 text-stone-500 group-hover:bg-white group-hover:text-blush">
@@ -127,7 +128,7 @@ export default function HomePage() {
               description="Vendor berkualitas dengan reputasi dan layanan yang telah diverifikasi."
             />
             <AppButton asChild variant="secondary" className="rounded-full">
-              <Link href="/customer/marketplace">Jelajahi marketplace</Link>
+              <Link href={ROUTES.customer.marketplace}>Jelajahi marketplace</Link>
             </AppButton>
           </div>
           <div className="mt-9 grid gap-6 md:grid-cols-3">
@@ -211,7 +212,7 @@ export default function HomePage() {
               eyebrow="Untuk couple"
               title="Rencanakan wedding impian"
               text="Temukan vendor, kelola budget, booking layanan, dan pantau progress persiapan."
-              href="/register/customer"
+              href={ROUTES.registerCustomer}
               button="Daftar sebagai customer"
               accent="bg-gradient-to-br from-rose-100 to-white"
             />
@@ -220,7 +221,7 @@ export default function HomePage() {
               eyebrow="Untuk bisnis wedding"
               title="Tumbuhkan bisnis vendor Anda"
               text="Tampilkan paket layanan, terima booking, dan bangun reputasi bersama customer."
-              href="/register/vendor"
+              href={ROUTES.registerVendor}
               button="Daftar sebagai vendor"
               accent="bg-gradient-to-br from-emerald-100 to-white"
             />

@@ -11,8 +11,14 @@ export function AppInput({
   error,
   helper,
   className,
+  placeholder,
+  type = "text",
   ...props
 }: FieldBase & InputHTMLAttributes<HTMLInputElement>) {
+  const generatedPlaceholder = supportsPlaceholder(type)
+    ? `Masukkan ${label.toLowerCase()}`
+    : undefined;
+
   return (
     <label className="grid gap-1.5 text-sm font-medium">
       <span>
@@ -25,6 +31,8 @@ export function AppInput({
           error && "border-red-500",
           className,
         )}
+        placeholder={placeholder ?? generatedPlaceholder}
+        type={type}
         {...props}
       />
       {error ? (
@@ -40,6 +48,7 @@ export function AppTextarea({
   error,
   helper,
   className,
+  placeholder,
   ...props
 }: FieldBase & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
@@ -54,6 +63,7 @@ export function AppTextarea({
           error && "border-red-500",
           className,
         )}
+        placeholder={placeholder ?? `Masukkan ${label.toLowerCase()}`}
         {...props}
       />
       {error ? (
@@ -93,4 +103,10 @@ export function AppFileUpload({
   helper = "Format JPG, PNG, atau PDF. Maksimal 5 MB.",
 }: FieldBase) {
   return <AppInput label={label} helper={helper} type="file" accept=".jpg,.jpeg,.png,.pdf" />;
+}
+
+function supportsPlaceholder(type: InputHTMLAttributes<HTMLInputElement>["type"]) {
+  return !["checkbox", "color", "date", "file", "hidden", "radio", "range", "submit"].includes(
+    type ?? "text",
+  );
 }

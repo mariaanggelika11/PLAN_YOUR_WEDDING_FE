@@ -5,6 +5,7 @@ import type { Product, Vendor } from "@/types";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { AppButton } from "@/components/ui/AppButton";
+import { ROUTES } from "@/constants/routes";
 
 export function DashboardCard({
   label,
@@ -81,7 +82,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
         </div>
         <div className="mt-auto flex items-stretch gap-2 pt-5">
           <AppButton asChild className="h-11 min-h-11 flex-1 whitespace-nowrap">
-            <Link href={`/customer/vendors/${vendor.id}`}>Lihat Detail</Link>
+            <Link href={ROUTES.customer.vendor(vendor.id)}>Lihat Detail</Link>
           </AppButton>
           <AppButton
             aria-label="Chat vendor"
@@ -132,10 +133,10 @@ export function ProductCard({ product }: { product: Product }) {
           variant="secondary"
           className="h-11 min-h-11 flex-1 whitespace-nowrap px-3"
         >
-          <Link href={`/customer/products/${product.id}`}>Lihat Paket</Link>
+          <Link href={ROUTES.customer.product(product.id)}>Lihat Paket</Link>
         </AppButton>
         <AppButton asChild className="h-11 min-h-11 flex-1 whitespace-nowrap px-3">
-          <Link href="/customer/checkout">Booking</Link>
+          <Link href={ROUTES.customer.checkout}>Booking</Link>
         </AppButton>
       </div>
     </article>

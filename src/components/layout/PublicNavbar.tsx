@@ -40,7 +40,7 @@ export function PublicNavbar() {
             asChild
             className="hidden h-10 min-h-10 min-w-24 rounded-full px-5 shadow-lg shadow-rose-200/60 sm:inline-flex"
           >
-            <Link href="/#daftar">Daftar</Link>
+            <Link href={ROUTES.homeRegister}>Daftar</Link>
           </AppButton>
           <MobilePublicMenu />
         </div>
@@ -92,7 +92,7 @@ function MobilePublicMenu() {
               <Link href={ROUTES.login}>Masuk</Link>
             </AppButton>
             <AppButton asChild className="w-full">
-              <Link href="/#daftar">Daftar</Link>
+              <Link href={ROUTES.homeRegister}>Daftar</Link>
             </AppButton>
           </div>
         </Dialog.Content>

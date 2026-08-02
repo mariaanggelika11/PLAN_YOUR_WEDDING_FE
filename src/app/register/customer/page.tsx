@@ -1,4 +1,4 @@
-import { AuthForm } from "@/components/forms/AuthForm";
+import { RegistrationForm } from "@/components/forms/RegistrationForm";
 import { AuthPage } from "@/components/layout/AuthPage";
 export default function RegisterCustomerPage() {
   return (
@@ -6,7 +6,7 @@ export default function RegisterCustomerPage() {
       title="Daftar sebagai customer"
       description="Mulai susun rencana wedding bersama vendor terpercaya."
     >
-      <AuthForm type="customer" />
+      <RegistrationForm type="customer" />
     </AuthPage>
   );
 }
