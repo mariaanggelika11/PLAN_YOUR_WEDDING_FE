@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import {
   AppDatePicker,
@@ -7,6 +10,7 @@ import {
   AppTextarea,
 } from "@/components/ui/FormFields";
 import { Stepper } from "@/components/common/Interactive";
+import { cn } from "@/utils/cn";
 
 export type FormField = {
   label: string;
@@ -15,6 +19,11 @@ export type FormField = {
   options?: string[];
   required?: boolean;
   helper?: string;
+  step?: number;
+  multiple?: boolean;
+  accept?: string;
+  min?: number;
+  placeholder?: string;
 };
 export function EntityForm({
   fields,
@@ -27,35 +36,69 @@ export function EntityForm({
   note?: string;
   steps?: string[];
 }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const lastStep = (steps?.length ?? 1) - 1;
+
   return (
-    <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" action="#">
-      {steps && <Stepper steps={steps} />}
+    <form
+      className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7"
+      action="#"
+      noValidate
+    >
+      {steps && <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />}
       {note && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{note}</p>}
       <div className="grid gap-4 md:grid-cols-2">
-        {fields.map((field) =>
-          field.type === "textarea" ? (
-            <AppTextarea key={field.name} {...field} />
-          ) : field.type === "select" ? (
-            <AppSelect key={field.name} {...field}>
-              <option value="">Pilih {field.label.toLowerCase()}</option>
-              {field.options?.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </AppSelect>
-          ) : field.type === "file" ? (
-            <AppFileUpload key={field.name} {...field} />
-          ) : field.type === "date" ? (
-            <AppDatePicker key={field.name} {...field} />
-          ) : (
-            <AppInput key={field.name} {...field} />
-          ),
-        )}
+        {fields.map(({ step: fieldStep, ...field }) => (
+          <div
+            className={cn(
+              field.type === "textarea" && "md:col-span-2",
+              steps && (fieldStep ?? 0) !== activeStep && "hidden",
+            )}
+            key={field.name}
+          >
+            {field.type === "textarea" ? (
+              <AppTextarea {...field} />
+            ) : field.type === "select" ? (
+              <AppSelect {...field}>
+                <option value="">Pilih {field.label.toLowerCase()}</option>
+                {field.options?.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </AppSelect>
+            ) : field.type === "file" ? (
+              <AppFileUpload {...field} />
+            ) : field.type === "date" ? (
+              <AppDatePicker {...field} />
+            ) : (
+              <AppInput {...field} />
+            )}
+          </div>
+        ))}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <AppButton type="button" variant="secondary">
-          Simpan draft
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-5">
+        <AppButton
+          disabled={!steps || activeStep === 0}
+          onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
+          type="button"
+          variant="secondary"
+        >
+          Kembali
         </AppButton>
-        <AppButton type="submit">{submitLabel}</AppButton>
+        <div className="flex flex-wrap gap-2">
+          <AppButton type="button" variant="outline">
+            Simpan draft
+          </AppButton>
+          {steps && activeStep < lastStep ? (
+            <AppButton
+              onClick={() => setActiveStep((current) => Math.min(lastStep, current + 1))}
+              type="button"
+            >
+              Lanjutkan
+            </AppButton>
+          ) : (
+            <AppButton type="submit">{submitLabel}</AppButton>
+          )}
+        </div>
       </div>
       {/* TODO API: Kirim data form ke backend saat submit */}
       {/* TODO API: Simpan data sebagai draft */}

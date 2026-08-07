@@ -14,6 +14,20 @@ export interface CustomerApiProfile {
   address?: string | null;
   city?: string | null;
   province?: string | null;
+  weddingDate?: string | null;
+  weddingLocation?: string | null;
+  weddingCity?: string | null;
+  weddingProvince?: string | null;
+  eventType?: string | null;
+  weddingTheme?: string | null;
+  estimatedGuests?: number | null;
+  neededVendorCategories?: string[] | null;
+  preferredVendorLocation?: string | null;
+  packagePreference?: string | null;
+  estimatedBudget?: number | null;
+  budgetRangeMin?: number | null;
+  budgetRangeMax?: number | null;
+  budgetPriorities?: string[] | null;
 }
 
 export interface CustomerProfilePayload {
@@ -24,6 +38,20 @@ export interface CustomerProfilePayload {
   address?: string;
   city?: string;
   province?: string;
+  weddingDate?: string;
+  weddingLocation?: string;
+  weddingCity?: string;
+  weddingProvince?: string;
+  eventType?: string;
+  weddingTheme?: string;
+  estimatedGuests?: number;
+  neededVendorCategories?: string[];
+  preferredVendorLocation?: string;
+  packagePreference?: string;
+  estimatedBudget?: number;
+  budgetRangeMin?: number;
+  budgetRangeMax?: number;
+  budgetPriorities?: string[];
 }
 
 export interface VendorApiProfile {
@@ -41,6 +69,17 @@ export interface VendorApiProfile {
   description?: string | null;
   serviceArea?: string | null;
   logoUrl?: string | null;
+  selectedCategories?: string[] | null;
+  portfolioImageUrls?: string[] | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  websiteUrl?: string | null;
+  whatsappNumber?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountHolder?: string | null;
+  legalDocumentType?: string | null;
+  legalDocumentNumber?: string | null;
   isVerified: boolean;
   rejectReason?: string | null;
 }
@@ -58,4 +97,15 @@ export interface VendorProfilePayload {
   description?: string;
   serviceArea?: string;
   logoUrl?: string;
+  selectedCategories?: string[];
+  portfolioImageUrls?: string[];
+  instagramUrl?: string;
+  tiktokUrl?: string;
+  websiteUrl?: string;
+  whatsappNumber?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountHolder?: string;
+  legalDocumentType?: string;
+  legalDocumentNumber?: string;
 }

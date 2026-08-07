@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, ChevronDown, UploadCloud } from "lucide-react";
+import { ChevronDown, UploadCloud } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 export function Tabs({ items }: { items: { label: string; content: React.ReactNode }[] }) {
@@ -25,30 +25,43 @@ export function Tabs({ items }: { items: { label: string; content: React.ReactNo
     </div>
   );
 }
-export function Stepper({ steps, active = 0 }: { steps: string[]; active?: number }) {
+export function Stepper({
+  steps,
+  active = 0,
+  onStepChange,
+}: {
+  steps: string[];
+  active?: number;
+  onStepChange?: (step: number) => void;
+}) {
   return (
-    <ol className="grid gap-2 rounded-2xl border bg-white p-3 sm:grid-cols-3">
+    <ol className="grid grid-cols-2 gap-2 rounded-2xl border bg-white p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
       {steps.map((step, index) => (
-        <li
-          className={cn(
-            "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold",
-            index === active
-              ? "bg-rose-50 text-blush"
-              : index < active
-                ? "text-emerald-600"
-                : "text-stone-400",
-          )}
-          key={step}
-        >
-          <span
+        <li key={step}>
+          <button
+            aria-current={index === active ? "step" : undefined}
             className={cn(
-              "grid size-6 place-items-center rounded-full border",
-              index <= active && "border-current",
+              "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition",
+              index === active
+                ? "bg-rose-50 text-blush"
+                : "text-stone-400 hover:bg-stone-50 hover:text-stone-600",
+              onStepChange &&
+                "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush",
             )}
+            disabled={!onStepChange}
+            onClick={() => onStepChange?.(index)}
+            type="button"
           >
-            {index < active ? <Check size={13} /> : index + 1}
-          </span>
-          {step}
+            <span
+              className={cn(
+                "grid size-6 shrink-0 place-items-center rounded-full border",
+                index <= active && "border-current",
+              )}
+            >
+              {index + 1}
+            </span>
+            {step}
+          </button>
         </li>
       ))}
     </ol>

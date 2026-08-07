@@ -32,6 +32,7 @@ export const ROUTES = {
     notifications: "/vendor/notifications",
     settings: "/vendor/settings",
     createProduct: "/vendor/products/create",
+    product: (id: string) => `/vendor/products/${id}`,
     editProduct: (id: string) => `/vendor/products/${id}/edit`,
     order: (id: string) => `/vendor/orders/${id}`,
   },

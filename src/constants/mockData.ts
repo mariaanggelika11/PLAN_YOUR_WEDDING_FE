@@ -56,12 +56,15 @@ export const mockCategories: VendorCategory[] = [
   "Entertainment",
   "Invitation",
   "Souvenir",
+  "Wedding Dress / Attire",
   "Sound System & Lighting",
   "MC",
   "Wedding Cake",
   "Henna",
   "Transportation",
+  "Wedding Planner",
   "Jewelry",
+  "Seserahan / Hampers",
   "Live Streaming",
 ].map((name, index) => ({ id: `cat-${index + 1}`, name, icon: "Sparkles" }));
 export const mockVendors: Vendor[] = [

@@ -5,11 +5,19 @@ import { AppInput, AppSelect } from "@/components/ui/FormFields";
 import { getCities, getProvinces, type RegionOption } from "@/services/regionService";
 
 export function RegionFields({
+  cityLabel = "Kabupaten/Kota",
+  cityName = "city",
   initialCity = "",
   initialProvince = "",
+  provinceLabel = "Provinsi",
+  provinceName = "province",
 }: {
+  cityLabel?: string;
+  cityName?: string;
   initialCity?: string;
   initialProvince?: string;
+  provinceLabel?: string;
+  provinceName?: string;
 }) {
   const [provinces, setProvinces] = useState<RegionOption[]>([]);
   const [cities, setCities] = useState<RegionOption[]>([]);
@@ -41,8 +49,8 @@ export function RegionFields({
   if (failed) {
     return (
       <>
-        <AppInput defaultValue={initialProvince} label="Provinsi" name="province" />
-        <AppInput defaultValue={initialCity} label="Kabupaten/Kota" name="city" />
+        <AppInput defaultValue={initialProvince} label={provinceLabel} name={provinceName} />
+        <AppInput defaultValue={initialCity} label={cityLabel} name={cityName} />
       </>
     );
   }
@@ -50,8 +58,8 @@ export function RegionFields({
   return (
     <>
       <AppSelect
-        label="Provinsi"
-        name="province"
+        label={provinceLabel}
+        name={provinceName}
         onChange={(event) => {
           const option = provinces.find((item) => item.name === event.target.value);
           setProvince(event.target.value);
@@ -69,8 +77,8 @@ export function RegionFields({
       </AppSelect>
       <AppSelect
         disabled={!provinceCode}
-        label="Kabupaten/Kota"
-        name="city"
+        label={cityLabel}
+        name={cityName}
         onChange={(event) => setCity(event.target.value)}
         value={city}
       >

@@ -101,8 +101,11 @@ export function AppDatePicker(props: Omit<React.ComponentProps<typeof AppInput>,
 export function AppFileUpload({
   label,
   helper = "Format JPG, PNG, atau PDF. Maksimal 5 MB.",
-}: FieldBase) {
-  return <AppInput label={label} helper={helper} type="file" accept=".jpg,.jpeg,.png,.pdf" />;
+  ...props
+}: FieldBase & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <AppInput label={label} helper={helper} type="file" accept=".jpg,.jpeg,.png,.pdf" {...props} />
+  );
 }
 
 function supportsPlaceholder(type: InputHTMLAttributes<HTMLInputElement>["type"]) {

@@ -24,23 +24,45 @@ import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
 
 const productFields: FormField[] = [
-  { label: "Nama paket", name: "name", required: true },
+  { label: "Nama produk atau paket", name: "name", required: true, step: 0 },
   {
     label: "Kategori",
     name: "category",
     type: "select",
     options: mockCategories.map((item) => item.name),
     required: true,
+    step: 0,
   },
-  { label: "Deskripsi", name: "description", type: "textarea", required: true },
-  { label: "Harga", name: "price", type: "number", required: true },
-  { label: "Minimum DP", name: "dp", type: "number" },
-  { label: "Durasi", name: "duration" },
-  { label: "Kapasitas tamu", name: "capacity", type: "number" },
-  { label: "Area layanan", name: "area" },
-  { label: "Syarat dan ketentuan", name: "terms", type: "textarea" },
-  { label: "Foto produk", name: "images", type: "file" },
-  { label: "Status", name: "status", type: "select", options: ["DRAFT", "ACTIVE"], required: true },
+  { label: "Deskripsi layanan", name: "description", type: "textarea", required: true, step: 0 },
+  { label: "Harga", name: "price", type: "number", min: 0, required: true, step: 1 },
+  { label: "Minimal DP", name: "dp", type: "number", min: 0, step: 1 },
+  { label: "Durasi layanan", name: "duration", placeholder: "Contoh: 8 jam", step: 1 },
+  { label: "Kapasitas tamu", name: "capacity", type: "number", min: 1, step: 1 },
+  {
+    label: "Area layanan",
+    name: "area",
+    placeholder: "Contoh: Jabodetabek",
+    required: true,
+    step: 2,
+  },
+  {
+    label: "Foto atau portofolio paket",
+    name: "images",
+    type: "file",
+    accept: "image/jpeg,image/png,image/webp",
+    multiple: true,
+    helper: "Pilih beberapa foto JPG, PNG, atau WebP.",
+    step: 3,
+  },
+  { label: "Syarat dan ketentuan", name: "terms", type: "textarea", required: true, step: 4 },
+  {
+    label: "Status produk",
+    name: "status",
+    type: "select",
+    options: ["DRAFT", "ACTIVE", "INACTIVE"],
+    required: true,
+    step: 5,
+  },
 ];
 
 export function VendorPage({ slug }: { slug: string[] }) {
@@ -64,13 +86,14 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <EntityForm
           fields={productFields}
           steps={[
-            "Informasi Paket",
+            "Informasi Layanan",
             "Harga & Kapasitas",
             "Area Layanan",
             "Foto & Portofolio",
             "Ketentuan",
             "Status Publish",
           ]}
+          note="Produk hanya dapat diaktifkan jika status vendor sudah Verified / Active. Pilih Draft jika produk belum siap ditampilkan."
           submitLabel="Publish paket"
         />
       </Page>
@@ -81,17 +104,19 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <EntityForm
           fields={productFields}
           steps={[
-            "Informasi Paket",
+            "Informasi Layanan",
             "Harga & Kapasitas",
             "Area Layanan",
             "Foto & Portofolio",
             "Ketentuan",
             "Status Publish",
           ]}
+          note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
           submitLabel="Simpan perubahan"
         />
       </Page>
     );
+  if (page === "products" && slug[1]) return <ProductDetailPage productId={slug[1]} />;
   if (page === "products") return <ProductsPage />;
   if (page === "orders" && slug[1]) return <OrderDetail />;
   if (page === "orders") return <OrdersPage />;
@@ -208,31 +233,143 @@ function CategoryPage() {
 function ProductsPage() {
   return (
     <Page title="Kelola Produk" description="Kelola paket layanan, publikasi, dan status produk.">
-      <div className="flex gap-3">
-        <AppInput label="Cari produk" placeholder="Nama paket" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <DashboardCard label="Total produk" value={`${mockProducts.length} produk`} />
+        <DashboardCard
+          label="Produk aktif"
+          value={`${mockProducts.filter((product) => product.status === "ACTIVE").length} produk`}
+        />
+        <DashboardCard
+          label="Draft"
+          value={`${mockProducts.filter((product) => product.status === "DRAFT").length} produk`}
+        />
+        <DashboardCard
+          label="Nonaktif"
+          value={`${mockProducts.filter((product) => product.status === "INACTIVE").length} produk`}
+        />
+      </div>
+      <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <AppInput label="Cari produk" placeholder="Nama produk atau paket" />
+        </div>
+        <label className="grid gap-1.5 text-sm font-medium">
+          <span>Status</span>
+          <select className="min-h-11 rounded-xl border bg-white px-3.5 text-sm shadow-sm">
+            <option>Semua status</option>
+            <option>DRAFT</option>
+            <option>ACTIVE</option>
+            <option>INACTIVE</option>
+            <option>REJECTED</option>
+            <option>DELETED</option>
+          </select>
+        </label>
         <AppButton asChild>
-          <Link href={ROUTES.vendor.createProduct}>Buat paket</Link>
+          <Link href={ROUTES.vendor.createProduct}>Buat paket baru</Link>
         </AppButton>
       </div>
       <DataTable
-        columns={["Produk", "Kategori", "Harga", "Status", "Aksi"]}
+        title="Daftar produk dan paket layanan"
+        columns={["Produk", "Kategori", "Harga", "Kapasitas", "Area", "Status", "Aksi"]}
         rows={mockProducts.map((p) => [
-          p.name,
+          <Link
+            className="font-semibold text-ink hover:text-blush"
+            href={ROUTES.vendor.product(p.id)}
+            key={p.id}
+          >
+            {p.name}
+          </Link>,
           p.category,
           formatCurrency(p.price),
+          `${p.guestCapacity} tamu`,
+          p.serviceArea,
           <StatusBadge status={p.status} />,
-          <div className="flex gap-2" key={p.id}>
+          <div className="flex flex-wrap gap-2" key={p.id}>
+            <AppButton asChild variant="ghost">
+              <Link href={ROUTES.vendor.product(p.id)}>Detail</Link>
+            </AppButton>
             <AppButton asChild variant="secondary">
               <Link href={ROUTES.vendor.editProduct(p.id)}>Edit</Link>
             </AppButton>
             <ConfirmModal
-              trigger={<AppButton variant="danger">Nonaktifkan</AppButton>}
-              title="Nonaktifkan produk?"
-              description="Produk tidak akan tampil di marketplace."
+              trigger={
+                <AppButton variant="outline">
+                  {p.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
+                </AppButton>
+              }
+              title={p.status === "ACTIVE" ? "Nonaktifkan produk?" : "Aktifkan produk?"}
+              description={
+                p.status === "ACTIVE"
+                  ? "Produk tidak akan tampil di marketplace sampai diaktifkan kembali."
+                  : "Produk akan tampil di marketplace jika akun vendor sudah terverifikasi."
+              }
+            />
+            <ConfirmModal
+              trigger={<AppButton variant="danger">Hapus</AppButton>}
+              title="Hapus produk secara sistem?"
+              description="Produk akan berstatus Deleted dan tidak dihapus permanen agar riwayat transaksi tetap tersimpan."
             />
           </div>,
         ])}
       />
+    </Page>
+  );
+}
+
+function ProductDetailPage({ productId }: { productId: string }) {
+  const product = mockProducts.find((item) => item.id === productId) ?? mockProducts[0];
+
+  return (
+    <Page
+      title={product.name}
+      description="Detail produk atau paket layanan yang ditampilkan kepada customer."
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4">
+        <StatusBadge status={product.status} />
+        <div className="flex flex-wrap gap-2">
+          <AppButton asChild variant="secondary">
+            <Link href={ROUTES.vendor.editProduct(product.id)}>Edit produk</Link>
+          </AppButton>
+          <ConfirmModal
+            trigger={<AppButton variant="outline">Nonaktifkan</AppButton>}
+            title="Nonaktifkan produk?"
+            description="Produk tidak akan tampil di marketplace sampai diaktifkan kembali."
+          />
+          <ConfirmModal
+            trigger={<AppButton variant="danger">Hapus</AppButton>}
+            title="Hapus produk secara sistem?"
+            description="Produk akan disembunyikan dengan status Deleted tanpa menghapus riwayat transaksi."
+          />
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <div className="overflow-hidden rounded-3xl border bg-white">
+          <img
+            alt={product.name}
+            className="aspect-[4/3] size-full object-cover"
+            src={product.image}
+          />
+        </div>
+        <DetailGrid
+          items={[
+            ["Nama paket", product.name],
+            ["Kategori", product.category],
+            ["Harga", formatCurrency(product.price)],
+            ["Minimal DP", formatCurrency(product.minimumDp)],
+            ["Durasi layanan", product.duration],
+            ["Kapasitas", `${product.guestCapacity} tamu`],
+            ["Area layanan", product.serviceArea],
+            ["Status", <StatusBadge status={product.status} />],
+            ["Deskripsi", product.description],
+            [
+              "Syarat dan ketentuan",
+              "Mengikuti kesepakatan layanan dan jadwal yang telah dikonfirmasi.",
+            ],
+          ]}
+        />
+      </div>
+      <p className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+        Perubahan harga tidak akan mengubah harga pada pesanan yang sudah dibuat sebelumnya.
+      </p>
     </Page>
   );
 }

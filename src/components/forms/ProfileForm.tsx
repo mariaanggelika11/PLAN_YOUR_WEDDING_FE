@@ -6,6 +6,7 @@ import { RegionFields } from "@/components/forms/RegionFields";
 import { ErrorState, LoadingSkeleton, SuccessState } from "@/components/states/States";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput, AppSelect, AppTextarea } from "@/components/ui/FormFields";
+import { categoryLabels } from "@/constants/menu";
 import {
   getCustomerProfile,
   getVendorProfile,
@@ -34,8 +35,16 @@ export function ProfileForm({ type }: { type: ProfileType }) {
   const [activeStep, setActiveStep] = useState(0);
   const steps =
     type === "customer"
-      ? ["Data Pribadi", "Alamat", "Foto Profile"]
-      : ["Pemilik", "Informasi Bisnis", "Lokasi & Layanan", "Logo"];
+      ? ["Data Pribadi", "Alamat", "Foto Profile", "Detail Pernikahan"]
+      : [
+          "Pemilik",
+          "Informasi Bisnis",
+          "Lokasi & Layanan",
+          "Kategori",
+          "Brand & Portofolio",
+          "Kontak & Rekening",
+          "Dokumen Verifikasi",
+        ];
 
   async function loadProfile() {
     setIsLoading(true);
@@ -99,7 +108,7 @@ export function ProfileForm({ type }: { type: ProfileType }) {
 
   return (
     <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
-      <Stepper active={activeStep} steps={steps} />
+      <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />
 
       {type === "customer" ? (
         <CustomerFields activeStep={activeStep} profile={profile as CustomerApiProfile | null} />
@@ -199,6 +208,123 @@ function CustomerFields({
           initialUrl={profile?.avatarUrl ?? ""}
           label="URL foto profile"
           name="avatarUrl"
+        />
+      </ProfileSection>
+      <ProfileSection
+        active={activeStep === 3}
+        description="Lengkapi detail acara agar rekomendasi vendor dan perencanaan wedding lebih relevan."
+        step={3}
+        title="Detail pernikahan"
+      >
+        <FormGroupHeader
+          description="Informasi utama mengenai waktu, tempat, dan konsep acara."
+          title="Data Pernikahan"
+        />
+        <AppInput
+          defaultValue={dateValue(profile?.weddingDate)}
+          label="Tanggal acara"
+          name="weddingDate"
+          type="date"
+        />
+        <AppSelect defaultValue={profile?.eventType ?? ""} label="Jenis acara" name="eventType">
+          <option value="">Pilih jenis acara</option>
+          <option value="AKAD">Akad</option>
+          <option value="RESEPSI">Resepsi</option>
+          <option value="AKAD_DAN_RESEPSI">Akad + Resepsi</option>
+          <option value="LAINNYA">Lainnya</option>
+        </AppSelect>
+        <RegionFields
+          cityLabel="Kota/Kabupaten acara"
+          cityName="weddingCity"
+          initialCity={profile?.weddingCity ?? ""}
+          initialProvince={profile?.weddingProvince ?? ""}
+          provinceLabel="Provinsi acara"
+          provinceName="weddingProvince"
+        />
+        <div className="md:col-span-2">
+          <AppTextarea
+            defaultValue={profile?.weddingLocation ?? ""}
+            label="Lokasi atau venue acara"
+            name="weddingLocation"
+            placeholder="Contoh: The Glass House, Jl. Gatot Subroto No. 10"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <AppTextarea
+            defaultValue={profile?.weddingTheme ?? ""}
+            label="Konsep atau tema pernikahan"
+            name="weddingTheme"
+            placeholder="Contoh: Modern romantic dengan nuansa putih dan dusty pink"
+          />
+        </div>
+
+        <FormGroupHeader
+          description="Bantu sistem memahami skala acara dan vendor yang sedang dicari."
+          title="Data Kebutuhan Acara"
+        />
+        <AppInput
+          defaultValue={profile?.estimatedGuests ?? ""}
+          label="Estimasi jumlah tamu"
+          min={1}
+          name="estimatedGuests"
+          type="number"
+        />
+        <AppInput
+          defaultValue={profile?.preferredVendorLocation ?? ""}
+          label="Preferensi lokasi vendor"
+          name="preferredVendorLocation"
+          placeholder="Contoh: Jakarta dan sekitarnya"
+        />
+        <AppSelect
+          defaultValue={profile?.packagePreference ?? ""}
+          label="Preferensi paket wedding"
+          name="packagePreference"
+        >
+          <option value="">Belum ada preferensi</option>
+          <option value="FULL_SERVICE">Paket lengkap / full service</option>
+          <option value="PER_SERVICE">Paket per layanan</option>
+          <option value="CUSTOM">Paket custom</option>
+        </AppSelect>
+        <CheckboxGroup
+          initialValues={profile?.neededVendorCategories ?? []}
+          label="Kebutuhan vendor"
+          name="neededVendorCategories"
+          options={categoryLabels}
+        />
+
+        <FormGroupHeader
+          description="Tentukan rencana biaya agar pengeluaran dapat dipantau sejak awal."
+          title="Data Budget"
+        />
+        <AppInput
+          defaultValue={profile?.estimatedBudget ?? ""}
+          label="Estimasi total budget"
+          min={0}
+          name="estimatedBudget"
+          placeholder="Contoh: 250000000"
+          type="number"
+        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <AppInput
+            defaultValue={profile?.budgetRangeMin ?? ""}
+            label="Budget minimum"
+            min={0}
+            name="budgetRangeMin"
+            type="number"
+          />
+          <AppInput
+            defaultValue={profile?.budgetRangeMax ?? ""}
+            label="Budget maksimum"
+            min={0}
+            name="budgetRangeMax"
+            type="number"
+          />
+        </div>
+        <CheckboxGroup
+          initialValues={profile?.budgetPriorities ?? []}
+          label="Prioritas budget"
+          name="budgetPriorities"
+          options={categoryLabels}
         />
       </ProfileSection>
     </>
@@ -302,11 +428,134 @@ function VendorFields({
       </ProfileSection>
       <ProfileSection
         active={activeStep === 3}
-        description="Upload file memerlukan endpoint storage backend. Untuk sementara gunakan URL logo."
+        description="Pilih satu atau lebih kategori yang sesuai dengan layanan bisnis Anda."
         step={3}
-        title="Logo bisnis"
+        title="Kategori vendor"
+      >
+        <CheckboxGroup
+          initialValues={profile?.selectedCategories ?? []}
+          label="Kategori layanan"
+          name="selectedCategories"
+          options={categoryLabels}
+        />
+      </ProfileSection>
+      <ProfileSection
+        active={activeStep === 4}
+        description="Tambahkan identitas visual dan contoh hasil pekerjaan terbaik vendor."
+        step={4}
+        title="Brand dan portofolio"
       >
         <ImageUrlField initialUrl={profile?.logoUrl ?? ""} label="URL logo bisnis" name="logoUrl" />
+        <div className="md:col-span-2">
+          <AppTextarea
+            defaultValue={(profile?.portfolioImageUrls ?? []).join("\n")}
+            helper="Masukkan satu URL gambar pada setiap baris."
+            label="Gambar portofolio"
+            name="portfolioImageUrls"
+            placeholder={"https://contoh.com/portfolio-1.jpg\nhttps://contoh.com/portfolio-2.jpg"}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <AppInput
+            accept="image/jpeg,image/png,image/webp"
+            helper="JPG, PNG, atau WebP. Upload memerlukan endpoint storage backend."
+            label="Pilih gambar portofolio"
+            multiple
+            name="portfolioFiles"
+            type="file"
+          />
+        </div>
+      </ProfileSection>
+      <ProfileSection
+        active={activeStep === 5}
+        description="Informasi sosial dapat ditampilkan ke customer, sedangkan rekening bersifat privat."
+        step={5}
+        title="Kontak dan rekening"
+      >
+        <FormGroupHeader
+          description="Tambahkan kanal resmi bisnis yang dapat dikunjungi customer."
+          title="Media Sosial"
+        />
+        <AppInput
+          defaultValue={profile?.instagramUrl ?? ""}
+          label="Instagram"
+          name="instagramUrl"
+          placeholder="https://instagram.com/nama-vendor"
+          type="url"
+        />
+        <AppInput
+          defaultValue={profile?.tiktokUrl ?? ""}
+          label="TikTok"
+          name="tiktokUrl"
+          placeholder="https://tiktok.com/@nama-vendor"
+          type="url"
+        />
+        <AppInput
+          defaultValue={profile?.websiteUrl ?? ""}
+          label="Website"
+          name="websiteUrl"
+          placeholder="https://vendor.com"
+          type="url"
+        />
+        <AppInput
+          defaultValue={profile?.whatsappNumber ?? ""}
+          label="Nomor WhatsApp bisnis"
+          name="whatsappNumber"
+          placeholder="Contoh: 6281234567890"
+          type="tel"
+        />
+        <FormGroupHeader
+          description="Data rekening hanya digunakan untuk kebutuhan transaksi dan tidak ditampilkan ke publik."
+          title="Informasi Rekening"
+        />
+        <AppInput defaultValue={profile?.bankName ?? ""} label="Nama bank" name="bankName" />
+        <AppInput
+          defaultValue={profile?.bankAccountNumber ?? ""}
+          inputMode="numeric"
+          label="Nomor rekening"
+          name="bankAccountNumber"
+        />
+        <AppInput
+          defaultValue={profile?.bankAccountHolder ?? ""}
+          label="Nama pemilik rekening"
+          name="bankAccountHolder"
+        />
+      </ProfileSection>
+      <ProfileSection
+        active={activeStep === 6}
+        description="Unggah dokumen legal agar admin dapat memverifikasi bisnis Anda."
+        step={6}
+        title="Dokumen verifikasi"
+      >
+        <AppSelect
+          defaultValue={profile?.legalDocumentType ?? ""}
+          label="Jenis dokumen"
+          name="legalDocumentType"
+        >
+          <option value="">Pilih jenis dokumen</option>
+          <option value="KTP">KTP pemilik</option>
+          <option value="NIB">NIB</option>
+          <option value="NPWP">NPWP</option>
+          <option value="SIUP">SIUP</option>
+          <option value="OTHER">Dokumen lainnya</option>
+        </AppSelect>
+        <AppInput
+          defaultValue={profile?.legalDocumentNumber ?? ""}
+          label="Nomor dokumen"
+          name="legalDocumentNumber"
+        />
+        <div className="md:col-span-2">
+          <AppInput
+            accept=".jpg,.jpeg,.png,.pdf"
+            helper="JPG, PNG, atau PDF maksimal 5 MB. Pengiriman file memerlukan endpoint upload backend."
+            label="File dokumen"
+            name="legalDocumentFile"
+            type="file"
+          />
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 md:col-span-2">
+          Setelah dokumen dikirim, profil vendor akan masuk ke proses pemeriksaan admin.
+        </div>
       </ProfileSection>
     </>
   );
@@ -333,6 +582,50 @@ function ProfileSection({
       </div>
       <div className="grid gap-4 md:grid-cols-2">{children}</div>
     </section>
+  );
+}
+
+function FormGroupHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="border-b border-rose-100 pb-3 md:col-span-2">
+      <h3 className="font-semibold text-ink">{title}</h3>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{description}</p>
+    </div>
+  );
+}
+
+function CheckboxGroup({
+  initialValues,
+  label,
+  name,
+  options,
+}: {
+  initialValues: string[];
+  label: string;
+  name: string;
+  options: readonly string[];
+}) {
+  return (
+    <fieldset className="md:col-span-2">
+      <legend className="text-sm font-medium">{label}</legend>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {options.map((option) => (
+          <label
+            className="flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-sm font-normal hover:border-rose-200 hover:bg-rose-50"
+            key={option}
+          >
+            <input
+              className="size-4 accent-rose-500"
+              defaultChecked={initialValues.includes(option)}
+              name={name}
+              type="checkbox"
+              value={option}
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -377,6 +670,20 @@ function customerPayload(form: FormData): CustomerProfilePayload {
       address: optionalValue(form, "address"),
       city: optionalValue(form, "city"),
       province: optionalValue(form, "province"),
+      weddingDate: optionalValue(form, "weddingDate"),
+      weddingLocation: optionalValue(form, "weddingLocation"),
+      weddingCity: optionalValue(form, "weddingCity"),
+      weddingProvince: optionalValue(form, "weddingProvince"),
+      eventType: optionalValue(form, "eventType"),
+      weddingTheme: optionalValue(form, "weddingTheme"),
+      estimatedGuests: optionalNumber(form, "estimatedGuests"),
+      neededVendorCategories: values(form, "neededVendorCategories"),
+      preferredVendorLocation: optionalValue(form, "preferredVendorLocation"),
+      packagePreference: optionalValue(form, "packagePreference"),
+      estimatedBudget: optionalNumber(form, "estimatedBudget"),
+      budgetRangeMin: optionalNumber(form, "budgetRangeMin"),
+      budgetRangeMax: optionalNumber(form, "budgetRangeMax"),
+      budgetPriorities: values(form, "budgetPriorities"),
     }),
   };
 }
@@ -395,6 +702,17 @@ function vendorPayload(form: FormData): VendorProfilePayload {
     description: optionalValue(form, "description"),
     serviceArea: optionalValue(form, "serviceArea"),
     logoUrl: optionalValue(form, "logoUrl"),
+    selectedCategories: values(form, "selectedCategories"),
+    portfolioImageUrls: lineValues(form, "portfolioImageUrls"),
+    instagramUrl: optionalValue(form, "instagramUrl"),
+    tiktokUrl: optionalValue(form, "tiktokUrl"),
+    websiteUrl: optionalValue(form, "websiteUrl"),
+    whatsappNumber: optionalValue(form, "whatsappNumber"),
+    bankName: optionalValue(form, "bankName"),
+    bankAccountNumber: optionalValue(form, "bankAccountNumber"),
+    bankAccountHolder: optionalValue(form, "bankAccountHolder"),
+    legalDocumentType: optionalValue(form, "legalDocumentType"),
+    legalDocumentNumber: optionalValue(form, "legalDocumentNumber"),
   });
 }
 
@@ -409,6 +727,21 @@ function optionalValue(form: FormData, field: string) {
 function optionalNumber(form: FormData, field: string) {
   const value = optionalValue(form, field);
   return value === undefined ? undefined : Number(value);
+}
+
+function values(form: FormData, field: string) {
+  return form
+    .getAll(field)
+    .map(String)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function lineValues(form: FormData, field: string) {
+  return requiredValue(form, field)
+    .split("\n")
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function compact<T extends Record<string, unknown>>(data: T) {
