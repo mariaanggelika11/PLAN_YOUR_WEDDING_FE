@@ -35,7 +35,12 @@ export function Stepper({
   onStepChange?: (step: number) => void;
 }) {
   return (
-    <ol className="grid grid-cols-2 gap-2 rounded-2xl border bg-white p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+    <ol
+      className={cn(
+        "grid grid-cols-2 gap-2 rounded-2xl border bg-white p-3 sm:grid-cols-3 lg:grid-cols-4",
+        steps.length > 4 && "xl:grid-cols-7",
+      )}
+    >
       {steps.map((step, index) => (
         <li key={step}>
           <button
