@@ -8,7 +8,7 @@ export default function LoginPage() {
       title="Selamat datang kembali"
       description="Masuk untuk melanjutkan persiapan hari istimewa Anda."
     >
-      <AuthForm type="login" />
+      <AuthForm />
       <p className="text-center text-sm text-stone-500">
         Belum punya akun?{" "}
         <Link className="font-semibold text-blush" href={ROUTES.register}>

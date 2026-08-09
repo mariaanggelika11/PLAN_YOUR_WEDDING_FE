@@ -6,6 +6,10 @@ export const API_ROUTES = {
     login: "/auth/login",
     logout: "/auth/logout",
     profile: "/auth/profile",
+    forgotPassword: "/auth/forgot-password",
+    verifyOtp: "/auth/verify-otp",
+    resendOtp: "/auth/resend-otp",
+    changePassword: "/auth/change-password",
   },
   register: {
     customer: "/register/customer",

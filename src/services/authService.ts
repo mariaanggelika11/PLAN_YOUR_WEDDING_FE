@@ -3,8 +3,17 @@ import { dashboardRoute } from "@/constants/routes";
 import { ApiError, apiRequest } from "@/services/api";
 import { encryptText } from "@/services/cryptographyService";
 import type { ApiResponse } from "@/types/api";
-import type { AuthSession, LoginCredentials } from "@/types/auth";
+import type {
+  AuthSession,
+  ChangePasswordData,
+  ChangePasswordResult,
+  LoginCredentials,
+  OtpDeliveryResult,
+  OtpPurpose,
+  OtpVerificationResult,
+} from "@/types/auth";
 import type { UserRole } from "@/types";
+import { PASSWORD_REGEX, validationMessages } from "@/utils/validation";
 
 const SESSION_KEY = "pyw_auth_session";
 
@@ -19,6 +28,7 @@ interface BackendLoginData {
     id: number;
     email: string;
     fullname: string;
+    isEmailVerified: boolean;
   };
   roles: BackendRole | null;
   listRoles: BackendRole[];
@@ -28,6 +38,13 @@ export class AuthError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AuthError";
+  }
+}
+
+export class EmailVerificationRequiredError extends AuthError {
+  constructor(public readonly email: string) {
+    super("Email belum diverifikasi.");
+    this.name = "EmailVerificationRequiredError";
   }
 }
 
@@ -44,6 +61,10 @@ export async function login(credentials: LoginCredentials): Promise<AuthSession>
     });
 
     const backendSession = loginResponse.data;
+    if (!backendSession.user.isEmailVerified) {
+      throw new EmailVerificationRequiredError(backendSession.user.email);
+    }
+
     const role = mapBackendRole(backendSession.roles?.roleName);
     const session: AuthSession = {
       user: {
@@ -67,6 +88,78 @@ export async function login(credentials: LoginCredentials): Promise<AuthSession>
     }
     throw new AuthError("Login gagal. Silakan coba kembali.");
   }
+}
+
+export async function requestPasswordReset(email: string): Promise<OtpDeliveryResult> {
+  return runAuthRequest("Permintaan reset password gagal.", async () => {
+    const response = await apiRequest<ApiResponse<OtpDeliveryResult>>(
+      API_ROUTES.auth.forgotPassword,
+      {
+        method: "POST",
+        body: JSON.stringify({ email: normalizeEmail(email) }),
+      },
+    );
+    return requireOtpDelivery(response.data);
+  });
+}
+
+export async function verifyOtp(
+  email: string,
+  otpCode: string,
+  purpose: OtpPurpose,
+): Promise<OtpVerificationResult> {
+  return runAuthRequest("Verifikasi OTP gagal.", async () => {
+    const response = await apiRequest<ApiResponse<OtpVerificationResult>>(
+      API_ROUTES.auth.verifyOtp,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          email: normalizeEmail(email),
+          otpCode: otpCode.trim(),
+          purpose,
+        }),
+      },
+    );
+    return requireOtpVerification(response.data);
+  });
+}
+
+export async function resendOtp(email: string, purpose: OtpPurpose): Promise<OtpDeliveryResult> {
+  return runAuthRequest("Kode OTP gagal dikirim ulang.", async () => {
+    const response = await apiRequest<ApiResponse<OtpDeliveryResult>>(API_ROUTES.auth.resendOtp, {
+      method: "POST",
+      body: JSON.stringify({ email: normalizeEmail(email), purpose }),
+    });
+    return requireOtpDelivery(response.data);
+  });
+}
+
+export async function changePassword(data: ChangePasswordData): Promise<ChangePasswordResult> {
+  if (!PASSWORD_REGEX.test(data.newPassword)) {
+    throw new AuthError(validationMessages.password);
+  }
+  if (data.newPassword !== data.confirmNewPassword) {
+    throw new AuthError(validationMessages.confirmPassword);
+  }
+
+  return runAuthRequest("Password gagal diubah.", async () => {
+    const cipherText = await encryptText(data.newPassword);
+    const response = await apiRequest<ApiResponse<ChangePasswordResult>>(
+      API_ROUTES.auth.changePassword,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          email: normalizeEmail(data.email),
+          newPassword: cipherText,
+          confirmNewPassword: cipherText,
+        }),
+      },
+    );
+    if (!response.data?.changed) {
+      throw new AuthError("Backend belum mengonfirmasi bahwa password berhasil diubah.");
+    }
+    return response.data;
+  });
 }
 
 export function getSession(): AuthSession | null {
@@ -146,4 +239,34 @@ function getJwtExpiry(token: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+async function runAuthRequest<T>(fallbackMessage: string, request: () => Promise<T>): Promise<T> {
+  try {
+    return await request();
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    if (error instanceof ApiError) throw new AuthError(error.message);
+    throw new AuthError(fallbackMessage);
+  }
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function requireOtpDelivery(result: OtpDeliveryResult | null | undefined): OtpDeliveryResult {
+  if (!result?.sent) {
+    throw new AuthError("Backend belum mengonfirmasi bahwa kode OTP berhasil dikirim.");
+  }
+  return result;
+}
+
+function requireOtpVerification(
+  result: OtpVerificationResult | null | undefined,
+): OtpVerificationResult {
+  if (!result?.verified) {
+    throw new AuthError("Backend belum mengonfirmasi bahwa kode OTP berhasil diverifikasi.");
+  }
+  return result;
 }

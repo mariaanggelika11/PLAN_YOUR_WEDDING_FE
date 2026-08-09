@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PasswordInput } from "@/components/forms/PasswordInput";
+import { OtpVerificationForm } from "@/components/forms/OtpVerificationForm";
 import { SuccessState } from "@/components/states/States";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
@@ -16,12 +17,13 @@ import type { CustomerRegistrationData, VendorRegistrationData } from "@/types/r
 import { PASSWORD_REGEX, validationMessages } from "@/utils/validation";
 
 type RegistrationType = "customer" | "vendor";
+type RegistrationStep = "details" | "otp" | "success";
 
 export function RegistrationForm({ type }: { type: RegistrationType }) {
-  const router = useRouter();
+  const [step, setStep] = useState<RegistrationStep>("details");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,20 +35,16 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     if (password !== confirmPassword) return setError(validationMessages.confirmPassword);
 
     setError("");
-    setSuccess("");
     setIsLoading(true);
 
     try {
-      if (type === "customer") {
-        await registerCustomer(customerData(form, password, confirmPassword));
-      } else {
-        await registerVendor(vendorData(form, password, confirmPassword));
-      }
+      const result =
+        type === "customer"
+          ? await registerCustomer(customerData(form, password, confirmPassword))
+          : await registerVendor(vendorData(form, password, confirmPassword));
 
-      setSuccess("Registrasi berhasil. Mengarahkan ke halaman masuk...");
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      router.replace(ROUTES.login);
-      router.refresh();
+      setRegisteredEmail(result.user.email);
+      setStep("otp");
     } catch (submitError) {
       setError(
         submitError instanceof RegistrationError
@@ -56,6 +54,30 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (step === "otp") {
+    return (
+      <div className="grid gap-4">
+        <SuccessState message="Registrasi berhasil. Verifikasi email Anda untuk menyelesaikan pendaftaran." />
+        <OtpVerificationForm
+          email={registeredEmail}
+          purpose="register"
+          onVerified={() => setStep("success")}
+        />
+      </div>
+    );
+  }
+
+  if (step === "success") {
+    return (
+      <div className="grid gap-4">
+        <SuccessState message="Email berhasil diverifikasi. Akun Anda siap digunakan." />
+        <AppButton asChild>
+          <Link href={ROUTES.login}>Masuk ke akun</Link>
+        </AppButton>
+      </div>
+    );
   }
 
   return (
@@ -120,8 +142,6 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
           {error}
         </p>
       )}
-      {success && <SuccessState message={success} />}
-
       <AppButton loading={isLoading} type="submit">
         Daftar sekarang
       </AppButton>

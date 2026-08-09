@@ -1,12 +1,12 @@
-import { AuthForm } from "@/components/forms/AuthForm";
+import { ForgotPasswordForm } from "@/components/forms/ForgotPasswordForm";
 import { AuthPage } from "@/components/layout/AuthPage";
 export default function ForgotPasswordPage() {
   return (
     <AuthPage
       title="Atur ulang password"
-      description="Kami akan mengirim tautan reset ke email Anda."
+      description="Masukkan email akun Anda. Kami akan mengirim kode OTP untuk mengatur ulang password."
     >
-      <AuthForm type="forgot" />
+      <ForgotPasswordForm />
     </AuthPage>
   );
 }
