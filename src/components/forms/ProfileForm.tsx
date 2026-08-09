@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { Landmark, Plus, Trash2 } from "lucide-react";
 import { Stepper } from "@/components/common/Interactive";
 import { RegionFields } from "@/components/forms/RegionFields";
 import { ErrorState, LoadingSkeleton, SuccessState } from "@/components/states/States";
@@ -468,58 +469,12 @@ function VendorFields({
       </ProfileSection>
       <ProfileSection
         active={activeStep === 5}
-        description="Informasi sosial dapat ditampilkan ke customer, sedangkan rekening bersifat privat."
+        description="Kelola kanal kontak bisnis dan rekening pencairan dalam satu tempat."
         step={5}
         title="Kontak dan rekening"
       >
-        <FormGroupHeader
-          description="Tambahkan kanal resmi bisnis yang dapat dikunjungi customer."
-          title="Media Sosial"
-        />
-        <AppInput
-          defaultValue={profile?.instagramUrl ?? ""}
-          label="Instagram"
-          name="instagramUrl"
-          placeholder="https://instagram.com/nama-vendor"
-          type="url"
-        />
-        <AppInput
-          defaultValue={profile?.tiktokUrl ?? ""}
-          label="TikTok"
-          name="tiktokUrl"
-          placeholder="https://tiktok.com/@nama-vendor"
-          type="url"
-        />
-        <AppInput
-          defaultValue={profile?.websiteUrl ?? ""}
-          label="Website"
-          name="websiteUrl"
-          placeholder="https://vendor.com"
-          type="url"
-        />
-        <AppInput
-          defaultValue={profile?.whatsappNumber ?? ""}
-          label="Nomor WhatsApp bisnis"
-          name="whatsappNumber"
-          placeholder="Contoh: 6281234567890"
-          type="tel"
-        />
-        <FormGroupHeader
-          description="Data rekening hanya digunakan untuk kebutuhan transaksi dan tidak ditampilkan ke publik."
-          title="Informasi Rekening"
-        />
-        <AppInput defaultValue={profile?.bankName ?? ""} label="Nama bank" name="bankName" />
-        <AppInput
-          defaultValue={profile?.bankAccountNumber ?? ""}
-          inputMode="numeric"
-          label="Nomor rekening"
-          name="bankAccountNumber"
-        />
-        <AppInput
-          defaultValue={profile?.bankAccountHolder ?? ""}
-          label="Nama pemilik rekening"
-          name="bankAccountHolder"
-        />
+        <VendorContactRows profile={profile} />
+        <VendorBankAccountCards profile={profile} />
       </ProfileSection>
       <ProfileSection
         active={activeStep === 6}
@@ -590,6 +545,248 @@ function FormGroupHeader({ title, description }: { title: string; description: s
     <div className="border-b border-rose-100 pb-3 md:col-span-2">
       <h3 className="font-semibold text-ink">{title}</h3>
       <p className="mt-1 text-xs leading-5 text-stone-500">{description}</p>
+    </div>
+  );
+}
+
+type ContactField = "instagramUrl" | "tiktokUrl" | "websiteUrl" | "whatsappNumber";
+
+interface ContactOption {
+  field: ContactField;
+  label: string;
+  placeholder: string;
+  type: "tel" | "url";
+}
+
+const CONTACT_OPTIONS: readonly ContactOption[] = [
+  {
+    field: "whatsappNumber",
+    label: "WhatsApp",
+    placeholder: "Contoh: 6281234567890",
+    type: "tel",
+  },
+  {
+    field: "instagramUrl",
+    label: "Instagram",
+    placeholder: "https://instagram.com/nama-vendor",
+    type: "url",
+  },
+  {
+    field: "tiktokUrl",
+    label: "TikTok",
+    placeholder: "https://tiktok.com/@nama-vendor",
+    type: "url",
+  },
+  {
+    field: "websiteUrl",
+    label: "Website",
+    placeholder: "https://vendor.com",
+    type: "url",
+  },
+];
+
+function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
+  const initialFields = CONTACT_OPTIONS.filter(({ field }) => Boolean(profile?.[field])).map(
+    ({ field }) => field,
+  );
+  const [fields, setFields] = useState<ContactField[]>(
+    initialFields.length > 0 ? initialFields : ["whatsappNumber"],
+  );
+
+  const availableOptions = CONTACT_OPTIONS.filter(({ field }) => !fields.includes(field));
+
+  function addContact() {
+    const nextOption = availableOptions[0];
+    if (nextOption) setFields((current) => [...current, nextOption.field]);
+  }
+
+  function removeContact(field: ContactField) {
+    setFields((current) => current.filter((item) => item !== field));
+  }
+
+  return (
+    <div className="grid gap-4 md:col-span-2">
+      <SectionHeading
+        action={
+          <AppButton
+            disabled={availableOptions.length === 0}
+            onClick={addContact}
+            type="button"
+            variant="secondary"
+          >
+            <Plus size={16} /> Tambah kontak
+          </AppButton>
+        }
+        description="Tambahkan kanal resmi yang dapat digunakan customer untuk mengenal bisnis Anda."
+        title="Kontak bisnis"
+      />
+
+      {fields.length === 0 ? (
+        <EmptyCollection message="Belum ada kontak bisnis. Tambahkan setidaknya satu kanal kontak." />
+      ) : (
+        <div className="grid gap-3">
+          {fields.map((field) => {
+            const option = CONTACT_OPTIONS.find((item) => item.field === field)!;
+            return (
+              <div
+                className="grid gap-3 rounded-2xl border bg-stone-50/60 p-4 sm:grid-cols-[150px_1fr_auto] sm:items-end"
+                key={field}
+              >
+                <AppSelect
+                  aria-label="Jenis kontak"
+                  label="Jenis kontak"
+                  onChange={(event) => {
+                    const nextField = event.target.value as ContactField;
+                    setFields((current) =>
+                      current.map((item) => (item === field ? nextField : item)),
+                    );
+                  }}
+                  value={field}
+                >
+                  {CONTACT_OPTIONS.map((contactOption) => (
+                    <option
+                      disabled={
+                        fields.includes(contactOption.field) && contactOption.field !== field
+                      }
+                      key={contactOption.field}
+                      value={contactOption.field}
+                    >
+                      {contactOption.label}
+                    </option>
+                  ))}
+                </AppSelect>
+                <AppInput
+                  defaultValue={profile?.[field] ?? ""}
+                  key={field}
+                  label="Detail kontak"
+                  name={field}
+                  placeholder={option.placeholder}
+                  type={option.type}
+                />
+                <button
+                  aria-label={`Hapus kontak ${option.label}`}
+                  className="grid size-11 place-items-center rounded-xl border border-red-200 bg-white text-red-600 transition hover:bg-red-50"
+                  onClick={() => removeContact(field)}
+                  title="Hapus kontak"
+                  type="button"
+                >
+                  <Trash2 size={17} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null }) {
+  const hasSavedAccount = Boolean(
+    profile?.bankName || profile?.bankAccountNumber || profile?.bankAccountHolder,
+  );
+  const [hasAccount, setHasAccount] = useState(hasSavedAccount);
+
+  return (
+    <div className="mt-3 grid gap-4 border-t border-rose-100 pt-6 md:col-span-2">
+      <SectionHeading
+        action={
+          <AppButton
+            disabled={hasAccount}
+            onClick={() => setHasAccount(true)}
+            type="button"
+            variant="secondary"
+          >
+            <Plus size={16} /> Tambah rekening
+          </AppButton>
+        }
+        description="Rekening digunakan untuk pencairan transaksi dan tidak ditampilkan pada profil publik."
+        title="Rekening pencairan"
+      />
+
+      {hasAccount ? (
+        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b bg-rose-50/70 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-white text-blush shadow-sm">
+                <Landmark size={19} />
+              </span>
+              <div>
+                <p className="font-semibold text-ink">Rekening utama</p>
+                <p className="text-xs text-stone-500">Digunakan sebagai tujuan pencairan dana</p>
+              </div>
+            </div>
+            <button
+              aria-label="Hapus rekening"
+              className="grid size-10 place-items-center rounded-xl text-red-600 transition hover:bg-red-50"
+              onClick={() => setHasAccount(false)}
+              title="Hapus rekening"
+              type="button"
+            >
+              <Trash2 size={17} />
+            </button>
+          </div>
+          <div className="grid gap-4 p-4 md:grid-cols-2">
+            <AppInput
+              defaultValue={profile?.bankName ?? ""}
+              label="Nama bank"
+              name="bankName"
+              placeholder="Contoh: BCA"
+            />
+            <AppInput
+              defaultValue={profile?.bankAccountNumber ?? ""}
+              inputMode="numeric"
+              label="Nomor rekening"
+              name="bankAccountNumber"
+              pattern="[0-9]+"
+              placeholder="Masukkan nomor rekening"
+            />
+            <div className="md:col-span-2">
+              <AppInput
+                defaultValue={profile?.bankAccountHolder ?? ""}
+                label="Nama pemilik rekening"
+                name="bankAccountHolder"
+                placeholder="Sesuai dengan nama pada rekening"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <EmptyCollection message="Belum ada rekening pencairan. Tambahkan rekening ketika Anda siap menerima pembayaran." />
+      )}
+
+      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+        Untuk keamanan, data rekening hanya dapat dilihat oleh pemilik akun dan admin yang
+        berwenang. API saat ini mendukung satu rekening utama.
+      </p>
+    </div>
+  );
+}
+
+function SectionHeading({
+  action,
+  description,
+  title,
+}: {
+  action: React.ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <div>
+        <h3 className="font-semibold text-ink">{title}</h3>
+        <p className="mt-1 text-xs leading-5 text-stone-500">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function EmptyCollection({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed bg-stone-50 px-5 py-8 text-center text-sm text-stone-500">
+      {message}
     </div>
   );
 }

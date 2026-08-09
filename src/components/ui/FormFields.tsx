@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 interface FieldBase {
@@ -76,6 +77,8 @@ export function AppTextarea({
 }
 export function AppSelect({
   label,
+  error,
+  helper,
   children,
   className,
   ...props
@@ -86,12 +89,33 @@ export function AppSelect({
         {label}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
-      <select
-        className={cn("rounded-xl border bg-white px-3.5 py-3 font-normal shadow-sm", className)}
-        {...props}
-      >
-        {children}
-      </select>
+      <span className="relative block">
+        <select
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            "min-h-12 w-full appearance-none rounded-xl border border-stone-200 bg-white px-3.5 py-3 pr-11 font-normal text-ink shadow-sm outline-none transition",
+            "hover:border-stone-300",
+            "focus:border-blush focus:ring-2 focus:ring-rose-100",
+            "disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500",
+            error && "border-red-500 focus:border-red-500 focus:ring-red-100",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500"
+          size={18}
+          strokeWidth={2}
+        />
+      </span>
+      {error ? (
+        <span className="text-xs text-red-600">{error}</span>
+      ) : helper ? (
+        <span className="text-xs text-stone-500">{helper}</span>
+      ) : null}
     </label>
   );
 }
