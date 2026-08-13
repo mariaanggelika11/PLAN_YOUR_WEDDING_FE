@@ -1,5 +1,9 @@
 import { mockVendors } from "@/constants/mockData";
-export { getVendorProfile, saveVendorProfile } from "@/services/profileService";
+export {
+  getVendorProfile,
+  saveVendorProfileDraft,
+  submitVendorProfile,
+} from "@/services/profileService";
 // TODO API: Ambil daftar vendor marketplace dari backend
 export async function getVendors() {
   return mockVendors;

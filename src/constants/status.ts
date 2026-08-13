@@ -39,6 +39,7 @@ export const paymentStatuses: PaymentStatus[] = [
 
 export const statusStyles: Record<string, string> = {
   VERIFIED_ACTIVE: "bg-emerald-100 text-emerald-700",
+  VERIFIED: "bg-emerald-100 text-emerald-700",
   ACTIVE: "bg-emerald-100 text-emerald-700",
   PAID: "bg-emerald-100 text-emerald-700",
   COMPLETED: "bg-emerald-100 text-emerald-700",

@@ -134,11 +134,70 @@ function NavList({
   nav: NavigationItem[];
   pathname: string;
 }) {
+  const [openGroups, setOpenGroups] = useState<string[]>(() =>
+    nav
+      .filter((item) => item.children?.some((child) => pathname.startsWith(child.href)))
+      .map((item) => item.label),
+  );
   return (
     <nav className={cn("grid gap-1", collapsed ? "mt-8" : "mt-3")}>
       {nav.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const childActive = item.children?.some(
+          (child) => pathname === child.href || pathname.startsWith(`${child.href}/`),
+        );
+        const active =
+          childActive || pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
+        if (item.children && !collapsed) {
+          const open = openGroups.includes(item.label);
+          return (
+            <div className="grid gap-1" key={item.label}>
+              <button
+                aria-expanded={open}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition",
+                  active
+                    ? "bg-rose-50 font-semibold text-blush"
+                    : "text-stone-600 hover:bg-stone-50 hover:text-ink",
+                )}
+                onClick={() =>
+                  setOpenGroups((current) =>
+                    current.includes(item.label)
+                      ? current.filter((label) => label !== item.label)
+                      : [...current, item.label],
+                  )
+                }
+                type="button"
+              >
+                <Icon className="shrink-0" size={17} />
+                <span>{item.label}</span>
+                <ChevronDown className={cn("ml-auto transition", open && "rotate-180")} size={15} />
+              </button>
+              {open && (
+                <div className="ml-5 grid gap-1 border-l border-rose-100 pl-3">
+                  {item.children.map((child) => {
+                    const selected =
+                      pathname === child.href || pathname.startsWith(`${child.href}/`);
+                    return (
+                      <Link
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-xs transition",
+                          selected
+                            ? "bg-rose-50 font-semibold text-blush"
+                            : "text-stone-500 hover:bg-stone-50 hover:text-ink",
+                        )}
+                        href={child.href}
+                        key={child.href}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
         return (
           <Link
             aria-label={item.label}

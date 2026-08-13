@@ -30,6 +30,7 @@ export interface NavigationItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  children?: Array<{ label: string; href: string }>;
 }
 
 export const APP_BRAND = {
@@ -74,13 +75,15 @@ export const ADMIN_NAVIGATION: NavigationItem[] = [
   { label: "Verifikasi Pembayaran", href: ROUTES.admin.payments, icon: CircleDollarSign },
   { label: "Pengguna", href: ROUTES.admin.users, icon: Users },
   { label: "Vendor", href: ROUTES.admin.vendorManagement, icon: Building2 },
-  { label: "Kategori", href: ROUTES.admin.categories, icon: Tags },
-  { label: "Produk", href: ROUTES.admin.products, icon: Boxes },
-  { label: "Pesanan", href: ROUTES.admin.orders, icon: ReceiptText },
-  { label: "Ulasan", href: ROUTES.admin.reviews, icon: MessageSquareText },
   { label: "Sengketa", href: ROUTES.admin.disputes, icon: Scale },
   { label: "Laporan", href: ROUTES.admin.reports, icon: FileClock },
   { label: "Audit Log", href: ROUTES.admin.auditLogs, icon: ClipboardCheck },
+  {
+    label: "Master Data",
+    href: ROUTES.admin.parameters,
+    icon: Settings,
+    children: [{ label: "Master Parameter", href: ROUTES.admin.parameters }],
+  },
 ];
 
 export const USER_MENU_ITEMS = [

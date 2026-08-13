@@ -69,43 +69,39 @@ export interface VendorApiProfile {
   description?: string | null;
   serviceArea?: string | null;
   logoUrl?: string | null;
-  selectedCategories?: string[] | null;
-  portfolioImageUrls?: string[] | null;
-  instagramUrl?: string | null;
-  tiktokUrl?: string | null;
-  websiteUrl?: string | null;
-  whatsappNumber?: string | null;
-  bankName?: string | null;
-  bankAccountNumber?: string | null;
-  bankAccountHolder?: string | null;
-  legalDocumentType?: string | null;
-  legalDocumentNumber?: string | null;
+  categories: string[];
+  contacts: VendorContact[];
+  bankAccounts: VendorBankAccount[];
+  verificationDocuments: VendorVerificationDocument[];
+  portfolioAttachmentIds: string[];
+  status?: number | null;
   isVerified: boolean;
+  active?: boolean;
   rejectReason?: string | null;
 }
 
-export interface VendorProfilePayload {
-  businessName?: string;
-  ownerName?: string;
-  businessEmail?: string;
-  businessPhone?: string;
-  businessAddress?: string;
-  city?: string;
-  province?: string;
-  latitude?: number;
-  longitude?: number;
-  description?: string;
-  serviceArea?: string;
-  logoUrl?: string;
-  selectedCategories?: string[];
-  portfolioImageUrls?: string[];
-  instagramUrl?: string;
-  tiktokUrl?: string;
-  websiteUrl?: string;
-  whatsappNumber?: string;
-  bankName?: string;
-  bankAccountNumber?: string;
-  bankAccountHolder?: string;
-  legalDocumentType?: string;
-  legalDocumentNumber?: string;
+export interface VendorContact {
+  id: string;
+  contactType: string;
+  contactValue: string;
+  active: boolean;
+}
+
+export interface VendorBankAccount {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolderName: string;
+  isPrimary: boolean;
+  active: boolean;
+}
+
+export interface VendorVerificationDocument {
+  id: string;
+  documentType: string;
+  documentNumber?: string | null;
+  status?: number | null;
+  rejectReason?: string | null;
+  active: boolean;
+  attachmentId?: string | null;
 }

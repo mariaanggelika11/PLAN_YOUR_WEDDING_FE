@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { Landmark, Plus, Trash2 } from "lucide-react";
+import { StatusBadge } from "@/components/badges/StatusBadge";
 import { Stepper } from "@/components/common/Interactive";
 import { RegionFields } from "@/components/forms/RegionFields";
 import { ErrorState, LoadingSkeleton, SuccessState } from "@/components/states/States";
@@ -9,18 +10,24 @@ import { AppButton } from "@/components/ui/AppButton";
 import { AppInput, AppSelect, AppTextarea } from "@/components/ui/FormFields";
 import { categoryLabels } from "@/constants/menu";
 import {
+  deleteVendorLogo,
+  getAttachmentBlob,
+  getVendorLogo,
+  replaceVendorLogo,
+} from "@/services/attachmentService";
+import {
+  deleteVendorBankAccount,
+  deleteVendorContact,
+  deleteVendorVerificationDocument,
   getCustomerProfile,
   getVendorProfile,
   ProfileError,
   saveCustomerProfile,
-  saveVendorProfile,
+  saveVendorRelatedData,
+  saveVendorProfileDraft,
+  submitVendorProfile,
 } from "@/services/profileService";
-import type {
-  CustomerApiProfile,
-  CustomerProfilePayload,
-  VendorApiProfile,
-  VendorProfilePayload,
-} from "@/types/profile";
+import type { CustomerApiProfile, CustomerProfilePayload, VendorApiProfile } from "@/types/profile";
 import { cn } from "@/utils/cn";
 
 type ProfileType = "customer" | "vendor";
@@ -30,22 +37,18 @@ export function ProfileForm({ type }: { type: ProfileType }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState<"draft" | "submit" | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [activeStep, setActiveStep] = useState(0);
+  const vendorProfile = type === "vendor" ? (profile as VendorApiProfile | null) : null;
+  const vendorCanEdit =
+    type !== "vendor" || !vendorProfile?.status || [1, 4].includes(vendorProfile.status);
   const steps =
     type === "customer"
       ? ["Data Pribadi", "Alamat", "Foto Profile", "Detail Pernikahan"]
-      : [
-          "Pemilik",
-          "Informasi Bisnis",
-          "Lokasi & Layanan",
-          "Kategori",
-          "Brand & Portofolio",
-          "Kontak & Rekening",
-          "Dokumen Verifikasi",
-        ];
+      : ["Pemilik", "Informasi Bisnis", "Kontak & Rekening", "Dokumen Verifikasi"];
 
   async function loadProfile() {
     setIsLoading(true);
@@ -67,16 +70,14 @@ export function ProfileForm({ type }: { type: ProfileType }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (type === "vendor") return;
     const form = new FormData(event.currentTarget);
     setError("");
     setMessage("");
     setIsSaving(true);
 
     try {
-      const saved =
-        type === "customer"
-          ? await saveCustomerProfile(profile?.id ?? null, customerPayload(form))
-          : await saveVendorProfile(profile?.id ?? null, vendorPayload(form));
+      const saved = await saveCustomerProfile(profile?.id ?? null, customerPayload(form));
       setProfile(saved);
       setMessage("Profile berhasil disimpan.");
     } catch (submitError) {
@@ -87,6 +88,66 @@ export function ProfileForm({ type }: { type: ProfileType }) {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function saveVendor(action: "draft" | "submit", form: HTMLFormElement | null) {
+    if (!form) return;
+    const vendorProfile = profile as VendorApiProfile | null;
+
+    if (action === "submit") {
+      const validation = validateVendorSubmission(form, vendorProfile);
+      if (validation) {
+        setActiveStep(validation.step);
+        setMessage("");
+        setError(validation.message);
+        return;
+      }
+    } else {
+      const validation = validateVendorDraft(form);
+      if (validation) {
+        setActiveStep(validation.step);
+        setMessage("");
+        setError(validation.message);
+        return;
+      }
+    }
+
+    setError("");
+    setMessage("");
+    setIsSaving(true);
+    setSavingAction(action);
+    try {
+      const data = vendorFormData(form, vendorProfile);
+      const saved =
+        action === "draft" ? await saveVendorProfileDraft(data) : await submitVendorProfile(data);
+      const related = vendorRelatedData(form, vendorProfile);
+      const savedWithRelations = await saveVendorRelatedData(related);
+      setProfile(savedWithRelations ?? saved);
+      const logoFile = formFile(form, "logoFile");
+      if (logoFile) {
+        try {
+          await replaceVendorLogo(saved.id, logoFile);
+        } catch {
+          setError(
+            "Profile berhasil disimpan, tetapi logo bisnis gagal diunggah. Silakan coba lagi.",
+          );
+        }
+      }
+      setMessage(
+        action === "draft"
+          ? "Draft profile berhasil disimpan."
+          : "Profile berhasil dikirim untuk verifikasi.",
+      );
+    } catch (submitError) {
+      setError(
+        submitError instanceof ProfileError
+          ? submitError.message
+          : "Profile vendor gagal disimpan. Silakan coba kembali.",
+      );
+    } finally {
+      setIsSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -109,13 +170,31 @@ export function ProfileForm({ type }: { type: ProfileType }) {
 
   return (
     <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
+      {type === "vendor" && <VendorProfileStatus profile={vendorProfile} />}
       <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />
 
       {type === "customer" ? (
         <CustomerFields activeStep={activeStep} profile={profile as CustomerApiProfile | null} />
       ) : (
-        <VendorFields activeStep={activeStep} profile={profile as VendorApiProfile | null} />
+        <fieldset className="contents" disabled={!vendorCanEdit}>
+          <VendorFields
+            activeStep={activeStep}
+            onDataChanged={() => void loadProfile()}
+            profile={profile as VendorApiProfile | null}
+          />
+        </fieldset>
       )}
+      {type === "vendor" &&
+        activeStep === 3 &&
+        primaryVerificationDocument(vendorProfile)?.attachmentId && (
+          <DocumentAttachmentActions
+            attachmentId={primaryVerificationDocument(vendorProfile)!.attachmentId!}
+            canDelete={vendorCanEdit}
+            documentId={primaryVerificationDocument(vendorProfile)!.id}
+            documentType={primaryVerificationDocument(vendorProfile)?.documentType ?? "dokumen"}
+            onDeleted={() => void loadProfile()}
+          />
+        )}
 
       {error && (
         <p
@@ -127,7 +206,7 @@ export function ProfileForm({ type }: { type: ProfileType }) {
       )}
       {message && <SuccessState message={message} />}
 
-      <div className="flex justify-between gap-3">
+      <div className="flex flex-wrap justify-between gap-3">
         <AppButton
           disabled={activeStep === 0 || isSaving}
           onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
@@ -136,7 +215,33 @@ export function ProfileForm({ type }: { type: ProfileType }) {
         >
           Kembali
         </AppButton>
-        {activeStep < steps.length - 1 ? (
+        {type === "vendor" ? (
+          <div className="ml-auto flex flex-wrap gap-2">
+            <AppButton
+              loading={savingAction === "draft"}
+              disabled={!vendorCanEdit}
+              onClick={(event) => void saveVendor("draft", event.currentTarget.form)}
+              type="button"
+              variant="secondary"
+            >
+              Simpan draft
+            </AppButton>
+            {activeStep < steps.length - 1 ? (
+              <AppButton disabled={isSaving} onClick={continueToNextStep} type="button">
+                Lanjutkan
+              </AppButton>
+            ) : (
+              <AppButton
+                loading={savingAction === "submit"}
+                disabled={!vendorCanEdit}
+                onClick={(event) => void saveVendor("submit", event.currentTarget.form)}
+                type="button"
+              >
+                Kirim untuk verifikasi
+              </AppButton>
+            )}
+          </div>
+        ) : activeStep < steps.length - 1 ? (
           <AppButton onClick={continueToNextStep} type="button">
             Lanjutkan
           </AppButton>
@@ -334,9 +439,11 @@ function CustomerFields({
 
 function VendorFields({
   activeStep,
+  onDataChanged,
   profile,
 }: {
   activeStep: number;
+  onDataChanged: () => void;
   profile: VendorApiProfile | null;
 }) {
   return (
@@ -357,7 +464,7 @@ function VendorFields({
       </ProfileSection>
       <ProfileSection
         active={activeStep === 1}
-        description="Informasi yang akan dilihat customer di marketplace."
+        description="Lengkapi identitas bisnis, lokasi, cakupan layanan, kategori, dan logo brand."
         step={1}
         title="Informasi bisnis"
       >
@@ -391,13 +498,10 @@ function VendorFields({
             name="description"
           />
         </div>
-      </ProfileSection>
-      <ProfileSection
-        active={activeStep === 2}
-        description="Pilih wilayah bisnis dan cakupan layanan vendor."
-        step={2}
-        title="Lokasi dan layanan"
-      >
+        <FormGroupHeader
+          description="Lokasi operasional dan wilayah yang dapat dilayani."
+          title="Lokasi dan layanan"
+        />
         <RegionFields initialCity={profile?.city ?? ""} initialProvince={profile?.province ?? ""} />
         <AppInput
           defaultValue={profile?.latitude ?? ""}
@@ -426,64 +530,39 @@ function VendorFields({
             required
           />
         </div>
+        <FormGroupHeader
+          description="Pilih kategori yang paling sesuai dengan jasa utama vendor."
+          title="Kategori vendor"
+        />
+        <CheckboxGroup
+          initialValues={profile?.categories ?? []}
+          label="Kategori layanan"
+          name="categories"
+          options={categoryLabels}
+        />
+        <FormGroupHeader
+          description="Gunakan logo yang mudah dikenali customer."
+          title="Logo brand"
+        />
+        <VendorLogoUpload onDeleted={onDataChanged} profileId={profile?.id ?? null} />
+      </ProfileSection>
+      <ProfileSection
+        active={activeStep === 2}
+        description="Kelola kanal kontak bisnis dan rekening pencairan dalam satu tempat."
+        step={2}
+        title="Kontak dan rekening"
+      >
+        <VendorContactRows onDeleted={onDataChanged} profile={profile} />
+        <VendorBankAccountCards onDeleted={onDataChanged} profile={profile} />
       </ProfileSection>
       <ProfileSection
         active={activeStep === 3}
-        description="Pilih satu atau lebih kategori yang sesuai dengan layanan bisnis Anda."
-        step={3}
-        title="Kategori vendor"
-      >
-        <CheckboxGroup
-          initialValues={profile?.selectedCategories ?? []}
-          label="Kategori layanan"
-          name="selectedCategories"
-          options={categoryLabels}
-        />
-      </ProfileSection>
-      <ProfileSection
-        active={activeStep === 4}
-        description="Tambahkan identitas visual dan contoh hasil pekerjaan terbaik vendor."
-        step={4}
-        title="Brand dan portofolio"
-      >
-        <ImageUrlField initialUrl={profile?.logoUrl ?? ""} label="URL logo bisnis" name="logoUrl" />
-        <div className="md:col-span-2">
-          <AppTextarea
-            defaultValue={(profile?.portfolioImageUrls ?? []).join("\n")}
-            helper="Masukkan satu URL gambar pada setiap baris."
-            label="Gambar portofolio"
-            name="portfolioImageUrls"
-            placeholder={"https://contoh.com/portfolio-1.jpg\nhttps://contoh.com/portfolio-2.jpg"}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <AppInput
-            accept="image/jpeg,image/png,image/webp"
-            helper="JPG, PNG, atau WebP. Upload memerlukan endpoint storage backend."
-            label="Pilih gambar portofolio"
-            multiple
-            name="portfolioFiles"
-            type="file"
-          />
-        </div>
-      </ProfileSection>
-      <ProfileSection
-        active={activeStep === 5}
-        description="Kelola kanal kontak bisnis dan rekening pencairan dalam satu tempat."
-        step={5}
-        title="Kontak dan rekening"
-      >
-        <VendorContactRows profile={profile} />
-        <VendorBankAccountCards profile={profile} />
-      </ProfileSection>
-      <ProfileSection
-        active={activeStep === 6}
         description="Unggah dokumen legal agar admin dapat memverifikasi bisnis Anda."
-        step={6}
+        step={3}
         title="Dokumen verifikasi"
       >
         <AppSelect
-          defaultValue={profile?.legalDocumentType ?? ""}
+          defaultValue={primaryVerificationDocument(profile)?.documentType ?? ""}
           label="Jenis dokumen"
           name="legalDocumentType"
         >
@@ -495,14 +574,27 @@ function VendorFields({
           <option value="OTHER">Dokumen lainnya</option>
         </AppSelect>
         <AppInput
-          defaultValue={profile?.legalDocumentNumber ?? ""}
+          defaultValue={primaryVerificationDocument(profile)?.documentNumber ?? ""}
           label="Nomor dokumen"
           name="legalDocumentNumber"
         />
+        {primaryVerificationDocument(profile)?.status && (
+          <div className="flex items-start justify-between gap-3 rounded-xl border bg-stone-50 p-3 md:col-span-2">
+            <div>
+              <p className="text-sm font-semibold text-ink">Status dokumen</p>
+              {primaryVerificationDocument(profile)?.rejectReason && (
+                <p className="mt-1 text-sm text-red-700">
+                  Alasan: {primaryVerificationDocument(profile)?.rejectReason}
+                </p>
+              )}
+            </div>
+            <StatusBadge status={statusDetails(primaryVerificationDocument(profile)?.status).key} />
+          </div>
+        )}
         <div className="md:col-span-2">
           <AppInput
             accept=".jpg,.jpeg,.png,.pdf"
-            helper="JPG, PNG, atau PDF maksimal 5 MB. Pengiriman file memerlukan endpoint upload backend."
+            helper="JPG, PNG, atau PDF maksimal 5 MB. File diunggah saat draft disimpan atau profile dikirim."
             label="File dokumen"
             name="legalDocumentFile"
             type="file"
@@ -562,7 +654,7 @@ const CONTACT_OPTIONS: readonly ContactOption[] = [
   {
     field: "whatsappNumber",
     label: "WhatsApp",
-    placeholder: "Contoh: 6281234567890",
+    placeholder: "Contoh: 081234567890",
     type: "tel",
   },
   {
@@ -585,13 +677,20 @@ const CONTACT_OPTIONS: readonly ContactOption[] = [
   },
 ];
 
-function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
-  const initialFields = CONTACT_OPTIONS.filter(({ field }) => Boolean(profile?.[field])).map(
-    ({ field }) => field,
-  );
+function VendorContactRows({
+  onDeleted,
+  profile,
+}: {
+  onDeleted: () => void;
+  profile: VendorApiProfile | null;
+}) {
+  const initialFields = CONTACT_OPTIONS.filter(({ field }) =>
+    Boolean(contactValue(profile, field)),
+  ).map(({ field }) => field);
   const [fields, setFields] = useState<ContactField[]>(
     initialFields.length > 0 ? initialFields : ["whatsappNumber"],
   );
+  const [deleteError, setDeleteError] = useState("");
 
   const availableOptions = CONTACT_OPTIONS.filter(({ field }) => !fields.includes(field));
 
@@ -600,7 +699,17 @@ function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
     if (nextOption) setFields((current) => [...current, nextOption.field]);
   }
 
-  function removeContact(field: ContactField) {
+  async function removeContact(field: ContactField) {
+    const contact = savedContact(profile, field);
+    if (contact && !window.confirm(`Hapus kontak ${contact.contactType}?`)) return;
+    try {
+      if (contact) await deleteVendorContact(contact.id);
+      setDeleteError("");
+      onDeleted();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Kontak gagal dihapus.");
+      return;
+    }
     setFields((current) => current.filter((item) => item !== field));
   }
 
@@ -656,7 +765,7 @@ function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
                   ))}
                 </AppSelect>
                 <AppInput
-                  defaultValue={profile?.[field] ?? ""}
+                  defaultValue={contactValue(profile, field)}
                   key={field}
                   label="Detail kontak"
                   name={field}
@@ -666,7 +775,7 @@ function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
                 <button
                   aria-label={`Hapus kontak ${option.label}`}
                   className="grid size-11 place-items-center rounded-xl border border-red-200 bg-white text-red-600 transition hover:bg-red-50"
-                  onClick={() => removeContact(field)}
+                  onClick={() => void removeContact(field)}
                   title="Hapus kontak"
                   type="button"
                 >
@@ -677,15 +786,34 @@ function VendorContactRows({ profile }: { profile: VendorApiProfile | null }) {
           })}
         </div>
       )}
+      {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
     </div>
   );
 }
 
-function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null }) {
-  const hasSavedAccount = Boolean(
-    profile?.bankName || profile?.bankAccountNumber || profile?.bankAccountHolder,
-  );
+function VendorBankAccountCards({
+  onDeleted,
+  profile,
+}: {
+  onDeleted: () => void;
+  profile: VendorApiProfile | null;
+}) {
+  const savedAccount = primaryBankAccount(profile);
+  const hasSavedAccount = Boolean(savedAccount);
   const [hasAccount, setHasAccount] = useState(hasSavedAccount);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function removeAccount() {
+    if (savedAccount && !window.confirm("Hapus rekening pencairan ini?")) return;
+    try {
+      if (savedAccount) await deleteVendorBankAccount(savedAccount.id);
+      setHasAccount(false);
+      setDeleteError("");
+      onDeleted();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Rekening gagal dihapus.");
+    }
+  }
 
   return (
     <div className="mt-3 grid gap-4 border-t border-rose-100 pt-6 md:col-span-2">
@@ -719,7 +847,7 @@ function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null 
             <button
               aria-label="Hapus rekening"
               className="grid size-10 place-items-center rounded-xl text-red-600 transition hover:bg-red-50"
-              onClick={() => setHasAccount(false)}
+              onClick={() => void removeAccount()}
               title="Hapus rekening"
               type="button"
             >
@@ -728,13 +856,13 @@ function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null 
           </div>
           <div className="grid gap-4 p-4 md:grid-cols-2">
             <AppInput
-              defaultValue={profile?.bankName ?? ""}
+              defaultValue={savedAccount?.bankName ?? ""}
               label="Nama bank"
               name="bankName"
               placeholder="Contoh: BCA"
             />
             <AppInput
-              defaultValue={profile?.bankAccountNumber ?? ""}
+              defaultValue={savedAccount?.accountNumber ?? ""}
               inputMode="numeric"
               label="Nomor rekening"
               name="bankAccountNumber"
@@ -743,7 +871,7 @@ function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null 
             />
             <div className="md:col-span-2">
               <AppInput
-                defaultValue={profile?.bankAccountHolder ?? ""}
+                defaultValue={savedAccount?.accountHolderName ?? ""}
                 label="Nama pemilik rekening"
                 name="bankAccountHolder"
                 placeholder="Sesuai dengan nama pada rekening"
@@ -754,6 +882,7 @@ function VendorBankAccountCards({ profile }: { profile: VendorApiProfile | null 
       ) : (
         <EmptyCollection message="Belum ada rekening pencairan. Tambahkan rekening ketika Anda siap menerima pembayaran." />
       )}
+      {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
 
       <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
         Untuk keamanan, data rekening hanya dapat dilihat oleh pemilik akun dan admin yang
@@ -791,6 +920,339 @@ function EmptyCollection({ message }: { message: string }) {
   );
 }
 
+function contactValue(profile: VendorApiProfile | null, field: ContactField) {
+  return savedContact(profile, field)?.contactValue ?? "";
+}
+
+function savedContact(profile: VendorApiProfile | null, field: ContactField) {
+  const option = CONTACT_OPTIONS.find((item) => item.field === field);
+  if (!option) return undefined;
+
+  const aliases = new Set(
+    [field, option.label].map((value) => value.toLowerCase().replace(/[^a-z0-9]/g, "")),
+  );
+  return profile?.contacts?.find((contact) =>
+    aliases.has(contact.contactType.toLowerCase().replace(/[^a-z0-9]/g, "")),
+  );
+}
+
+function primaryBankAccount(profile: VendorApiProfile | null) {
+  return profile?.bankAccounts?.find((account) => account.isPrimary) ?? profile?.bankAccounts?.[0];
+}
+
+function primaryVerificationDocument(profile: VendorApiProfile | null) {
+  return (
+    profile?.verificationDocuments?.find((document) => document.active) ??
+    profile?.verificationDocuments?.[0]
+  );
+}
+
+function DocumentAttachmentActions({
+  attachmentId,
+  canDelete,
+  documentId,
+  documentType,
+  onDeleted,
+}: {
+  attachmentId: string;
+  canDelete: boolean;
+  documentId: string;
+  documentType: string;
+  onDeleted: () => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function openAttachment(download: boolean) {
+    setIsLoading(true);
+    setError("");
+    try {
+      const blob = await getAttachmentBlob(attachmentId);
+      const url = URL.createObjectURL(blob);
+      if (download) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${documentType}-${attachmentId}`;
+        link.click();
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      setError("Dokumen tidak dapat dimuat.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function removeDocument() {
+    if (!window.confirm(`Hapus dokumen ${documentType} beserta file terkait?`)) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      await deleteVendorVerificationDocument(documentId);
+      onDeleted();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Dokumen gagal dihapus.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-stone-50 p-3 md:col-span-2">
+      <span className="mr-auto text-sm font-medium">Dokumen {documentType} sudah tersimpan.</span>
+      <AppButton
+        disabled={isLoading}
+        onClick={() => void openAttachment(false)}
+        type="button"
+        variant="secondary"
+      >
+        Lihat
+      </AppButton>
+      <AppButton
+        disabled={isLoading}
+        onClick={() => void openAttachment(true)}
+        type="button"
+        variant="outline"
+      >
+        Unduh
+      </AppButton>
+      {canDelete && (
+        <AppButton
+          disabled={isLoading}
+          onClick={() => void removeDocument()}
+          type="button"
+          variant="danger"
+        >
+          Hapus
+        </AppButton>
+      )}
+      {error && <p className="w-full text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+const VENDOR_STATUS = {
+  1: { key: "DRAFT", label: "Draft", description: "Profile masih dapat dilengkapi dan disimpan." },
+  2: {
+    key: "PENDING_VERIFICATION",
+    label: "Pending Verification",
+    description: "Profile sedang menunggu pemeriksaan admin.",
+  },
+  3: { key: "VERIFIED", label: "Verified", description: "Profile telah diverifikasi." },
+  4: {
+    key: "REJECTED",
+    label: "Rejected",
+    description: "Profile perlu diperbaiki sebelum dikirim ulang.",
+  },
+  5: {
+    key: "SUSPENDED",
+    label: "Suspended",
+    description: "Profile untuk sementara ditangguhkan.",
+  },
+  6: { key: "INACTIVE", label: "Inactive", description: "Profile sedang tidak aktif." },
+} as const;
+
+function VendorProfileStatus({ profile }: { profile: VendorApiProfile | null }) {
+  if (!profile?.status) return null;
+  const status = statusDetails(profile.status);
+  if (!status) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border bg-stone-50 p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p className="font-semibold text-ink">Status profile: {status.label}</p>
+        <p className="mt-1 text-sm text-stone-600">{status.description}</p>
+        {profile.rejectReason && (
+          <p className="mt-2 text-sm font-medium text-red-700">Alasan: {profile.rejectReason}</p>
+        )}
+      </div>
+      <StatusBadge status={status.key} />
+    </div>
+  );
+}
+
+function statusDetails(status?: number | null) {
+  return (
+    VENDOR_STATUS[status as keyof typeof VENDOR_STATUS] ?? {
+      key: "INACTIVE",
+      label: "Unknown",
+      description: "Status belum dikenali.",
+    }
+  );
+}
+
+interface VendorValidationError {
+  step: number;
+  message: string;
+}
+
+function validateVendorDraft(form: HTMLFormElement): VendorValidationError | null {
+  const controls = Array.from(
+    form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input, select, textarea",
+    ),
+  );
+  const invalid = controls.find((control) => Boolean(control.value) && !control.checkValidity());
+  if (invalid) {
+    return {
+      step: controlStep(invalid),
+      message: `Periksa kembali field “${fieldLabel(invalid)}” sebelum menyimpan draft.`,
+    };
+  }
+
+  const logoFile = formFile(form, "logoFile");
+  if (logoFile && logoFile.size > 5 * 1024 * 1024) {
+    return { step: 1, message: "Ukuran logo bisnis maksimal 5 MB." };
+  }
+  if (logoFile && !["image/jpeg", "image/png", "image/webp"].includes(logoFile.type)) {
+    return { step: 1, message: "Format logo harus JPG, PNG, atau WebP." };
+  }
+
+  const bankValues = ["bankName", "bankAccountNumber", "bankAccountHolder"].filter((name) =>
+    formValue(form, name),
+  );
+  if (bankValues.length > 0 && bankValues.length < 3) {
+    return { step: 2, message: "Lengkapi nama bank, nomor rekening, dan nama pemilik rekening." };
+  }
+
+  const documentFile = formFile(form, "legalDocumentFile");
+  if (
+    (formValue(form, "legalDocumentNumber") || documentFile) &&
+    !formValue(form, "legalDocumentType")
+  ) {
+    return { step: 3, message: "Pilih jenis dokumen untuk data dokumen yang ingin disimpan." };
+  }
+  return null;
+}
+
+function validateVendorSubmission(
+  form: HTMLFormElement,
+  profile: VendorApiProfile | null,
+): VendorValidationError | null {
+  const draftError = validateVendorDraft(form);
+  if (draftError) return draftError;
+
+  const requirements: Array<{ step: number; label: string; valid: boolean }> = [
+    { step: 0, label: "nama pemilik", valid: Boolean(formValue(form, "ownerName")) },
+    { step: 1, label: "nama bisnis", valid: Boolean(formValue(form, "businessName")) },
+    { step: 1, label: "email bisnis", valid: Boolean(formValue(form, "businessEmail")) },
+    { step: 1, label: "nomor telepon bisnis", valid: Boolean(formValue(form, "businessPhone")) },
+    { step: 1, label: "provinsi", valid: Boolean(formValue(form, "province")) },
+    { step: 1, label: "kota/kabupaten", valid: Boolean(formValue(form, "city")) },
+    { step: 1, label: "alamat bisnis", valid: Boolean(formValue(form, "businessAddress")) },
+    { step: 1, label: "area layanan", valid: Boolean(formValue(form, "serviceArea")) },
+    {
+      step: 1,
+      label: "minimal satu kategori",
+      valid: formValues(form, "categories").length > 0,
+    },
+    {
+      step: 2,
+      label: "minimal satu kontak bisnis",
+      valid: CONTACT_OPTIONS.some(({ field }) => Boolean(formValue(form, field))),
+    },
+    {
+      step: 3,
+      label: "jenis dokumen verifikasi",
+      valid: Boolean(formValue(form, "legalDocumentType")),
+    },
+    {
+      step: 3,
+      label: "file dokumen verifikasi",
+      valid: Boolean(
+        formFile(form, "legalDocumentFile") ||
+        profile?.verificationDocuments?.some((document) => document.attachmentId),
+      ),
+    },
+  ];
+  const missing = requirements.filter((item) => !item.valid);
+  if (!missing.length) return null;
+
+  const firstStep = Math.min(...missing.map((item) => item.step));
+  return {
+    step: firstStep,
+    message: `Profile belum dapat dikirim. Lengkapi: ${missing.map((item) => item.label).join(", ")}.`,
+  };
+}
+
+function vendorFormData(form: HTMLFormElement, profile: VendorApiProfile | null) {
+  const data = new FormData();
+  const plainFields = [
+    "businessName",
+    "ownerName",
+    "businessEmail",
+    "businessPhone",
+    "businessAddress",
+    "city",
+    "province",
+    "latitude",
+    "longitude",
+    "description",
+    "serviceArea",
+    "logoUrl",
+  ] as const;
+  plainFields.forEach((field) => {
+    const value = formValue(form, field);
+    if (value) data.set(field, field === "businessEmail" ? value.toLowerCase() : value);
+  });
+
+  data.set("categories", JSON.stringify(formValues(form, "categories")));
+  return data;
+}
+
+function vendorRelatedData(form: HTMLFormElement, profile: VendorApiProfile | null) {
+  const contacts = CONTACT_OPTIONS.flatMap((option) => {
+    const contactValue = formValue(form, option.field);
+    return contactValue ? [{ contactType: option.label, contactValue }] : [];
+  });
+  const bankName = formValue(form, "bankName");
+  const accountNumber = formValue(form, "bankAccountNumber");
+  const accountHolderName = formValue(form, "bankAccountHolder");
+  const documentType = formValue(form, "legalDocumentType");
+  const documentNumber = formValue(form, "legalDocumentNumber");
+  const documentFile = formFile(form, "legalDocumentFile");
+
+  return {
+    contacts,
+    bankAccount:
+      bankName && accountNumber && accountHolderName
+        ? { bankName, accountNumber, accountHolderName }
+        : undefined,
+    bankAccountId: primaryBankAccount(profile)?.id,
+    verificationDocument:
+      documentType && documentFile
+        ? { documentType, documentNumber, file: documentFile }
+        : undefined,
+  };
+}
+
+function formValue(form: HTMLFormElement, field: string) {
+  return String(new FormData(form).get(field) ?? "").trim();
+}
+
+function formValues(form: HTMLFormElement, field: string) {
+  return new FormData(form)
+    .getAll(field)
+    .map(String)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function formFile(form: HTMLFormElement, field: string) {
+  const value = new FormData(form).get(field);
+  return value instanceof File && value.size > 0 ? value : null;
+}
+
+function controlStep(control: HTMLElement) {
+  return Number(control.closest<HTMLElement>("[data-profile-step]")?.dataset.profileStep ?? 0);
+}
+
+function fieldLabel(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+  return control.labels?.[0]?.textContent?.trim() || control.name;
+}
+
 function CheckboxGroup({
   initialValues,
   label,
@@ -802,6 +1264,18 @@ function CheckboxGroup({
   name: string;
   options: readonly string[];
 }) {
+  const [selectedValues, setSelectedValues] = useState(initialValues);
+
+  useEffect(() => {
+    setSelectedValues(initialValues);
+  }, [initialValues]);
+
+  function toggleValue(option: string, checked: boolean) {
+    setSelectedValues((current) =>
+      checked ? [...new Set([...current, option])] : current.filter((value) => value !== option),
+    );
+  }
+
   return (
     <fieldset className="md:col-span-2">
       <legend className="text-sm font-medium">{label}</legend>
@@ -813,8 +1287,9 @@ function CheckboxGroup({
           >
             <input
               className="size-4 accent-rose-500"
-              defaultChecked={initialValues.includes(option)}
+              checked={selectedValues.includes(option)}
               name={name}
+              onChange={(event) => toggleValue(option, event.target.checked)}
               type="checkbox"
               value={option}
             />
@@ -857,6 +1332,127 @@ function ImageUrlField({
   );
 }
 
+function VendorLogoUpload({
+  onDeleted,
+  profileId,
+}: {
+  onDeleted: () => void;
+  profileId: number | null;
+}) {
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(Boolean(profileId));
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const selectedUrlRef = useRef("");
+  const hasSelectionRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadedUrl = "";
+    hasSelectionRef.current = false;
+
+    async function loadLogo() {
+      if (!profileId) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      setLoadFailed(false);
+      try {
+        const attachment = await getVendorLogo(profileId);
+        if (!attachment || cancelled) return;
+        const blob = await getAttachmentBlob(attachment.id);
+        if (cancelled) return;
+        loadedUrl = URL.createObjectURL(blob);
+        if (!hasSelectionRef.current) setPreviewUrl(loadedUrl);
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    void loadLogo();
+    return () => {
+      cancelled = true;
+      if (loadedUrl) URL.revokeObjectURL(loadedUrl);
+    };
+  }, [profileId]);
+
+  useEffect(
+    () => () => {
+      if (selectedUrlRef.current) URL.revokeObjectURL(selectedUrlRef.current);
+    },
+    [],
+  );
+
+  function selectLogo(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (selectedUrlRef.current) URL.revokeObjectURL(selectedUrlRef.current);
+    selectedUrlRef.current = URL.createObjectURL(file);
+    hasSelectionRef.current = true;
+    setPreviewUrl(selectedUrlRef.current);
+    setLoadFailed(false);
+  }
+
+  async function removeLogo() {
+    if (!profileId || !window.confirm("Hapus logo bisnis ini?")) return;
+    setIsLoading(true);
+    setDeleteError("");
+    try {
+      await deleteVendorLogo(profileId);
+      setPreviewUrl("");
+      onDeleted();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Logo gagal dihapus.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-4 md:col-span-2 md:grid-cols-[180px_1fr] md:items-center">
+      <div className="grid aspect-square place-items-center overflow-hidden rounded-3xl border-2 border-dashed bg-stone-50">
+        {isLoading ? (
+          <div className="size-full animate-pulse bg-stone-100" />
+        ) : previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="Logo bisnis" className="size-full object-cover" src={previewUrl} />
+        ) : (
+          <span className="px-4 text-center text-xs text-stone-400">
+            {loadFailed ? "Logo gagal dimuat" : "Belum ada logo"}
+          </span>
+        )}
+      </div>
+      <div className="grid gap-2">
+        <AppInput
+          accept="image/jpeg,image/png,image/webp"
+          helper="JPG, PNG, atau WebP maksimal 5 MB. Disarankan gambar persegi."
+          label={previewUrl ? "Ganti logo bisnis" : "Upload logo bisnis"}
+          name="logoFile"
+          onChange={selectLogo}
+          type="file"
+        />
+        <p className="text-xs leading-5 text-stone-500">
+          Logo akan diunggah saat draft disimpan atau profile dikirim untuk verifikasi.
+        </p>
+        {previewUrl && (
+          <AppButton
+            className="w-fit"
+            onClick={() => void removeLogo()}
+            type="button"
+            variant="danger"
+          >
+            Hapus logo
+          </AppButton>
+        )}
+        {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
+      </div>
+    </div>
+  );
+}
+
 function customerPayload(form: FormData): CustomerProfilePayload {
   return {
     fullName: requiredValue(form, "fullName"),
@@ -885,34 +1481,6 @@ function customerPayload(form: FormData): CustomerProfilePayload {
   };
 }
 
-function vendorPayload(form: FormData): VendorProfilePayload {
-  return compact({
-    ownerName: optionalValue(form, "ownerName"),
-    businessName: optionalValue(form, "businessName"),
-    businessEmail: optionalValue(form, "businessEmail")?.toLowerCase(),
-    businessPhone: optionalValue(form, "businessPhone"),
-    businessAddress: optionalValue(form, "businessAddress"),
-    city: optionalValue(form, "city"),
-    province: optionalValue(form, "province"),
-    latitude: optionalNumber(form, "latitude"),
-    longitude: optionalNumber(form, "longitude"),
-    description: optionalValue(form, "description"),
-    serviceArea: optionalValue(form, "serviceArea"),
-    logoUrl: optionalValue(form, "logoUrl"),
-    selectedCategories: values(form, "selectedCategories"),
-    portfolioImageUrls: lineValues(form, "portfolioImageUrls"),
-    instagramUrl: optionalValue(form, "instagramUrl"),
-    tiktokUrl: optionalValue(form, "tiktokUrl"),
-    websiteUrl: optionalValue(form, "websiteUrl"),
-    whatsappNumber: optionalValue(form, "whatsappNumber"),
-    bankName: optionalValue(form, "bankName"),
-    bankAccountNumber: optionalValue(form, "bankAccountNumber"),
-    bankAccountHolder: optionalValue(form, "bankAccountHolder"),
-    legalDocumentType: optionalValue(form, "legalDocumentType"),
-    legalDocumentNumber: optionalValue(form, "legalDocumentNumber"),
-  });
-}
-
 function requiredValue(form: FormData, field: string) {
   return String(form.get(field) ?? "").trim();
 }
@@ -930,13 +1498,6 @@ function values(form: FormData, field: string) {
   return form
     .getAll(field)
     .map(String)
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function lineValues(form: FormData, field: string) {
-  return requiredValue(form, field)
-    .split("\n")
     .map((value) => value.trim())
     .filter(Boolean);
 }

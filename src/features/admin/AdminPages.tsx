@@ -21,6 +21,7 @@ import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
 import { AdminProfileForm } from "@/components/forms/AdminProfileForm";
+import { ParameterManager } from "@/components/forms/ParameterManager";
 
 export function AdminPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
@@ -36,6 +37,15 @@ export function AdminPage({ slug }: { slug: string[] }) {
   if (page === "vendor-verification") return <VendorVerification />;
   if (page === "payment-verification" && slug[1]) return <PaymentDetail />;
   if (page === "payment-verification") return <PaymentVerification />;
+  if (page === "parameters")
+    return (
+      <Page
+        title="Master Setup"
+        description="Kelola parameter dan konfigurasi sistem yang hanya dapat diakses administrator."
+      >
+        <ParameterManager />
+      </Page>
+    );
   if (page === "users")
     return (
       <Page title="Manajemen Pengguna" description="Kelola status dan akses pengguna.">

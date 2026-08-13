@@ -18,10 +18,35 @@ export const API_ROUTES = {
   profile: {
     customer: "/customer-profile",
     customerById: (id: number) => `/customer-profile/${id}`,
+    customerByUserId: (userId: number) => `/customer-profile/user/${userId}`,
     vendor: "/vendor-profile",
     vendorById: (id: number) => `/vendor-profile/${id}`,
+    vendorByUserId: (userId: number) => `/vendor-profile/user/${userId}`,
+    vendorSaveDraft: "/vendor-profile/save-draft",
+    vendorSubmit: "/vendor-profile/submit",
   },
   users: {
     byId: (id: number) => `/users/${id}`,
+  },
+  attachments: {
+    root: "/attachments",
+    file: (id: string) => `/attachments/${id}/file`,
+    byId: (id: string) => `/attachments/${id}`,
+  },
+  parameters: {
+    root: "/parameter",
+    byId: (id: string) => `/parameter/${id}`,
+  },
+  contacts: {
+    forUser: (userId: number) => `/contacts/user/${userId}`,
+    byId: (id: string) => `/contacts/${id}`,
+  },
+  bankAccounts: {
+    forUser: (userId: number) => `/bank-accounts/user/${userId}`,
+    byId: (id: string) => `/bank-accounts/${id}`,
+  },
+  verificationDocuments: {
+    forUser: (userId: number) => `/verification-documents/user/${userId}`,
+    byId: (id: string) => `/verification-documents/${id}`,
   },
 } as const;

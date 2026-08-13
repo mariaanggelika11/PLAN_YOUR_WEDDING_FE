@@ -3,16 +3,15 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend-api";
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Accept", "application/json");
-  if (init?.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   } catch {
-    throw new ApiError(
-      "Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.",
-      0,
-    );
+    throw new ApiError("Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.", 0);
   }
 
   const payload = await readResponseBody(response);

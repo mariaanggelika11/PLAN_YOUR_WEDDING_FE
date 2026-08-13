@@ -2,18 +2,13 @@ import { API_ROUTES } from "@/constants/apiRoutes";
 import { getSession } from "@/services/authService";
 import { ApiError, apiRequest } from "@/services/api";
 import type { ApiResponse } from "@/types/api";
-import type {
-  CustomerApiProfile,
-  CustomerProfilePayload,
-  VendorApiProfile,
-  VendorProfilePayload,
-} from "@/types/profile";
+import type { CustomerApiProfile, CustomerProfilePayload, VendorApiProfile } from "@/types/profile";
 
-interface ProfilePage<T> {
-  data: T[];
-  total: number;
-  pageNumber: number;
-  pageSize: number;
+export interface VendorRelatedData {
+  contacts: Array<{ contactType: string; contactValue: string }>;
+  bankAccount?: { bankName: string; accountNumber: string; accountHolderName: string };
+  bankAccountId?: string;
+  verificationDocument?: { documentType: string; documentNumber?: string; file: File };
 }
 
 export class ProfileError extends Error {
@@ -24,11 +19,11 @@ export class ProfileError extends Error {
 }
 
 export function getCustomerProfile() {
-  return getOwnProfile<CustomerApiProfile>(API_ROUTES.profile.customer);
+  return getOwnProfile<CustomerApiProfile>(API_ROUTES.profile.customerByUserId);
 }
 
 export function getVendorProfile() {
-  return getOwnProfile<VendorApiProfile>(API_ROUTES.profile.vendor);
+  return getOwnProfile<VendorApiProfile>(API_ROUTES.profile.vendorByUserId);
 }
 
 export function saveCustomerProfile(profileId: number | null, data: CustomerProfilePayload) {
@@ -39,24 +34,90 @@ export function saveCustomerProfile(profileId: number | null, data: CustomerProf
   );
 }
 
-export function saveVendorProfile(profileId: number | null, data: VendorProfilePayload) {
-  return saveProfile<VendorApiProfile>(
-    profileId ? API_ROUTES.profile.vendorById(profileId) : API_ROUTES.profile.vendor,
-    profileId,
-    data,
-  );
+export function saveVendorProfileDraft(data: FormData) {
+  return saveVendorProfileForm(API_ROUTES.profile.vendorSaveDraft, data);
 }
 
-async function getOwnProfile<T extends { user: { id: number } }>(endpoint: string) {
+export function submitVendorProfile(data: FormData) {
+  return saveVendorProfileForm(API_ROUTES.profile.vendorSubmit, data);
+}
+
+export async function saveVendorRelatedData(data: VendorRelatedData) {
+  const { accessToken, userId } = sessionContext();
+  const headers = authorizationHeader(accessToken);
+
+  for (const contact of data.contacts) {
+    await apiRequest(API_ROUTES.contacts.forUser(userId), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(contact),
+    });
+  }
+
+  if (data.bankAccount) {
+    await apiRequest(
+      data.bankAccountId
+        ? API_ROUTES.bankAccounts.byId(data.bankAccountId)
+        : API_ROUTES.bankAccounts.forUser(userId),
+      {
+        method: data.bankAccountId ? "PUT" : "POST",
+        headers,
+        body: JSON.stringify(data.bankAccount),
+      },
+    );
+  }
+
+  if (data.verificationDocument) {
+    const document = new FormData();
+    document.set("documentType", data.verificationDocument.documentType);
+    if (data.verificationDocument.documentNumber) {
+      document.set("documentNumber", data.verificationDocument.documentNumber);
+    }
+    document.set("file", data.verificationDocument.file);
+    await apiRequest(API_ROUTES.verificationDocuments.forUser(userId), {
+      method: "POST",
+      headers,
+      body: document,
+    });
+  }
+
+  return getVendorProfile();
+}
+
+export async function deleteVendorContact(id: string) {
+  return deleteVendorResource(API_ROUTES.contacts.byId(id));
+}
+
+export async function deleteVendorBankAccount(id: string) {
+  return deleteVendorResource(API_ROUTES.bankAccounts.byId(id));
+}
+
+export async function deleteVendorVerificationDocument(id: string) {
+  return deleteVendorResource(API_ROUTES.verificationDocuments.byId(id));
+}
+
+async function deleteVendorResource(endpoint: string) {
+  const { accessToken } = sessionContext();
+  try {
+    await apiRequest(endpoint, {
+      method: "DELETE",
+      headers: authorizationHeader(accessToken),
+    });
+  } catch (error) {
+    throw profileError(error, "Data gagal dihapus.");
+  }
+}
+
+async function getOwnProfile<T>(endpointForUser: (userId: number) => string) {
   const { accessToken, userId } = sessionContext();
 
   try {
-    const response = await apiRequest<ApiResponse<ProfilePage<T>>>(
-      `${endpoint}?pageNumber=1&pageSize=1000`,
-      { headers: authorizationHeader(accessToken) },
-    );
-    return response.data.data.find((profile) => profile.user.id === userId) ?? null;
+    const response = await apiRequest<ApiResponse<T>>(endpointForUser(userId), {
+      headers: authorizationHeader(accessToken),
+    });
+    return response.data;
   } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
     throw profileError(error, "Profile gagal dimuat.");
   }
 }
@@ -64,7 +125,7 @@ async function getOwnProfile<T extends { user: { id: number } }>(endpoint: strin
 async function saveProfile<T>(
   endpoint: string,
   profileId: number | null,
-  data: CustomerProfilePayload | VendorProfilePayload,
+  data: CustomerProfilePayload,
 ) {
   const { accessToken, userId } = sessionContext();
 
@@ -77,6 +138,22 @@ async function saveProfile<T>(
     return response.data;
   } catch (error) {
     throw profileError(error, "Profile gagal disimpan.");
+  }
+}
+
+async function saveVendorProfileForm(endpoint: string, data: FormData) {
+  const { accessToken, userId } = sessionContext();
+  data.set("userId", String(userId));
+
+  try {
+    const response = await apiRequest<ApiResponse<VendorApiProfile>>(endpoint, {
+      method: "POST",
+      headers: authorizationHeader(accessToken),
+      body: data,
+    });
+    return response.data;
+  } catch (error) {
+    throw profileError(error, "Profile vendor gagal disimpan.");
   }
 }
 
