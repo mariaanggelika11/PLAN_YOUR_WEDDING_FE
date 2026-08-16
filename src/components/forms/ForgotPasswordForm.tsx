@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ToastMessage } from "@/components/common/Toast";
 import { OtpVerificationForm } from "@/components/forms/OtpVerificationForm";
 import { PasswordInput } from "@/components/forms/PasswordInput";
 import { SuccessState } from "@/components/states/States";
@@ -132,11 +133,7 @@ export function ForgotPasswordForm() {
 }
 
 function ErrorMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
-      {children}
-    </p>
-  );
+  return <ToastMessage message={String(children)} variant="error" />;
 }
 
 function errorMessage(error: unknown, fallback: string) {

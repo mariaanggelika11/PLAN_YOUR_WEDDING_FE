@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { ShieldCheck } from "lucide-react";
-import { ErrorState, LoadingSkeleton, SuccessState } from "@/components/states/States";
+import { ErrorState, LoadingSkeleton } from "@/components/states/States";
+import { ToastMessage } from "@/components/common/Toast";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
 import {
@@ -88,12 +89,11 @@ export function AdminProfileForm() {
         />
         <AppInput disabled label="Status akun" value={profile.active ? "Aktif" : "Nonaktif"} />
       </div>
-      {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </p>
+      {error ? (
+        <ToastMessage message={error} variant="error" />
+      ) : (
+        message && <ToastMessage message={message} />
       )}
-      {message && <SuccessState message={message} />}
       <div className="flex justify-end">
         <AppButton loading={isSaving} type="submit">
           Simpan perubahan

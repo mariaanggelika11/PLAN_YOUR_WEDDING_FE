@@ -23,6 +23,8 @@ interface AttachmentPage {
 
 const VENDOR_PROFILE_REFERENCE = "vendor_profiles";
 const VENDOR_LOGO_CATEGORY = "logo";
+const CUSTOMER_PROFILE_REFERENCE = "customer_profiles";
+const CUSTOMER_AVATAR_CATEGORY = "avatar";
 
 export async function getAttachmentBlob(attachmentId: string): Promise<Blob> {
   const session = getSession();
@@ -87,6 +89,15 @@ export async function deleteVendorLogo(vendorProfileId: number) {
     VENDOR_LOGO_CATEGORY,
   );
   await Promise.all(logos.map((logo) => deleteAttachment(logo.id)));
+}
+
+export async function deleteCustomerAvatar(customerProfileId: number) {
+  const avatars = await getAttachments(
+    CUSTOMER_PROFILE_REFERENCE,
+    customerProfileId,
+    CUSTOMER_AVATAR_CATEGORY,
+  );
+  await Promise.all(avatars.map((avatar) => deleteAttachment(avatar.id)));
 }
 
 async function getAttachments(referenceTable: string, referenceId: number, category: string) {

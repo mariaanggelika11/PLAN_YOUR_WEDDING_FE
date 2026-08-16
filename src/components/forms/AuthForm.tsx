@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ToastMessage } from "@/components/common/Toast";
 import { useRouter } from "next/navigation";
 import { PasswordInput } from "@/components/forms/PasswordInput";
 import { OtpVerificationForm } from "@/components/forms/OtpVerificationForm";
@@ -111,19 +112,8 @@ export function AuthForm() {
           Lupa password?
         </Link>
       </div>
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-700">
-          {success}
-        </p>
-      )}
+      {error && <ToastMessage message={error} variant="error" />}
+      {success && <ToastMessage message={success} />}
       <AppButton loading={isLoading} type="submit">
         Masuk
       </AppButton>

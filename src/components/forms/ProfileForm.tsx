@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { Landmark, Plus, Trash2 } from "lucide-react";
+import { Eye, FileCheck2, Landmark, Plus, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { Stepper } from "@/components/common/Interactive";
+import { ToastMessage } from "@/components/common/Toast";
+import { usePopup } from "@/components/common/Popup";
 import { RegionFields } from "@/components/forms/RegionFields";
-import { ErrorState, LoadingSkeleton, SuccessState } from "@/components/states/States";
+import { ErrorState, LoadingSkeleton } from "@/components/states/States";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput, AppSelect, AppTextarea } from "@/components/ui/FormFields";
-import { categoryLabels } from "@/constants/menu";
 import {
   deleteVendorLogo,
+  deleteCustomerAvatar,
   getAttachmentBlob,
   getVendorLogo,
   replaceVendorLogo,
@@ -18,20 +20,28 @@ import {
 import {
   deleteVendorBankAccount,
   deleteVendorContact,
-  deleteVendorVerificationDocument,
   getCustomerProfile,
   getVendorProfile,
   ProfileError,
-  saveCustomerProfile,
+  saveCustomerProfileDraft,
   saveVendorRelatedData,
   saveVendorProfileDraft,
   submitVendorProfile,
+  updateVendorProfile,
 } from "@/services/profileService";
-import type { CustomerApiProfile, CustomerProfilePayload, VendorApiProfile } from "@/types/profile";
+import { getActiveParameterDetailsByCodes } from "@/services/parameterService";
+import type { ParameterDetail } from "@/types/parameter";
+import type {
+  CustomerApiProfile,
+  VendorApiProfile,
+  VendorVerificationDocument,
+} from "@/types/profile";
 import { cn } from "@/utils/cn";
 
 type ProfileType = "customer" | "vendor";
 type ProfileData = CustomerApiProfile | VendorApiProfile;
+const CUSTOMER_EVENT_TYPE_PARAMETER_CODE = "JENIS ACARA";
+const VENDOR_CATEGORY_PARAMETER_CODE = "KATEGORI VENDOR";
 
 export function ProfileForm({ type }: { type: ProfileType }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -41,10 +51,15 @@ export function ProfileForm({ type }: { type: ProfileType }) {
   const [loadError, setLoadError] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [eventTypeOptions, setEventTypeOptions] = useState<ParameterDetail[]>([]);
+  const [vendorCategoryOptions, setVendorCategoryOptions] = useState<ParameterDetail[]>([]);
+  const [masterParameterError, setMasterParameterError] = useState("");
   const [activeStep, setActiveStep] = useState(0);
   const vendorProfile = type === "vendor" ? (profile as VendorApiProfile | null) : null;
+  const vendorIsVerified = Boolean(vendorProfile?.isVerified);
   const vendorCanEdit =
     type !== "vendor" || !vendorProfile?.status || [1, 4].includes(vendorProfile.status);
+  const vendorCanEditOperations = vendorCanEdit || vendorIsVerified;
   const steps =
     type === "customer"
       ? ["Data Pribadi", "Alamat", "Foto Profile", "Detail Pernikahan"]
@@ -55,11 +70,38 @@ export function ProfileForm({ type }: { type: ProfileType }) {
     setLoadError(false);
     try {
       setProfile(type === "customer" ? await getCustomerProfile() : await getVendorProfile());
+      try {
+        const parameterCodes =
+          type === "customer"
+            ? [CUSTOMER_EVENT_TYPE_PARAMETER_CODE, VENDOR_CATEGORY_PARAMETER_CODE]
+            : [VENDOR_CATEGORY_PARAMETER_CODE];
+        const parameters = await getActiveParameterDetailsByCodes(parameterCodes);
+        setEventTypeOptions(
+          parameters.get(normalizeParameterValue(CUSTOMER_EVENT_TYPE_PARAMETER_CODE)) ?? [],
+        );
+        setVendorCategoryOptions(
+          parameters.get(normalizeParameterValue(VENDOR_CATEGORY_PARAMETER_CODE)) ?? [],
+        );
+        setMasterParameterError("");
+      } catch (parameterError) {
+        setEventTypeOptions([]);
+        setVendorCategoryOptions([]);
+        setMasterParameterError(
+          parameterError instanceof Error
+            ? parameterError.message
+            : "Master parameter profile gagal dimuat.",
+        );
+      }
     } catch {
       setLoadError(true);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function reloadChangedProfile() {
+    await loadProfile();
+    window.dispatchEvent(new Event("pyw-profile-change"));
   }
 
   useEffect(() => {
@@ -70,15 +112,27 @@ export function ProfileForm({ type }: { type: ProfileType }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (type === "vendor") return;
-    const form = new FormData(event.currentTarget);
+  }
+
+  async function saveCustomer(form: HTMLFormElement | null) {
+    if (!form) return;
+    const validation = validateCustomer(form);
+    if (validation) {
+      setActiveStep(validation.step);
+      setMessage("");
+      setError(validation.message);
+      return;
+    }
     setError("");
     setMessage("");
     setIsSaving(true);
+    setSavingAction("draft");
 
     try {
-      const saved = await saveCustomerProfile(profile?.id ?? null, customerPayload(form));
+      const data = customerFormData(form);
+      const saved = await saveCustomerProfileDraft(data);
       setProfile(saved);
+      window.dispatchEvent(new Event("pyw-profile-change"));
       setMessage("Profile berhasil disimpan.");
     } catch (submitError) {
       setError(
@@ -88,6 +142,7 @@ export function ProfileForm({ type }: { type: ProfileType }) {
       );
     } finally {
       setIsSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -124,6 +179,10 @@ export function ProfileForm({ type }: { type: ProfileType }) {
       const related = vendorRelatedData(form, vendorProfile);
       const savedWithRelations = await saveVendorRelatedData(related);
       setProfile(savedWithRelations ?? saved);
+      if (related.verificationDocument) {
+        const documentInput = form.elements.namedItem("legalDocumentFile");
+        if (documentInput instanceof HTMLInputElement) documentInput.value = "";
+      }
       const logoFile = formFile(form, "logoFile");
       if (logoFile) {
         try {
@@ -139,12 +198,38 @@ export function ProfileForm({ type }: { type: ProfileType }) {
           ? "Draft profile berhasil disimpan."
           : "Profile berhasil dikirim untuk verifikasi.",
       );
+      window.dispatchEvent(new Event("pyw-profile-change"));
     } catch (submitError) {
       setError(
         submitError instanceof ProfileError
           ? submitError.message
           : "Profile vendor gagal disimpan. Silakan coba kembali.",
       );
+    } finally {
+      setIsSaving(false);
+      setSavingAction(null);
+    }
+  }
+
+  async function saveVerifiedVendor(form: HTMLFormElement | null) {
+    if (!form || !vendorProfile) return;
+    setError("");
+    setMessage("");
+    setIsSaving(true);
+    setSavingAction("draft");
+    try {
+      if (activeStep === 1) {
+        await updateVendorProfile(vendorProfile.id, vendorBusinessPayload(form));
+        const logoFile = formFile(form, "logoFile");
+        if (logoFile) await replaceVendorLogo(vendorProfile.id, logoFile);
+      } else if (activeStep === 2) {
+        await saveVendorRelatedData(vendorRelatedData(form, vendorProfile));
+      }
+      setProfile((await getVendorProfile()) ?? vendorProfile);
+      window.dispatchEvent(new Event("pyw-profile-change"));
+      setMessage("Perubahan berhasil disimpan tanpa mengubah status verifikasi.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Perubahan gagal disimpan.");
     } finally {
       setIsSaving(false);
       setSavingAction(null);
@@ -174,37 +259,31 @@ export function ProfileForm({ type }: { type: ProfileType }) {
       <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />
 
       {type === "customer" ? (
-        <CustomerFields activeStep={activeStep} profile={profile as CustomerApiProfile | null} />
+        <CustomerFields
+          activeStep={activeStep}
+          masterParameterError={masterParameterError}
+          eventTypeOptions={eventTypeOptions}
+          onDataChanged={() => void reloadChangedProfile()}
+          profile={profile as CustomerApiProfile | null}
+          vendorCategoryOptions={vendorCategoryOptions}
+        />
       ) : (
-        <fieldset className="contents" disabled={!vendorCanEdit}>
-          <VendorFields
-            activeStep={activeStep}
-            onDataChanged={() => void loadProfile()}
-            profile={profile as VendorApiProfile | null}
-          />
-        </fieldset>
+        <VendorFields
+          activeStep={activeStep}
+          canEditBusiness={vendorCanEditOperations}
+          canEditCore={vendorCanEdit}
+          canEditOperations={vendorCanEditOperations}
+          onDataChanged={() => void reloadChangedProfile()}
+          profile={profile as VendorApiProfile | null}
+          masterParameterError={masterParameterError}
+          vendorCategoryOptions={vendorCategoryOptions}
+        />
       )}
-      {type === "vendor" &&
-        activeStep === 3 &&
-        primaryVerificationDocument(vendorProfile)?.attachmentId && (
-          <DocumentAttachmentActions
-            attachmentId={primaryVerificationDocument(vendorProfile)!.attachmentId!}
-            canDelete={vendorCanEdit}
-            documentId={primaryVerificationDocument(vendorProfile)!.id}
-            documentType={primaryVerificationDocument(vendorProfile)?.documentType ?? "dokumen"}
-            onDeleted={() => void loadProfile()}
-          />
-        )}
-
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
+      {error ? (
+        <ToastMessage message={error} variant="error" />
+      ) : (
+        message && <ToastMessage message={message} />
       )}
-      {message && <SuccessState message={message} />}
 
       <div className="flex flex-wrap justify-between gap-3">
         <AppButton
@@ -217,20 +296,31 @@ export function ProfileForm({ type }: { type: ProfileType }) {
         </AppButton>
         {type === "vendor" ? (
           <div className="ml-auto flex flex-wrap gap-2">
-            <AppButton
-              loading={savingAction === "draft"}
-              disabled={!vendorCanEdit}
-              onClick={(event) => void saveVendor("draft", event.currentTarget.form)}
-              type="button"
-              variant="secondary"
-            >
-              Simpan draft
-            </AppButton>
+            {vendorIsVerified && [1, 2].includes(activeStep) ? (
+              <AppButton
+                loading={savingAction === "draft"}
+                onClick={(event) => void saveVerifiedVendor(event.currentTarget.form)}
+                type="button"
+                variant="secondary"
+              >
+                Simpan perubahan
+              </AppButton>
+            ) : !vendorIsVerified ? (
+              <AppButton
+                loading={savingAction === "draft"}
+                disabled={!vendorCanEdit}
+                onClick={(event) => void saveVendor("draft", event.currentTarget.form)}
+                type="button"
+                variant="secondary"
+              >
+                Simpan draft
+              </AppButton>
+            ) : null}
             {activeStep < steps.length - 1 ? (
               <AppButton disabled={isSaving} onClick={continueToNextStep} type="button">
                 Lanjutkan
               </AppButton>
-            ) : (
+            ) : !vendorIsVerified ? (
               <AppButton
                 loading={savingAction === "submit"}
                 disabled={!vendorCanEdit}
@@ -239,16 +329,24 @@ export function ProfileForm({ type }: { type: ProfileType }) {
               >
                 Kirim untuk verifikasi
               </AppButton>
+            ) : null}
+          </div>
+        ) : (
+          <div className="ml-auto flex flex-wrap gap-2">
+            {activeStep < steps.length - 1 ? (
+              <AppButton disabled={isSaving} onClick={continueToNextStep} type="button">
+                Lanjutkan
+              </AppButton>
+            ) : (
+              <AppButton
+                loading={savingAction === "draft"}
+                onClick={(event) => void saveCustomer(event.currentTarget.form)}
+                type="button"
+              >
+                Simpan perubahan
+              </AppButton>
             )}
           </div>
-        ) : activeStep < steps.length - 1 ? (
-          <AppButton onClick={continueToNextStep} type="button">
-            Lanjutkan
-          </AppButton>
-        ) : (
-          <AppButton loading={isSaving} type="submit">
-            Simpan perubahan
-          </AppButton>
         )}
       </div>
     </form>
@@ -257,10 +355,18 @@ export function ProfileForm({ type }: { type: ProfileType }) {
 
 function CustomerFields({
   activeStep,
+  eventTypeOptions,
+  masterParameterError,
+  onDataChanged,
   profile,
+  vendorCategoryOptions,
 }: {
   activeStep: number;
+  eventTypeOptions: ParameterDetail[];
+  masterParameterError: string;
+  onDataChanged: () => void;
   profile: CustomerApiProfile | null;
+  vendorCategoryOptions: ParameterDetail[];
 }) {
   return (
     <>
@@ -306,14 +412,14 @@ function CustomerFields({
       </ProfileSection>
       <ProfileSection
         active={activeStep === 2}
-        description="Upload file memerlukan endpoint storage backend. Untuk sementara gunakan URL gambar."
+        description="Unggah foto profile yang akan ditampilkan pada akun customer Anda."
         step={2}
         title="Foto profile"
       >
-        <ImageUrlField
-          initialUrl={profile?.avatarUrl ?? ""}
-          label="URL foto profile"
-          name="avatarUrl"
+        <CustomerAvatarUpload
+          attachmentId={profile?.avatarAttachmentId ?? null}
+          onDeleted={onDataChanged}
+          profileId={profile?.id ?? null}
         />
       </ProfileSection>
       <ProfileSection
@@ -332,12 +438,25 @@ function CustomerFields({
           name="weddingDate"
           type="date"
         />
-        <AppSelect defaultValue={profile?.eventType ?? ""} label="Jenis acara" name="eventType">
+        <AppSelect
+          defaultValue={resolveParameterDetailCode(profile?.eventType, eventTypeOptions)}
+          disabled={eventTypeOptions.length === 0}
+          helper={
+            masterParameterError ||
+            (eventTypeOptions.length === 0
+              ? `Belum ada detail aktif pada parameter ${CUSTOMER_EVENT_TYPE_PARAMETER_CODE}.`
+              : undefined)
+          }
+          key={`event-type-${eventTypeOptions.map((item) => item.code).join("-")}`}
+          label="Jenis acara"
+          name="eventType"
+        >
           <option value="">Pilih jenis acara</option>
-          <option value="AKAD">Akad</option>
-          <option value="RESEPSI">Resepsi</option>
-          <option value="AKAD_DAN_RESEPSI">Akad + Resepsi</option>
-          <option value="LAINNYA">Lainnya</option>
+          {eventTypeOptions.map((option) => (
+            <option key={option.id ?? option.code} value={option.code}>
+              {option.description?.trim() || option.code}
+            </option>
+          ))}
         </AppSelect>
         <RegionFields
           cityLabel="Kota/Kabupaten acara"
@@ -368,12 +487,11 @@ function CustomerFields({
           description="Bantu sistem memahami skala acara dan vendor yang sedang dicari."
           title="Data Kebutuhan Acara"
         />
-        <AppInput
+        <FormattedNumberInput
           defaultValue={profile?.estimatedGuests ?? ""}
           label="Estimasi jumlah tamu"
           min={1}
           name="estimatedGuests"
-          type="number"
         />
         <AppInput
           defaultValue={profile?.preferredVendorLocation ?? ""}
@@ -392,45 +510,50 @@ function CustomerFields({
           <option value="CUSTOM">Paket custom</option>
         </AppSelect>
         <CheckboxGroup
-          initialValues={profile?.neededVendorCategories ?? []}
+          emptyMessage={parameterEmptyMessage(masterParameterError, VENDOR_CATEGORY_PARAMETER_CODE)}
+          initialValues={resolveParameterDetailCodes(
+            profile?.neededVendorCategories,
+            vendorCategoryOptions,
+          )}
           label="Kebutuhan vendor"
           name="neededVendorCategories"
-          options={categoryLabels}
+          options={parameterCheckboxOptions(vendorCategoryOptions)}
         />
 
         <FormGroupHeader
           description="Tentukan rencana biaya agar pengeluaran dapat dipantau sejak awal."
           title="Data Budget"
         />
-        <AppInput
+        <FormattedNumberInput
           defaultValue={profile?.estimatedBudget ?? ""}
           label="Estimasi total budget"
           min={0}
           name="estimatedBudget"
-          placeholder="Contoh: 250000000"
-          type="number"
+          placeholder="Contoh: 250.000.000"
         />
         <div className="grid gap-4 md:grid-cols-2">
-          <AppInput
+          <FormattedNumberInput
             defaultValue={profile?.budgetRangeMin ?? ""}
             label="Budget minimum"
             min={0}
             name="budgetRangeMin"
-            type="number"
           />
-          <AppInput
+          <FormattedNumberInput
             defaultValue={profile?.budgetRangeMax ?? ""}
             label="Budget maksimum"
             min={0}
             name="budgetRangeMax"
-            type="number"
           />
         </div>
         <CheckboxGroup
-          initialValues={profile?.budgetPriorities ?? []}
+          emptyMessage={parameterEmptyMessage(masterParameterError, VENDOR_CATEGORY_PARAMETER_CODE)}
+          initialValues={resolveParameterDetailCodes(
+            profile?.budgetPriorities,
+            vendorCategoryOptions,
+          )}
           label="Prioritas budget"
           name="budgetPriorities"
-          options={categoryLabels}
+          options={parameterCheckboxOptions(vendorCategoryOptions)}
         />
       </ProfileSection>
     </>
@@ -439,12 +562,22 @@ function CustomerFields({
 
 function VendorFields({
   activeStep,
+  canEditBusiness,
+  canEditCore,
+  canEditOperations,
   onDataChanged,
   profile,
+  masterParameterError,
+  vendorCategoryOptions,
 }: {
   activeStep: number;
+  canEditBusiness: boolean;
+  canEditCore: boolean;
+  canEditOperations: boolean;
   onDataChanged: () => void;
   profile: VendorApiProfile | null;
+  masterParameterError: string;
+  vendorCategoryOptions: ParameterDetail[];
 }) {
   return (
     <>
@@ -454,13 +587,15 @@ function VendorFields({
         step={0}
         title="Pemilik"
       >
-        <AppInput
-          defaultValue={profile?.ownerName ?? ""}
-          label="Nama pemilik"
-          maxLength={100}
-          name="ownerName"
-          required
-        />
+        <fieldset className="contents" disabled={!canEditCore}>
+          <AppInput
+            defaultValue={profile?.ownerName ?? ""}
+            label="Nama pemilik"
+            maxLength={100}
+            name="ownerName"
+            required
+          />
+        </fieldset>
       </ProfileSection>
       <ProfileSection
         active={activeStep === 1}
@@ -468,83 +603,96 @@ function VendorFields({
         step={1}
         title="Informasi bisnis"
       >
-        <AppInput
-          defaultValue={profile?.businessName ?? ""}
-          label="Nama bisnis"
-          maxLength={100}
-          name="businessName"
-          required
-        />
-        <AppInput
-          defaultValue={profile?.businessEmail ?? ""}
-          label="Email bisnis"
-          maxLength={100}
-          name="businessEmail"
-          type="email"
-          required
-        />
-        <AppInput
-          defaultValue={profile?.businessPhone ?? ""}
-          label="Nomor telepon bisnis"
-          maxLength={100}
-          name="businessPhone"
-          type="tel"
-          required
-        />
-        <div className="md:col-span-2">
-          <AppTextarea
-            defaultValue={profile?.description ?? ""}
-            label="Deskripsi bisnis"
-            name="description"
-          />
-        </div>
-        <FormGroupHeader
-          description="Lokasi operasional dan wilayah yang dapat dilayani."
-          title="Lokasi dan layanan"
-        />
-        <RegionFields initialCity={profile?.city ?? ""} initialProvince={profile?.province ?? ""} />
-        <AppInput
-          defaultValue={profile?.latitude ?? ""}
-          label="Latitude"
-          name="latitude"
-          step="any"
-          type="number"
-        />
-        <AppInput
-          defaultValue={profile?.longitude ?? ""}
-          label="Longitude"
-          name="longitude"
-          step="any"
-          type="number"
-        />
-        <AppInput
-          defaultValue={profile?.serviceArea ?? ""}
-          label="Area layanan"
-          name="serviceArea"
-        />
-        <div className="md:col-span-2">
-          <AppTextarea
-            defaultValue={profile?.businessAddress ?? ""}
-            label="Alamat bisnis"
-            name="businessAddress"
+        <fieldset className="contents" disabled={!canEditBusiness}>
+          <AppInput
+            defaultValue={profile?.businessName ?? ""}
+            label="Nama bisnis"
+            maxLength={100}
+            name="businessName"
             required
           />
-        </div>
-        <FormGroupHeader
-          description="Pilih kategori yang paling sesuai dengan jasa utama vendor."
-          title="Kategori vendor"
-        />
-        <CheckboxGroup
-          initialValues={profile?.categories ?? []}
-          label="Kategori layanan"
-          name="categories"
-          options={categoryLabels}
-        />
+          <AppInput
+            defaultValue={profile?.businessEmail ?? ""}
+            label="Email bisnis"
+            maxLength={100}
+            name="businessEmail"
+            type="email"
+            required
+          />
+          <AppInput
+            defaultValue={profile?.businessPhone ?? ""}
+            label="Nomor telepon bisnis"
+            maxLength={100}
+            name="businessPhone"
+            type="tel"
+            required
+          />
+          <div className="md:col-span-2">
+            <AppTextarea
+              defaultValue={profile?.description ?? ""}
+              label="Deskripsi bisnis"
+              name="description"
+            />
+          </div>
+          <FormGroupHeader
+            description="Lokasi operasional dan wilayah yang dapat dilayani."
+            title="Lokasi dan layanan"
+          />
+          <RegionFields
+            initialCity={profile?.city ?? ""}
+            initialProvince={profile?.province ?? ""}
+          />
+          <AppInput
+            defaultValue={profile?.latitude ?? ""}
+            label="Latitude"
+            name="latitude"
+            step="any"
+            type="number"
+          />
+          <AppInput
+            defaultValue={profile?.longitude ?? ""}
+            label="Longitude"
+            name="longitude"
+            step="any"
+            type="number"
+          />
+          <AppInput
+            defaultValue={profile?.serviceArea ?? ""}
+            label="Area layanan"
+            name="serviceArea"
+          />
+          <div className="md:col-span-2">
+            <AppTextarea
+              defaultValue={profile?.businessAddress ?? ""}
+              label="Alamat bisnis"
+              name="businessAddress"
+              required
+            />
+          </div>
+        </fieldset>
+        <fieldset className="contents" disabled={!canEditCore}>
+          <FormGroupHeader
+            description="Pilih kategori yang paling sesuai dengan jasa utama vendor."
+            title="Kategori vendor"
+          />
+          <CheckboxGroup
+            emptyMessage={parameterEmptyMessage(
+              masterParameterError,
+              VENDOR_CATEGORY_PARAMETER_CODE,
+            )}
+            initialValues={resolveParameterDetailCodes(profile?.categories, vendorCategoryOptions)}
+            label="Kategori layanan"
+            name="categories"
+            options={parameterCheckboxOptions(vendorCategoryOptions)}
+          />
+        </fieldset>
         <FormGroupHeader
           description="Gunakan logo yang mudah dikenali customer."
           title="Logo brand"
         />
-        <VendorLogoUpload onDeleted={onDataChanged} profileId={profile?.id ?? null} />
+        <fieldset className="contents" disabled={!canEditOperations}>
+          <VendorLogoUpload onDeleted={onDataChanged} profileId={profile?.id ?? null} />
+        </fieldset>
       </ProfileSection>
       <ProfileSection
         active={activeStep === 2}
@@ -552,57 +700,50 @@ function VendorFields({
         step={2}
         title="Kontak dan rekening"
       >
-        <VendorContactRows onDeleted={onDataChanged} profile={profile} />
-        <VendorBankAccountCards onDeleted={onDataChanged} profile={profile} />
+        <fieldset className="contents" disabled={!canEditOperations}>
+          <VendorContactRows onDeleted={onDataChanged} profile={profile} />
+          <VendorBankAccountCards onDeleted={onDataChanged} profile={profile} />
+        </fieldset>
       </ProfileSection>
       <ProfileSection
         active={activeStep === 3}
-        description="Unggah dokumen legal agar admin dapat memverifikasi bisnis Anda."
+        description="Lengkapi dokumen legal bisnis Anda."
         step={3}
         title="Dokumen verifikasi"
       >
-        <AppSelect
-          defaultValue={primaryVerificationDocument(profile)?.documentType ?? ""}
-          label="Jenis dokumen"
-          name="legalDocumentType"
-        >
-          <option value="">Pilih jenis dokumen</option>
-          <option value="KTP">KTP pemilik</option>
-          <option value="NIB">NIB</option>
-          <option value="NPWP">NPWP</option>
-          <option value="SIUP">SIUP</option>
-          <option value="OTHER">Dokumen lainnya</option>
-        </AppSelect>
-        <AppInput
-          defaultValue={primaryVerificationDocument(profile)?.documentNumber ?? ""}
-          label="Nomor dokumen"
-          name="legalDocumentNumber"
-        />
-        {primaryVerificationDocument(profile)?.status && (
-          <div className="flex items-start justify-between gap-3 rounded-xl border bg-stone-50 p-3 md:col-span-2">
-            <div>
-              <p className="text-sm font-semibold text-ink">Status dokumen</p>
-              {primaryVerificationDocument(profile)?.rejectReason && (
-                <p className="mt-1 text-sm text-red-700">
-                  Alasan: {primaryVerificationDocument(profile)?.rejectReason}
-                </p>
-              )}
-            </div>
-            <StatusBadge status={statusDetails(primaryVerificationDocument(profile)?.status).key} />
-          </div>
-        )}
-        <div className="md:col-span-2">
+        <fieldset className="contents" disabled={!canEditCore}>
+          <AppSelect
+            defaultValue={primaryVerificationDocument(profile)?.documentType ?? ""}
+            label="Jenis dokumen"
+            name="legalDocumentType"
+          >
+            <option value="">Pilih jenis dokumen</option>
+            <option value="KTP">KTP pemilik</option>
+            <option value="NIB">NIB</option>
+            <option value="NPWP">NPWP</option>
+            <option value="SIUP">SIUP</option>
+            <option value="OTHER">Dokumen lainnya</option>
+          </AppSelect>
           <AppInput
-            accept=".jpg,.jpeg,.png,.pdf"
-            helper="JPG, PNG, atau PDF maksimal 5 MB. File diunggah saat draft disimpan atau profile dikirim."
-            label="File dokumen"
-            name="legalDocumentFile"
-            type="file"
+            defaultValue={primaryVerificationDocument(profile)?.documentNumber ?? ""}
+            label="Nomor dokumen"
+            name="legalDocumentNumber"
           />
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 md:col-span-2">
-          Setelah dokumen dikirim, profil vendor akan masuk ke proses pemeriksaan admin.
-        </div>
+          {primaryVerificationDocument(profile)?.status && (
+            <VendorDocumentSummary document={primaryVerificationDocument(profile)!} />
+          )}
+          <div className="md:col-span-2">
+            <AppInput
+              accept=".jpg,.jpeg,.png,.pdf"
+              helper="JPG, PNG, atau PDF · Maks. 5 MB"
+              label={
+                primaryVerificationDocument(profile)?.attachmentId ? "Ganti file" : "File dokumen"
+              }
+              name="legalDocumentFile"
+              type="file"
+            />
+          </div>
+        </fieldset>
       </ProfileSection>
     </>
   );
@@ -684,6 +825,7 @@ function VendorContactRows({
   onDeleted: () => void;
   profile: VendorApiProfile | null;
 }) {
+  const { confirm } = usePopup();
   const initialFields = CONTACT_OPTIONS.filter(({ field }) =>
     Boolean(contactValue(profile, field)),
   ).map(({ field }) => field);
@@ -701,7 +843,15 @@ function VendorContactRows({
 
   async function removeContact(field: ContactField) {
     const contact = savedContact(profile, field);
-    if (contact && !window.confirm(`Hapus kontak ${contact.contactType}?`)) return;
+    if (contact) {
+      const result = await confirm({
+        confirmLabel: "Hapus",
+        message: `Kontak ${contact.contactType} akan dihapus dari profile vendor.`,
+        title: "Hapus kontak?",
+        variant: "error",
+      });
+      if (!result.confirmed) return;
+    }
     try {
       if (contact) await deleteVendorContact(contact.id);
       setDeleteError("");
@@ -786,7 +936,7 @@ function VendorContactRows({
           })}
         </div>
       )}
-      {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
+      {deleteError && <ToastMessage message={deleteError} variant="error" />}
     </div>
   );
 }
@@ -798,13 +948,22 @@ function VendorBankAccountCards({
   onDeleted: () => void;
   profile: VendorApiProfile | null;
 }) {
+  const { confirm } = usePopup();
   const savedAccount = primaryBankAccount(profile);
   const hasSavedAccount = Boolean(savedAccount);
   const [hasAccount, setHasAccount] = useState(hasSavedAccount);
   const [deleteError, setDeleteError] = useState("");
 
   async function removeAccount() {
-    if (savedAccount && !window.confirm("Hapus rekening pencairan ini?")) return;
+    if (savedAccount) {
+      const result = await confirm({
+        confirmLabel: "Hapus",
+        message: "Rekening pencairan ini akan dihapus dari profile vendor.",
+        title: "Hapus rekening?",
+        variant: "error",
+      });
+      if (!result.confirmed) return;
+    }
     try {
       if (savedAccount) await deleteVendorBankAccount(savedAccount.id);
       setHasAccount(false);
@@ -882,7 +1041,7 @@ function VendorBankAccountCards({
       ) : (
         <EmptyCollection message="Belum ada rekening pencairan. Tambahkan rekening ketika Anda siap menerima pembayaran." />
       )}
-      {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
+      {deleteError && <ToastMessage message={deleteError} variant="error" />}
 
       <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
         Untuk keamanan, data rekening hanya dapat dilihat oleh pemilik akun dan admin yang
@@ -947,88 +1106,58 @@ function primaryVerificationDocument(profile: VendorApiProfile | null) {
   );
 }
 
-function DocumentAttachmentActions({
-  attachmentId,
-  canDelete,
-  documentId,
-  documentType,
-  onDeleted,
-}: {
-  attachmentId: string;
-  canDelete: boolean;
-  documentId: string;
-  documentType: string;
-  onDeleted: () => void;
-}) {
-  const [isLoading, setIsLoading] = useState(false);
+function VendorDocumentSummary({ document }: { document: VendorVerificationDocument }) {
+  const [isOpening, setIsOpening] = useState(false);
   const [error, setError] = useState("");
+  const status = statusDetails(document.status);
 
-  async function openAttachment(download: boolean) {
-    setIsLoading(true);
+  async function openDocument() {
+    if (!document.attachmentId) return;
+    setIsOpening(true);
     setError("");
     try {
-      const blob = await getAttachmentBlob(attachmentId);
+      const blob = await getAttachmentBlob(document.attachmentId);
       const url = URL.createObjectURL(blob);
-      if (download) {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${documentType}-${attachmentId}`;
-        link.click();
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
+      window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch {
-      setError("Dokumen tidak dapat dimuat.");
+      setError("Dokumen gagal dibuka.");
     } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function removeDocument() {
-    if (!window.confirm(`Hapus dokumen ${documentType} beserta file terkait?`)) return;
-    setIsLoading(true);
-    setError("");
-    try {
-      await deleteVendorVerificationDocument(documentId);
-      onDeleted();
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Dokumen gagal dihapus.");
-    } finally {
-      setIsLoading(false);
+      setIsOpening(false);
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-stone-50 p-3 md:col-span-2">
-      <span className="mr-auto text-sm font-medium">Dokumen {documentType} sudah tersimpan.</span>
-      <AppButton
-        disabled={isLoading}
-        onClick={() => void openAttachment(false)}
-        type="button"
-        variant="secondary"
-      >
-        Lihat
-      </AppButton>
-      <AppButton
-        disabled={isLoading}
-        onClick={() => void openAttachment(true)}
-        type="button"
-        variant="outline"
-      >
-        Unduh
-      </AppButton>
-      {canDelete && (
-        <AppButton
-          disabled={isLoading}
-          onClick={() => void removeDocument()}
-          type="button"
-          variant="danger"
-        >
-          Hapus
-        </AppButton>
+    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 md:col-span-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-rose-500 shadow-sm">
+          <FileCheck2 aria-hidden="true" size={20} />
+        </span>
+        <div className="mr-auto min-w-0">
+          <p className="truncate text-sm font-semibold text-ink">
+            {document.documentType}
+            {document.documentNumber ? ` · ${document.documentNumber}` : ""}
+          </p>
+          <div className="mt-1">
+            <StatusBadge status={status.key} />
+          </div>
+        </div>
+        {document.attachmentId && (
+          <AppButton
+            disabled={isOpening}
+            onClick={() => void openDocument()}
+            type="button"
+            variant="secondary"
+          >
+            <Eye aria-hidden="true" size={17} />
+            Lihat dokumen
+          </AppButton>
+        )}
+      </div>
+      {document.rejectReason && (
+        <p className="mt-3 border-t pt-3 text-sm text-red-700">{document.rejectReason}</p>
       )}
-      {error && <p className="w-full text-sm text-red-700">{error}</p>}
+      {error && <ToastMessage message={error} variant="error" />}
     </div>
   );
 }
@@ -1086,6 +1215,33 @@ function statusDetails(status?: number | null) {
 interface VendorValidationError {
   step: number;
   message: string;
+}
+
+function validateCustomer(form: HTMLFormElement): VendorValidationError | null {
+  if (!formValue(form, "fullName")) {
+    return { step: 0, message: "Nama lengkap wajib diisi sebelum menyimpan profile." };
+  }
+  const controls = Array.from(
+    form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input, select, textarea",
+    ),
+  );
+  const invalid = controls.find((control) => Boolean(control.value) && !control.checkValidity());
+  if (invalid) {
+    return {
+      step: controlStep(invalid),
+      message: `Periksa kembali field “${fieldLabel(invalid)}” sebelum menyimpan profile.`,
+    };
+  }
+
+  const avatar = formFile(form, "avatarPhoto");
+  if (avatar && avatar.size > 5 * 1024 * 1024) {
+    return { step: 2, message: "Ukuran foto profile maksimal 5 MB." };
+  }
+  if (avatar && !["image/jpeg", "image/png", "image/webp"].includes(avatar.type)) {
+    return { step: 2, message: "Format foto profile harus JPG, PNG, atau WebP." };
+  }
+  return null;
 }
 
 function validateVendorDraft(form: HTMLFormElement): VendorValidationError | null {
@@ -1202,10 +1358,28 @@ function vendorFormData(form: HTMLFormElement, profile: VendorApiProfile | null)
   return data;
 }
 
+function vendorBusinessPayload(form: HTMLFormElement) {
+  const latitude = formValue(form, "latitude");
+  const longitude = formValue(form, "longitude");
+  return {
+    businessName: formValue(form, "businessName"),
+    businessEmail: formValue(form, "businessEmail").toLowerCase(),
+    businessPhone: formValue(form, "businessPhone"),
+    businessAddress: formValue(form, "businessAddress"),
+    city: formValue(form, "city"),
+    province: formValue(form, "province"),
+    latitude: latitude ? Number(latitude) : undefined,
+    longitude: longitude ? Number(longitude) : undefined,
+    description: formValue(form, "description"),
+    serviceArea: formValue(form, "serviceArea"),
+  };
+}
+
 function vendorRelatedData(form: HTMLFormElement, profile: VendorApiProfile | null) {
   const contacts = CONTACT_OPTIONS.flatMap((option) => {
     const contactValue = formValue(form, option.field);
-    return contactValue ? [{ contactType: option.label, contactValue }] : [];
+    const existing = savedContact(profile, option.field);
+    return contactValue ? [{ id: existing?.id, contactType: option.label, contactValue }] : [];
   });
   const bankName = formValue(form, "bankName");
   const accountNumber = formValue(form, "bankAccountNumber");
@@ -1253,16 +1427,53 @@ function fieldLabel(control: HTMLInputElement | HTMLSelectElement | HTMLTextArea
   return control.labels?.[0]?.textContent?.trim() || control.name;
 }
 
+function FormattedNumberInput({
+  defaultValue,
+  label,
+  min,
+  name,
+  placeholder,
+}: {
+  defaultValue: string | number;
+  label: string;
+  min?: number;
+  name: string;
+  placeholder?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(() => formatThousands(defaultValue));
+
+  return (
+    <AppInput
+      inputMode="numeric"
+      label={label}
+      min={min}
+      name={name}
+      onChange={(event) => setDisplayValue(formatThousands(event.target.value))}
+      pattern="[0-9.]*"
+      placeholder={placeholder ? formatThousands(placeholder) : undefined}
+      type="text"
+      value={displayValue}
+    />
+  );
+}
+
+function formatThousands(value: string | number) {
+  const digits = String(value).replace(/\D/g, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 function CheckboxGroup({
+  emptyMessage,
   initialValues,
   label,
   name,
   options,
 }: {
+  emptyMessage?: string;
   initialValues: string[];
   label: string;
   name: string;
-  options: readonly string[];
+  options: CheckboxOption[];
 }) {
   const [selectedValues, setSelectedValues] = useState(initialValues);
 
@@ -1279,55 +1490,144 @@ function CheckboxGroup({
   return (
     <fieldset className="md:col-span-2">
       <legend className="text-sm font-medium">{label}</legend>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {options.map((option) => (
-          <label
-            className="flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-sm font-normal hover:border-rose-200 hover:bg-rose-50"
-            key={option}
-          >
-            <input
-              className="size-4 accent-rose-500"
-              checked={selectedValues.includes(option)}
-              name={name}
-              onChange={(event) => toggleValue(option, event.target.checked)}
-              type="checkbox"
-              value={option}
-            />
-            {option}
-          </label>
-        ))}
-      </div>
+      {options.length === 0 ? (
+        <p className="mt-2 rounded-xl border border-dashed bg-stone-50 p-4 text-sm text-stone-500">
+          {emptyMessage ?? "Belum ada pilihan aktif."}
+        </p>
+      ) : (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {options.map((option) => (
+            <label
+              className="flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-sm font-normal hover:border-rose-200 hover:bg-rose-50"
+              key={option.value}
+            >
+              <input
+                className="size-4 accent-rose-500"
+                checked={selectedValues.includes(option.value)}
+                name={name}
+                onChange={(event) => toggleValue(option.value, event.target.checked)}
+                type="checkbox"
+                value={option.value}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      )}
     </fieldset>
   );
 }
 
-function ImageUrlField({
-  initialUrl,
-  label,
-  name,
-}: {
-  initialUrl: string;
+interface CheckboxOption {
   label: string;
-  name: string;
+  value: string;
+}
+
+function CustomerAvatarUpload({
+  attachmentId,
+  onDeleted,
+  profileId,
+}: {
+  attachmentId: string | null;
+  onDeleted: () => void;
+  profileId: number | null;
 }) {
-  const [url, setUrl] = useState(initialUrl);
+  const { confirm } = usePopup();
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(Boolean(attachmentId));
+  const [error, setError] = useState("");
+  const selectedUrlRef = useRef("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadedUrl = "";
+    if (!attachmentId) {
+      setPreviewUrl("");
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    getAttachmentBlob(attachmentId)
+      .then((blob) => {
+        if (cancelled) return;
+        loadedUrl = URL.createObjectURL(blob);
+        setPreviewUrl(loadedUrl);
+      })
+      .catch(() => !cancelled && setError("Foto profile gagal dimuat."))
+      .finally(() => !cancelled && setIsLoading(false));
+    return () => {
+      cancelled = true;
+      if (loadedUrl) URL.revokeObjectURL(loadedUrl);
+    };
+  }, [attachmentId]);
+
+  function selectAvatar(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (selectedUrlRef.current) URL.revokeObjectURL(selectedUrlRef.current);
+    selectedUrlRef.current = URL.createObjectURL(file);
+    setPreviewUrl(selectedUrlRef.current);
+    setError("");
+  }
+
+  async function removeAvatar() {
+    if (!profileId) return;
+    const result = await confirm({
+      confirmLabel: "Hapus",
+      message: "Foto profile Anda akan dihapus.",
+      title: "Hapus foto profile?",
+      variant: "error",
+    });
+    if (!result.confirmed) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      await deleteCustomerAvatar(profileId);
+      setPreviewUrl("");
+      onDeleted();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Foto profile gagal dihapus.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <div className="grid gap-4 md:col-span-2 md:grid-cols-[160px_1fr] md:items-center">
+    <div className="grid gap-4 md:col-span-2 md:grid-cols-[180px_1fr] md:items-center">
       <div className="grid aspect-square place-items-center overflow-hidden rounded-3xl border-2 border-dashed bg-stone-50">
-        {url ? (
+        {isLoading ? (
+          <div className="size-full animate-pulse bg-stone-100" />
+        ) : previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img alt="Preview profile" className="size-full object-cover" src={url} />
+          <img alt="Foto profile" className="size-full object-cover" src={previewUrl} />
         ) : (
           <span className="px-4 text-center text-xs text-stone-400">Belum ada gambar</span>
         )}
       </div>
-      <AppInput
-        defaultValue={initialUrl}
-        label={label}
-        name={name}
-        onChange={(event) => setUrl(event.target.value)}
-        type="url"
-      />
+      <div className="grid gap-2">
+        <AppInput
+          accept="image/jpeg,image/png,image/webp"
+          helper="JPG, PNG, atau WebP maksimal 5 MB."
+          label={previewUrl ? "Ganti foto profile" : "Upload foto profile"}
+          name="avatarPhoto"
+          onChange={selectAvatar}
+          type="file"
+        />
+        <p className="text-xs leading-5 text-stone-500">
+          Foto akan diunggah saat draft disimpan atau profile dikirim.
+        </p>
+        {attachmentId && previewUrl && (
+          <AppButton
+            className="w-fit"
+            onClick={() => void removeAvatar()}
+            type="button"
+            variant="danger"
+          >
+            Hapus foto
+          </AppButton>
+        )}
+        {error && <ToastMessage message={error} variant="error" />}
+      </div>
     </div>
   );
 }
@@ -1339,6 +1639,7 @@ function VendorLogoUpload({
   onDeleted: () => void;
   profileId: number | null;
 }) {
+  const { confirm } = usePopup();
   const [previewUrl, setPreviewUrl] = useState("");
   const [isLoading, setIsLoading] = useState(Boolean(profileId));
   const [loadFailed, setLoadFailed] = useState(false);
@@ -1397,7 +1698,14 @@ function VendorLogoUpload({
   }
 
   async function removeLogo() {
-    if (!profileId || !window.confirm("Hapus logo bisnis ini?")) return;
+    if (!profileId) return;
+    const result = await confirm({
+      confirmLabel: "Hapus",
+      message: "Logo akan dihapus dari profile bisnis Anda.",
+      title: "Hapus logo bisnis?",
+      variant: "error",
+    });
+    if (!result.confirmed) return;
     setIsLoading(true);
     setDeleteError("");
     try {
@@ -1447,64 +1755,94 @@ function VendorLogoUpload({
             Hapus logo
           </AppButton>
         )}
-        {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
+        {deleteError && <ToastMessage message={deleteError} variant="error" />}
       </div>
     </div>
   );
 }
 
-function customerPayload(form: FormData): CustomerProfilePayload {
-  return {
-    fullName: requiredValue(form, "fullName"),
-    ...compact({
-      gender: optionalNumber(form, "gender"),
-      birthDate: optionalValue(form, "birthDate"),
-      avatarUrl: optionalValue(form, "avatarUrl"),
-      address: optionalValue(form, "address"),
-      city: optionalValue(form, "city"),
-      province: optionalValue(form, "province"),
-      weddingDate: optionalValue(form, "weddingDate"),
-      weddingLocation: optionalValue(form, "weddingLocation"),
-      weddingCity: optionalValue(form, "weddingCity"),
-      weddingProvince: optionalValue(form, "weddingProvince"),
-      eventType: optionalValue(form, "eventType"),
-      weddingTheme: optionalValue(form, "weddingTheme"),
-      estimatedGuests: optionalNumber(form, "estimatedGuests"),
-      neededVendorCategories: values(form, "neededVendorCategories"),
-      preferredVendorLocation: optionalValue(form, "preferredVendorLocation"),
-      packagePreference: optionalValue(form, "packagePreference"),
-      estimatedBudget: optionalNumber(form, "estimatedBudget"),
-      budgetRangeMin: optionalNumber(form, "budgetRangeMin"),
-      budgetRangeMax: optionalNumber(form, "budgetRangeMax"),
-      budgetPriorities: values(form, "budgetPriorities"),
-    }),
-  };
+function customerFormData(form: HTMLFormElement) {
+  const data = new FormData();
+  const plainFields = [
+    "fullName",
+    "gender",
+    "birthDate",
+    "address",
+    "city",
+    "province",
+    "weddingDate",
+    "eventType",
+    "weddingProvince",
+    "weddingCity",
+    "weddingLocation",
+    "weddingTheme",
+    "estimatedGuests",
+    "preferredVendorLocation",
+    "packagePreference",
+    "estimatedBudget",
+    "budgetRangeMin",
+    "budgetRangeMax",
+  ] as const;
+  plainFields.forEach((field) => {
+    const value = formValue(form, field);
+    if (value) {
+      const normalizedValue = CUSTOMER_NUMBER_FIELDS.has(field) ? value.replace(/\./g, "") : value;
+      data.set(field, normalizedValue);
+    }
+  });
+  data.set("neededVendorCategories", JSON.stringify(formValues(form, "neededVendorCategories")));
+  data.set("budgetPriorities", JSON.stringify(formValues(form, "budgetPriorities")));
+  const avatar = formFile(form, "avatarPhoto");
+  if (avatar) data.set("avatarPhoto", avatar);
+  return data;
 }
 
-function requiredValue(form: FormData, field: string) {
-  return String(form.get(field) ?? "").trim();
+function resolveParameterDetailCode(
+  savedValue: string | null | undefined,
+  options: ParameterDetail[],
+) {
+  if (!savedValue) return "";
+  const normalizedSavedValue = normalizeParameterValue(savedValue);
+  const matchingOption = options.find(
+    (option) =>
+      normalizeParameterValue(option.code) === normalizedSavedValue ||
+      normalizeParameterValue(option.description ?? "") === normalizedSavedValue,
+  );
+  return matchingOption?.code ?? "";
 }
 
-function optionalValue(form: FormData, field: string) {
-  return requiredValue(form, field) || undefined;
+function resolveParameterDetailCodes(
+  savedValues: string[] | null | undefined,
+  options: ParameterDetail[],
+) {
+  return (savedValues ?? []).flatMap((savedValue) => {
+    const code = resolveParameterDetailCode(savedValue, options);
+    return code ? [code] : [];
+  });
 }
 
-function optionalNumber(form: FormData, field: string) {
-  const value = optionalValue(form, field);
-  return value === undefined ? undefined : Number(value);
+function parameterCheckboxOptions(options: ParameterDetail[]): CheckboxOption[] {
+  return options.map((option) => ({
+    label: option.description?.trim() || option.code,
+    value: option.code,
+  }));
 }
 
-function values(form: FormData, field: string) {
-  return form
-    .getAll(field)
-    .map(String)
-    .map((value) => value.trim())
-    .filter(Boolean);
+function parameterEmptyMessage(error: string, parameterCode: string) {
+  return error || `Belum ada detail aktif pada parameter ${parameterCode}.`;
 }
 
-function compact<T extends Record<string, unknown>>(data: T) {
-  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+function normalizeParameterValue(value: string) {
+  return value.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ").toUpperCase();
 }
+
+const CUSTOMER_NUMBER_FIELDS = new Set([
+  "gender",
+  "estimatedGuests",
+  "estimatedBudget",
+  "budgetRangeMin",
+  "budgetRangeMax",
+]);
 
 function dateValue(value?: string | null) {
   return value?.slice(0, 10) ?? "";

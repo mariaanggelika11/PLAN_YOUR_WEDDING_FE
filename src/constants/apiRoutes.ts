@@ -19,6 +19,7 @@ export const API_ROUTES = {
     customer: "/customer-profile",
     customerById: (id: number) => `/customer-profile/${id}`,
     customerByUserId: (userId: number) => `/customer-profile/user/${userId}`,
+    customerSaveDraft: "/customer-profile/save-draft",
     vendor: "/vendor-profile",
     vendorById: (id: number) => `/vendor-profile/${id}`,
     vendorByUserId: (userId: number) => `/vendor-profile/user/${userId}`,
@@ -26,7 +27,11 @@ export const API_ROUTES = {
     vendorSubmit: "/vendor-profile/submit",
   },
   users: {
+    root: "/users",
     byId: (id: number) => `/users/${id}`,
+  },
+  userRoles: {
+    root: "/user-roles",
   },
   attachments: {
     root: "/attachments",

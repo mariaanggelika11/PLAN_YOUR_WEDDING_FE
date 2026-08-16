@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { AppButton } from "@/components/ui/AppButton";
+import { ToastMessage } from "@/components/common/Toast";
 import { AppInput } from "@/components/ui/FormFields";
 import { AuthError, resendOtp, verifyOtp } from "@/services/authService";
 import type { OtpPurpose } from "@/types/auth";
@@ -88,8 +89,8 @@ export function OtpVerificationForm({
         required
       />
 
-      {error && <Feedback tone="error">{error}</Feedback>}
-      {message && <Feedback tone="success">{message}</Feedback>}
+      {error && <Feedback>{error}</Feedback>}
+      {message && <ToastMessage message={message} />}
 
       <AppButton loading={isVerifying} type="submit">
         Verifikasi OTP
@@ -118,19 +119,8 @@ export function OtpVerificationForm({
   );
 }
 
-function Feedback({ children, tone }: { children: React.ReactNode; tone: "error" | "success" }) {
-  const color =
-    tone === "error"
-      ? "border-red-200 bg-red-50 text-red-700"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700";
-  return (
-    <p
-      className={`rounded-xl border p-3 text-sm ${color}`}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      {children}
-    </p>
-  );
+function Feedback({ children }: { children: React.ReactNode }) {
+  return <ToastMessage message={String(children)} variant="error" />;
 }
 
 function errorMessage(error: unknown, fallback: string) {

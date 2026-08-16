@@ -5,7 +5,7 @@ import { cn } from "@/utils/cn";
 
 interface AppButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean;
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "success" | "danger";
   loading?: boolean;
 }
 
@@ -28,6 +28,8 @@ export function AppButton({
       "border border-stone-300 bg-transparent text-ink hover:border-blush hover:text-blush":
         variant === "outline",
       "text-stone-600 hover:bg-stone-100": variant === "ghost",
+      "bg-emerald-600 text-white shadow-emerald-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg":
+        variant === "success",
       "bg-red-600 text-white hover:bg-red-700": variant === "danger",
     },
     className,

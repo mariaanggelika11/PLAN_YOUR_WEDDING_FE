@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
 import { DashboardCard } from "@/components/cards/Cards";
@@ -9,7 +12,7 @@ import { DetailGrid, PlaceholderPanel } from "@/features/shared/DetailBlocks";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { DataTable } from "@/components/tables/DataTable";
 import { ConfirmModal } from "@/components/modals/ConfirmModal";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/states/States";
 import {
   mockCategories,
   mockNotifications,
@@ -22,6 +25,8 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
+import { getVendorProfile } from "@/services/profileService";
+import type { VendorApiProfile } from "@/types/profile";
 
 const productFields: FormField[] = [
   { label: "Nama produk atau paket", name: "name", required: true, step: 0 },
@@ -75,49 +80,61 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <ProfileForm type="vendor" />
       </Page>
     );
-  if (page === "category") return <CategoryPage />;
-  if (page === "verification-status") return <VerificationPage />;
   if (page === "products" && slug[1] === "create")
     return (
-      <Page
-        title="Buat Paket Layanan"
-        description="Buat paket yang jelas agar customer mudah membandingkan."
-      >
-        <EntityForm
-          fields={productFields}
-          steps={[
-            "Informasi Layanan",
-            "Harga & Kapasitas",
-            "Area Layanan",
-            "Foto & Portofolio",
-            "Ketentuan",
-            "Status Publish",
-          ]}
-          note="Produk hanya dapat diaktifkan jika status vendor sudah Verified / Active. Pilih Draft jika produk belum siap ditampilkan."
-          submitLabel="Publish paket"
-        />
-      </Page>
+      <ProductAccessGate>
+        <Page
+          title="Buat Paket Layanan"
+          description="Buat paket yang jelas agar customer mudah membandingkan."
+        >
+          <EntityForm
+            fields={productFields}
+            steps={[
+              "Informasi Layanan",
+              "Harga & Kapasitas",
+              "Area Layanan",
+              "Foto & Portofolio",
+              "Ketentuan",
+              "Status Publish",
+            ]}
+            note="Pilih Draft jika produk belum siap ditampilkan."
+            submitLabel="Publish paket"
+          />
+        </Page>
+      </ProductAccessGate>
     );
   if (page === "products" && slug.includes("edit"))
     return (
-      <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
-        <EntityForm
-          fields={productFields}
-          steps={[
-            "Informasi Layanan",
-            "Harga & Kapasitas",
-            "Area Layanan",
-            "Foto & Portofolio",
-            "Ketentuan",
-            "Status Publish",
-          ]}
-          note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
-          submitLabel="Simpan perubahan"
-        />
-      </Page>
+      <ProductAccessGate>
+        <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
+          <EntityForm
+            fields={productFields}
+            steps={[
+              "Informasi Layanan",
+              "Harga & Kapasitas",
+              "Area Layanan",
+              "Foto & Portofolio",
+              "Ketentuan",
+              "Status Publish",
+            ]}
+            note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
+            submitLabel="Simpan perubahan"
+          />
+        </Page>
+      </ProductAccessGate>
     );
-  if (page === "products" && slug[1]) return <ProductDetailPage productId={slug[1]} />;
-  if (page === "products") return <ProductsPage />;
+  if (page === "products" && slug[1])
+    return (
+      <ProductAccessGate>
+        <ProductDetailPage productId={slug[1]} />
+      </ProductAccessGate>
+    );
+  if (page === "products")
+    return (
+      <ProductAccessGate>
+        <ProductsPage />
+      </ProductAccessGate>
+    );
   if (page === "orders" && slug[1]) return <OrderDetail />;
   if (page === "orders") return <OrdersPage />;
   if (page === "reviews")
@@ -192,42 +209,77 @@ function VendorDashboard() {
     </Page>
   );
 }
-function VerificationPage() {
-  return (
-    <Page title="Status Verifikasi" description="Pantau proses verifikasi bisnis Anda.">
-      <DetailGrid
-        items={[
-          ["Status", <StatusBadge status="PENDING_VERIFICATION" />],
-          ["Tanggal diajukan", "3 Juni 2026"],
-          ["Catatan admin", "Dokumen sedang diperiksa."],
-          ["Alasan penolakan", "-"],
-        ]}
-      />
-      <AppButton className="w-fit" variant="secondary">
-        Kirim ulang dokumen
-      </AppButton>
-    </Page>
+function ProductAccessGate({ children }: { children: ReactNode }) {
+  const [profile, setProfile] = useState<VendorApiProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      setProfile(await getVendorProfile());
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => void load(), [load]);
+  if (loading)
+    return (
+      <Page title="Produk" description="Memeriksa status vendor...">
+        <LoadingSkeleton />
+      </Page>
+    );
+  if (failed)
+    return (
+      <Page title="Produk" description="Status vendor tidak dapat dimuat.">
+        <ErrorState retry={() => void load()} />
+      </Page>
+    );
+  const canSell = Boolean(
+    profile?.isVerified && profile.active !== false && ![5, 6].includes(profile.status ?? 0),
   );
-}
-function CategoryPage() {
-  return (
-    <Page
-      title="Kategori Vendor"
-      description="Pilih minimal satu kategori yang sesuai dengan layanan."
-    >
-      <div className="rounded-2xl border bg-white p-6">
-        <AppInput label="Cari kategori" placeholder="Contoh: Catering" />
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {mockCategories.map((item, index) => (
-            <label className="flex gap-3 rounded-xl border p-3 text-sm" key={item.id}>
-              <input type="checkbox" defaultChecked={index < 2} /> {item.name}
-            </label>
-          ))}
+  if (!canSell) {
+    return (
+      <Page
+        title="Produk belum tersedia"
+        description="Selesaikan verifikasi bisnis untuk mulai berjualan."
+      >
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-7">
+          <StatusBadge status={vendorProfileStatus(profile?.status)} />
+          <h2 className="mt-4 text-xl font-semibold text-ink">
+            {profile?.isVerified ? "Akses produk sedang tidak aktif" : "Bisnis belum diverifikasi"}
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-stone-600">
+            {profile?.isVerified
+              ? "Hubungi admin untuk mengaktifkan kembali akun vendor Anda."
+              : "Lengkapi profil dan dokumen bisnis. Setelah disetujui admin, menu produk akan terbuka tanpa perlu verifikasi ulang."}
+          </p>
+          <AppButton asChild className="mt-5">
+            <Link href={ROUTES.vendor.profile}>Buka profil bisnis</Link>
+          </AppButton>
         </div>
-        <p className="mt-4 text-sm text-stone-500">Terpilih: Decoration, Wedding Organizer</p>
-        <AppButton className="mt-5">Simpan kategori</AppButton>
-      </div>
-    </Page>
+      </Page>
+    );
+  }
+  return children;
+}
+
+function vendorProfileStatus(status?: number | null) {
+  return (
+    (
+      {
+        1: "DRAFT",
+        2: "PENDING_VERIFICATION",
+        3: "VERIFIED",
+        4: "REJECTED",
+        5: "SUSPENDED",
+        6: "INACTIVE",
+      } as const
+    )[status as 1] ?? "INACTIVE"
   );
 }
 function ProductsPage() {

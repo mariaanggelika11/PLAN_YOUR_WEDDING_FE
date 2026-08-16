@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ToastMessage } from "@/components/common/Toast";
 import { PasswordInput } from "@/components/forms/PasswordInput";
 import { OtpVerificationForm } from "@/components/forms/OtpVerificationForm";
 import { SuccessState } from "@/components/states/States";
@@ -134,14 +135,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
         required
       />
 
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
+      {error && <ToastMessage message={error} variant="error" />}
       <AppButton loading={isLoading} type="submit">
         Daftar sekarang
       </AppButton>

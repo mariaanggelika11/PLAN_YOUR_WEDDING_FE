@@ -1,17 +1,98 @@
-import { mockAdminSummary, mockVendors } from "@/constants/mockData";
-// TODO API: Ambil ringkasan dashboard admin dari backend
-export async function getAdminSummary() {
-  return mockAdminSummary;
+import { API_ROUTES } from "@/constants/apiRoutes";
+import { ApiError, apiRequest } from "@/services/api";
+import { getSession } from "@/services/authService";
+import type { ApiResponse } from "@/types/api";
+import type { AdminUser, AdminUserRole, PaginatedData, VendorAdminProfile } from "@/types/admin";
+
+export class AdminServiceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminServiceError";
+  }
 }
-// TODO API: Ambil daftar vendor pending verification dari backend
-export async function getPendingVendors() {
-  return mockVendors.filter((vendor) => vendor.status === "PENDING_VERIFICATION");
+
+export async function getAdminUsers(query: AdminListQuery = {}) {
+  const [users, roles] = await Promise.all([
+    getPage<AdminUser>(API_ROUTES.users.root, query),
+    getPage<AdminUserRole>(API_ROUTES.userRoles.root, {
+      filter: query.filter,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  ]);
+  const rolesByUser = new Map<number, string[]>();
+  roles.data.forEach((role) => {
+    rolesByUser.set(role.userId, [...(rolesByUser.get(role.userId) ?? []), role.roleName]);
+  });
+  return {
+    ...users,
+    data: users.data.map((user) => ({ ...user, roles: rolesByUser.get(user.id) ?? [] })),
+  };
 }
-// TODO API: Admin approve atau reject vendor
-export async function verifyVendor() {
-  return true;
+
+export function updateUserActive(userId: number, active: boolean) {
+  return request<AdminUser>(API_ROUTES.users.byId(userId), {
+    method: "PUT",
+    body: JSON.stringify({ active }),
+  });
 }
-// TODO API: Admin mengambil audit log dari backend
-export async function getAuditLogs() {
-  return [];
+
+export function getAdminVendors(query: AdminListQuery = {}) {
+  return getPage<VendorAdminProfile>(API_ROUTES.profile.vendor, query);
+}
+
+export function getAdminVendor(id: number) {
+  return request<VendorAdminProfile>(API_ROUTES.profile.vendorById(id));
+}
+
+export async function verifyVendor(
+  vendor: VendorAdminProfile,
+  decision: "approve" | "reject",
+  reason?: string,
+) {
+  const approved = decision === "approve";
+  const status = approved ? 3 : 4;
+  const rejectReason = approved ? "" : reason?.trim();
+
+  await Promise.all(
+    (vendor.verificationDocuments ?? []).map((document) =>
+      request(API_ROUTES.verificationDocuments.byId(document.id), {
+        method: "PUT",
+        body: JSON.stringify({ status, rejectReason }),
+      }),
+    ),
+  );
+  return request<VendorAdminProfile>(API_ROUTES.profile.vendorById(vendor.id), {
+    method: "PUT",
+    body: JSON.stringify({ status, isVerified: approved, rejectReason }),
+  });
+}
+
+interface AdminListQuery {
+  filter?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
+async function getPage<T>(endpoint: string, query: AdminListQuery): Promise<PaginatedData<T>> {
+  const params = new URLSearchParams();
+  if (query.filter) params.set("filter", query.filter);
+  params.set("pageNumber", String(query.pageNumber ?? 1));
+  params.set("pageSize", String(query.pageSize ?? 10));
+  return request<PaginatedData<T>>(`${endpoint}?${params}`);
+}
+
+async function request<T>(endpoint: string, init?: RequestInit) {
+  const session = getSession();
+  if (!session) throw new AdminServiceError("Sesi login tidak ditemukan. Silakan masuk kembali.");
+  try {
+    const response = await apiRequest<ApiResponse<T>>(endpoint, {
+      ...init,
+      headers: { ...init?.headers, Authorization: `Bearer ${session.accessToken}` },
+    });
+    return response.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw new AdminServiceError(error.message);
+    throw new AdminServiceError("Data admin gagal diproses.");
+  }
 }

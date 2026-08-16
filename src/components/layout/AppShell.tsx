@@ -13,12 +13,14 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/common/BrandMark";
 import { mockNotifications, mockUsers } from "@/constants/mockData";
 import { USER_MENU_ITEMS, type NavigationItem } from "@/constants/menu";
 import { roleRoute, ROUTES, type AppRole } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
+import { getAttachmentBlob, getVendorLogo } from "@/services/attachmentService";
+import { getCustomerProfile, getVendorProfile } from "@/services/profileService";
 import { cn } from "@/utils/cn";
 
 interface AppShellProps {
@@ -321,6 +323,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const { user, logout } = useAuth();
   const fallbackUser = mockUsers.find((item) => item.role.toLowerCase() === role);
   const currentUser = user ?? fallbackUser;
@@ -331,6 +334,43 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  useEffect(() => {
+    let disposed = false;
+    let objectUrl = "";
+
+    async function loadAvatar() {
+      if (role === "admin") return;
+      try {
+        let attachmentId: string | null | undefined;
+        if (role === "vendor") {
+          const profile = await getVendorProfile();
+          attachmentId = profile?.logoAttachmentId;
+          if (!attachmentId && profile?.id) {
+            attachmentId = (await getVendorLogo(profile.id))?.id;
+          }
+        } else {
+          attachmentId = (await getCustomerProfile())?.avatarAttachmentId;
+        }
+        if (!attachmentId || disposed) return setAvatarUrl("");
+        const blob = await getAttachmentBlob(attachmentId);
+        if (disposed) return;
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(blob);
+        setAvatarUrl(objectUrl);
+      } catch {
+        if (!disposed) setAvatarUrl("");
+      }
+    }
+
+    void loadAvatar();
+    window.addEventListener("pyw-profile-change", loadAvatar);
+    return () => {
+      disposed = true;
+      window.removeEventListener("pyw-profile-change", loadAvatar);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [role]);
 
   async function handleLogout() {
     if (isLoggingOut) return;
@@ -351,8 +391,13 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
         type="button"
         className="flex items-center gap-2 rounded-xl border bg-white p-1.5 pr-2 shadow-sm hover:border-rose-200"
       >
-        <span className="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-rose-200 to-amber-100 text-xs font-bold text-ink">
-          {initials}
+        <span className="grid size-8 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-rose-200 to-amber-100 text-xs font-bold text-ink">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt={`Foto ${name}`} className="size-full object-cover" src={avatarUrl} />
+          ) : (
+            initials
+          )}
         </span>
         <span className="hidden max-w-28 text-left sm:block">
           <span className="block truncate text-xs font-semibold">{name}</span>

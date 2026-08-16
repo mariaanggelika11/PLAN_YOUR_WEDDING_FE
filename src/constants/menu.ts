@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Star,
-  Tags,
   UserRound,
   Users,
   WalletCards,
@@ -60,8 +59,6 @@ export const CUSTOMER_NAVIGATION: NavigationItem[] = [
 export const VENDOR_NAVIGATION: NavigationItem[] = [
   { label: "Dashboard", href: ROUTES.vendor.dashboard, icon: Gauge },
   { label: "Profil Bisnis", href: ROUTES.vendor.profile, icon: BriefcaseBusiness },
-  { label: "Status Verifikasi", href: ROUTES.vendor.verificationStatus, icon: ShieldCheck },
-  { label: "Kategori", href: ROUTES.vendor.category, icon: Tags },
   { label: "Produk", href: ROUTES.vendor.products, icon: Package },
   { label: "Pesanan", href: ROUTES.vendor.orders, icon: ClipboardCheck },
   { label: "Ulasan", href: ROUTES.vendor.reviews, icon: Star },
@@ -97,26 +94,3 @@ export const ROLE_LABELS = {
   vendor: "Seller Center",
   admin: "Admin Console",
 } as const;
-
-export const categoryLabels = [
-  "Catering",
-  "Wedding Organizer",
-  "Decoration",
-  "Makeup Artist",
-  "Photography",
-  "Videography",
-  "Venue",
-  "Entertainment",
-  "Invitation",
-  "Souvenir",
-  "Wedding Dress / Attire",
-  "Sound System & Lighting",
-  "MC",
-  "Wedding Cake",
-  "Henna",
-  "Transportation",
-  "Wedding Planner",
-  "Jewelry",
-  "Seserahan / Hampers",
-  "Live Streaming",
-] as const;

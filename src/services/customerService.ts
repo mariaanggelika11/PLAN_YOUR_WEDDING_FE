@@ -1,1 +1,1 @@
-export { getCustomerProfile, saveCustomerProfile } from "@/services/profileService";
+export { getCustomerProfile, saveCustomerProfileDraft } from "@/services/profileService";

@@ -13,8 +13,6 @@ import {
   mockOrders,
   mockPayments,
   mockReviews,
-  mockUsers,
-  mockVendors,
 } from "@/constants/mockData";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
@@ -22,6 +20,12 @@ import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
 import { AdminProfileForm } from "@/components/forms/AdminProfileForm";
 import { ParameterManager } from "@/components/forms/ParameterManager";
+import {
+  AdminUsersPage,
+  AdminVendorsPage,
+  AdminVendorVerificationDetailPage,
+  AdminVendorVerificationPage,
+} from "@/features/admin/AdminDataPages";
 
 export function AdminPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
@@ -33,8 +37,9 @@ export function AdminPage({ slug }: { slug: string[] }) {
         <AdminProfileForm />
       </Page>
     );
-  if (page === "vendor-verification" && slug[1]) return <VendorVerificationDetail />;
-  if (page === "vendor-verification") return <VendorVerification />;
+  if (page === "vendor-verification" && slug[1])
+    return <AdminVendorVerificationDetailPage vendorId={slug[1]} />;
+  if (page === "vendor-verification") return <AdminVendorVerificationPage />;
   if (page === "payment-verification" && slug[1]) return <PaymentDetail />;
   if (page === "payment-verification") return <PaymentVerification />;
   if (page === "parameters")
@@ -46,40 +51,8 @@ export function AdminPage({ slug }: { slug: string[] }) {
         <ParameterManager />
       </Page>
     );
-  if (page === "users")
-    return (
-      <Page title="Manajemen Pengguna" description="Kelola status dan akses pengguna.">
-        <DataTable
-          columns={["Nama", "Email", "Role", "Status", "Aksi"]}
-          rows={mockUsers.map((u) => [
-            u.name,
-            u.email,
-            u.role,
-            <StatusBadge status={u.status} />,
-            <AppButton variant="secondary" key={u.id}>
-              Suspend
-            </AppButton>,
-          ])}
-        />
-      </Page>
-    );
-  if (page === "vendors")
-    return (
-      <Page title="Manajemen Vendor" description="Tinjau seluruh akun bisnis.">
-        <DataTable
-          columns={["Vendor", "Pemilik", "Lokasi", "Status", "Aksi"]}
-          rows={mockVendors.map((v) => [
-            v.name,
-            v.ownerName,
-            v.city,
-            <StatusBadge status={v.status} />,
-            <AppButton variant="secondary" key={v.id}>
-              Detail
-            </AppButton>,
-          ])}
-        />
-      </Page>
-    );
+  if (page === "users") return <AdminUsersPage />;
+  if (page === "vendors") return <AdminVendorsPage />;
   if (page === "categories")
     return (
       <Page title="Manajemen Kategori" description="Kelola kategori marketplace.">
@@ -210,60 +183,6 @@ function AdminDashboard() {
             ["Sengketa dibuka", "D-1004", "1 jam lalu"],
           ]}
         />
-      </div>
-    </Page>
-  );
-}
-function VendorVerification() {
-  return (
-    <Page title="Verifikasi Vendor" description="Periksa bisnis yang menunggu persetujuan.">
-      <DataTable
-        columns={["Vendor", "Pemilik", "Kategori", "Lokasi", "Diajukan", "Status", "Aksi"]}
-        rows={mockVendors.map((v) => [
-          v.name,
-          v.ownerName,
-          v.categories.join(", "),
-          v.city,
-          "3 Juni 2026",
-          <StatusBadge status={v.status} />,
-          <Link className="font-semibold text-blush" href={ROUTES.admin.vendorVerification(v.id)}>
-            Detail
-          </Link>,
-        ])}
-      />
-    </Page>
-  );
-}
-function VendorVerificationDetail() {
-  const v = mockVendors[2];
-  return (
-    <Page
-      title={`Verifikasi ${v.name}`}
-      description="Periksa profil, portfolio, dan dokumen bisnis."
-    >
-      <DetailGrid
-        items={[
-          ["Nama bisnis", v.name],
-          ["Pemilik", v.ownerName],
-          ["Kategori", v.categories.join(", ")],
-          ["Lokasi", v.city],
-          ["Deskripsi", v.description],
-          ["Status", <StatusBadge status={v.status} />],
-        ]}
-      />
-      <PlaceholderPanel
-        title="Dokumen & portfolio"
-        description="Preview dokumen legal dan karya vendor."
-      />
-      <div className="flex gap-3">
-        <AppButton>Approve vendor</AppButton>
-        <ConfirmModal
-          requireReason
-          trigger={<AppButton variant="danger">Reject vendor</AppButton>}
-          title="Tolak vendor?"
-          description="Alasan penolakan wajib diisi sebelum dikirim."
-        />
-        <AppButton variant="secondary">Minta revisi</AppButton>
       </div>
     </Page>
   );

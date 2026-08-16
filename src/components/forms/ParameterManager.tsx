@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { AppButton } from "@/components/ui/AppButton";
+import { ToastMessage } from "@/components/common/Toast";
+import { usePopup } from "@/components/common/Popup";
 import { AppInput, AppTextarea } from "@/components/ui/FormFields";
 import {
   createParameter,
@@ -31,6 +33,7 @@ const emptyDetail = (): ParameterDetail => ({
 });
 
 export function ParameterManager() {
+  const { confirm } = usePopup();
   const [parameters, setParameters] = useState<SystemParameter[]>([]);
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -134,7 +137,13 @@ export function ParameterManager() {
   }
 
   async function remove(parameter: SystemParameter) {
-    if (!window.confirm(`Hapus parameter ${parameter.code} beserta seluruh detailnya?`)) return;
+    const result = await confirm({
+      confirmLabel: "Hapus",
+      message: `Parameter ${parameter.code} beserta seluruh detailnya akan dihapus permanen.`,
+      title: "Hapus parameter?",
+      variant: "error",
+    });
+    if (!result.confirmed) return;
     try {
       await deleteParameter(parameter.id);
       setMessage("Parameter berhasil dihapus.");
@@ -231,17 +240,8 @@ export function ParameterManager() {
         </AppButton>
       </div>
 
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>
-      )}
+      {error && <ToastMessage message={error} variant="error" />}
+      {message && <ToastMessage message={message} />}
 
       {formOpen && (
         <ParameterForm

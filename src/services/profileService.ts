@@ -2,10 +2,14 @@ import { API_ROUTES } from "@/constants/apiRoutes";
 import { getSession } from "@/services/authService";
 import { ApiError, apiRequest } from "@/services/api";
 import type { ApiResponse } from "@/types/api";
-import type { CustomerApiProfile, CustomerProfilePayload, VendorApiProfile } from "@/types/profile";
+import type {
+  CustomerApiProfile,
+  VendorApiProfile,
+  VendorProfileUpdatePayload,
+} from "@/types/profile";
 
 export interface VendorRelatedData {
-  contacts: Array<{ contactType: string; contactValue: string }>;
+  contacts: Array<{ id?: string; contactType: string; contactValue: string }>;
   bankAccount?: { bankName: string; accountNumber: string; accountHolderName: string };
   bankAccountId?: string;
   verificationDocument?: { documentType: string; documentNumber?: string; file: File };
@@ -26,12 +30,8 @@ export function getVendorProfile() {
   return getOwnProfile<VendorApiProfile>(API_ROUTES.profile.vendorByUserId);
 }
 
-export function saveCustomerProfile(profileId: number | null, data: CustomerProfilePayload) {
-  return saveProfile<CustomerApiProfile>(
-    profileId ? API_ROUTES.profile.customerById(profileId) : API_ROUTES.profile.customer,
-    profileId,
-    data,
-  );
+export function saveCustomerProfileDraft(data: FormData) {
+  return saveCustomerProfileForm(API_ROUTES.profile.customerSaveDraft, data);
 }
 
 export function saveVendorProfileDraft(data: FormData) {
@@ -42,15 +42,33 @@ export function submitVendorProfile(data: FormData) {
   return saveVendorProfileForm(API_ROUTES.profile.vendorSubmit, data);
 }
 
+export async function updateVendorProfile(id: number, data: VendorProfileUpdatePayload) {
+  const { accessToken } = sessionContext();
+  try {
+    const response = await apiRequest<ApiResponse<VendorApiProfile>>(
+      API_ROUTES.profile.vendorById(id),
+      {
+        method: "PUT",
+        headers: authorizationHeader(accessToken),
+        body: JSON.stringify(data),
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw profileError(error, "Informasi bisnis gagal diperbarui.");
+  }
+}
+
 export async function saveVendorRelatedData(data: VendorRelatedData) {
   const { accessToken, userId } = sessionContext();
   const headers = authorizationHeader(accessToken);
 
   for (const contact of data.contacts) {
-    await apiRequest(API_ROUTES.contacts.forUser(userId), {
-      method: "POST",
+    const { id, ...payload } = contact;
+    await apiRequest(id ? API_ROUTES.contacts.byId(id) : API_ROUTES.contacts.forUser(userId), {
+      method: id ? "PUT" : "POST",
       headers,
-      body: JSON.stringify(contact),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -122,18 +140,15 @@ async function getOwnProfile<T>(endpointForUser: (userId: number) => string) {
   }
 }
 
-async function saveProfile<T>(
-  endpoint: string,
-  profileId: number | null,
-  data: CustomerProfilePayload,
-) {
+async function saveCustomerProfileForm(endpoint: string, data: FormData) {
   const { accessToken, userId } = sessionContext();
+  data.set("userId", String(userId));
 
   try {
-    const response = await apiRequest<ApiResponse<T>>(endpoint, {
-      method: profileId ? "PUT" : "POST",
+    const response = await apiRequest<ApiResponse<CustomerApiProfile>>(endpoint, {
+      method: "POST",
       headers: authorizationHeader(accessToken),
-      body: JSON.stringify(profileId ? data : { userId, ...data }),
+      body: data,
     });
     return response.data;
   } catch (error) {
