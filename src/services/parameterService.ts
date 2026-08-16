@@ -17,22 +17,14 @@ export async function getParameters(filter = "", pageNumber = 1, pageSize = 10) 
   // Backend memuat relasi one-to-many `details` pada query yang sama dengan pagination.
   // Ambil header dalam satu batch lalu lakukan pagination berdasarkan header agar banyaknya
   // detail tidak membuat header lain hilang dari halaman.
-  const query = new URLSearchParams({
-    pageNumber: "1",
-    pageSize: String(PARAMETER_FETCH_LIMIT),
-  });
-  if (filter) query.set("filter", filter);
-  const response = await apiRequest<ApiResponse<ParameterPage>>(
-    `${API_ROUTES.parameters.root}?${query}`,
-    { headers: authHeader() },
-  );
+  const result = await fetchParameterPage(filter, 1, PARAMETER_FETCH_LIMIT);
   const start = (pageNumber - 1) * pageSize;
   return {
-    ...response.data,
-    data: response.data.data.slice(start, start + pageSize),
+    ...result,
+    data: result.data.slice(start, start + pageSize),
     pageNumber,
     pageSize,
-    total: response.data.total,
+    total: result.total,
   };
 }
 
@@ -42,20 +34,24 @@ export async function getActiveParameterDetails(code: string) {
 }
 
 export async function getActiveParameterDetailsByCodes(codes: string[]) {
-  const normalizedCodes = new Set(codes.map(normalizeParameterValue));
-  const result = await getParameters("", 1, PARAMETER_FETCH_LIMIT);
   const parameters = new Map<string, SystemParameter["details"]>();
 
-  result.data.forEach((parameter) => {
-    const normalizedCode = normalizeParameterValue(parameter.code);
-    if (!parameter.active || !normalizedCodes.has(normalizedCode)) return;
-    parameters.set(
-      normalizedCode,
-      parameter.details
-        .filter((detail) => detail.active)
-        .sort((first, second) => first.ordering - second.ordering),
-    );
-  });
+  await Promise.all(
+    codes.map(async (code) => {
+      const normalizedCode = normalizeParameterValue(code);
+      const result = await fetchParameterPage(code, 1, 10);
+      const parameter = result.data.find(
+        (item) => item.active && normalizeParameterValue(item.code) === normalizedCode,
+      );
+      if (!parameter) return;
+      parameters.set(
+        normalizedCode,
+        parameter.details
+          .filter((detail) => detail.active)
+          .sort((first, second) => first.ordering - second.ordering),
+      );
+    }),
+  );
 
   return parameters;
 }
@@ -80,6 +76,19 @@ export async function updateParameter(id: string, data: Partial<ParameterPayload
 
 export async function deleteParameter(id: string) {
   await apiRequest(API_ROUTES.parameters.byId(id), { method: "DELETE", headers: authHeader() });
+}
+
+async function fetchParameterPage(filter: string, pageNumber: number, pageSize: number) {
+  const query = new URLSearchParams({
+    pageNumber: String(pageNumber),
+    pageSize: String(pageSize),
+  });
+  if (filter) query.set("filter", filter);
+  const response = await apiRequest<ApiResponse<ParameterPage>>(
+    `${API_ROUTES.parameters.root}?${query}`,
+    { headers: authHeader() },
+  );
+  return response.data;
 }
 
 function authHeader() {
