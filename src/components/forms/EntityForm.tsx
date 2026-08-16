@@ -10,6 +10,7 @@ import {
   AppTextarea,
 } from "@/components/ui/FormFields";
 import { Stepper } from "@/components/common/Interactive";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { cn } from "@/utils/cn";
 
 export type FormField = {
@@ -23,6 +24,7 @@ export type FormField = {
   multiple?: boolean;
   accept?: string;
   min?: number;
+  max?: number;
   placeholder?: string;
 };
 export function EntityForm({
@@ -69,6 +71,17 @@ export function EntityForm({
               <AppFileUpload {...field} />
             ) : field.type === "date" ? (
               <AppDatePicker {...field} />
+            ) : field.type === "number" ? (
+              <FormattedNumberInput
+                defaultValue=""
+                helper={field.helper}
+                label={field.label}
+                max={field.max}
+                min={field.min}
+                name={field.name}
+                placeholder={field.placeholder}
+                required={field.required}
+              />
             ) : (
               <AppInput {...field} />
             )}

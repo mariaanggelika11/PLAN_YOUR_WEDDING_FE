@@ -63,6 +63,10 @@ function MobilePublicMenu() {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm" />
         <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-[min(88vw,380px)] flex-col bg-white p-6 shadow-2xl">
+          <Dialog.Title className="sr-only">Menu navigasi</Dialog.Title>
+          <Dialog.Description className="sr-only">
+            Pilih halaman atau masuk ke akun Plan Your Wedding.
+          </Dialog.Description>
           <div className="flex items-center justify-between">
             <BrandMark />
             <Dialog.Close

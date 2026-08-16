@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { ShieldCheck } from "lucide-react";
 import { ErrorState, LoadingSkeleton } from "@/components/states/States";
 import { ToastMessage } from "@/components/common/Toast";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { useAsyncResource } from "@/hooks/useAsyncResource";
 import {
   AccountError,
   getAccountProfile,
@@ -14,56 +16,34 @@ import {
 } from "@/services/accountService";
 
 export function AdminProfileForm() {
-  const [profile, setProfile] = useState<AccountProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
-  async function load() {
-    setIsLoading(true);
-    setLoadError(false);
-    try {
-      setProfile(await getAccountProfile());
-    } catch {
-      setLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const profile = useAsyncResource<AccountProfile | null>(getAccountProfile, {
+    initialData: null,
+    mapError: accountLoadError,
+  });
+  const save = useAsyncAction();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    setIsSaving(true);
-    setError("");
-    setMessage("");
-    try {
-      const saved = await saveAccountProfile({
-        fullname: String(form.get("fullname") ?? "").trim(),
-        email: String(form.get("email") ?? "")
-          .trim()
-          .toLowerCase(),
-        phoneNumber: String(form.get("phoneNumber") ?? "").trim() || null,
-      });
-      setProfile(saved);
-      setMessage("Profile admin berhasil disimpan.");
-    } catch (submitError) {
-      setError(
-        submitError instanceof AccountError ? submitError.message : "Profile admin gagal disimpan.",
-      );
-    } finally {
-      setIsSaving(false);
-    }
+    const result = await save.run(
+      () =>
+        saveAccountProfile({
+          fullname: String(form.get("fullname") ?? "").trim(),
+          email: String(form.get("email") ?? "")
+            .trim()
+            .toLowerCase(),
+          phoneNumber: String(form.get("phoneNumber") ?? "").trim() || null,
+        }),
+      {
+        errorMessage: accountSaveError,
+        successMessage: "Profile admin berhasil disimpan.",
+      },
+    );
+    if (result.success) profile.setData(result.data);
   }
 
-  if (isLoading) return <LoadingSkeleton />;
-  if (loadError || !profile) return <ErrorState retry={() => void load()} />;
+  if (profile.loading) return <LoadingSkeleton />;
+  if (profile.error || !profile.data) return <ErrorState retry={() => void profile.reload()} />;
 
   return (
     <form className="grid gap-6 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
@@ -79,26 +59,45 @@ export function AdminProfileForm() {
         </div>
       </section>
       <div className="grid gap-4 md:grid-cols-2">
-        <AppInput defaultValue={profile.fullname} label="Nama lengkap" name="fullname" required />
-        <AppInput defaultValue={profile.email} label="Email" name="email" type="email" required />
         <AppInput
-          defaultValue={profile.phoneNumber ?? ""}
+          defaultValue={profile.data.fullname}
+          label="Nama lengkap"
+          name="fullname"
+          required
+        />
+        <AppInput
+          defaultValue={profile.data.email}
+          label="Email"
+          name="email"
+          type="email"
+          required
+        />
+        <AppInput
+          defaultValue={profile.data.phoneNumber ?? ""}
           label="Nomor HP"
           name="phoneNumber"
           type="tel"
         />
-        <AppInput disabled label="Status akun" value={profile.active ? "Aktif" : "Nonaktif"} />
+        <AppInput disabled label="Status akun" value={profile.data.active ? "Aktif" : "Nonaktif"} />
       </div>
-      {error ? (
-        <ToastMessage message={error} variant="error" />
+      {save.error ? (
+        <ToastMessage message={save.error} variant="error" />
       ) : (
-        message && <ToastMessage message={message} />
+        save.message && <ToastMessage message={save.message} />
       )}
       <div className="flex justify-end">
-        <AppButton loading={isSaving} type="submit">
+        <AppButton loading={save.loading} type="submit">
           Simpan perubahan
         </AppButton>
       </div>
     </form>
   );
+}
+
+function accountLoadError() {
+  return "Profile admin gagal dimuat.";
+}
+
+function accountSaveError(error: unknown) {
+  return error instanceof AccountError ? error.message : "Profile admin gagal disimpan.";
 }

@@ -1,7 +1,6 @@
 import { API_ROUTES } from "@/constants/apiRoutes";
-import { ApiError, apiRequest } from "@/services/api";
-import { getSession } from "@/services/authService";
-import type { ApiResponse } from "@/types/api";
+import { ApiError } from "@/services/api";
+import { authenticatedDataRequest } from "@/services/authenticatedApi";
 import type { AdminUser, AdminUserRole, PaginatedData, VendorAdminProfile } from "@/types/admin";
 
 export class AdminServiceError extends Error {
@@ -83,14 +82,8 @@ async function getPage<T>(endpoint: string, query: AdminListQuery): Promise<Pagi
 }
 
 async function request<T>(endpoint: string, init?: RequestInit) {
-  const session = getSession();
-  if (!session) throw new AdminServiceError("Sesi login tidak ditemukan. Silakan masuk kembali.");
   try {
-    const response = await apiRequest<ApiResponse<T>>(endpoint, {
-      ...init,
-      headers: { ...init?.headers, Authorization: `Bearer ${session.accessToken}` },
-    });
-    return response.data;
+    return await authenticatedDataRequest<T>(endpoint, init);
   } catch (error) {
     if (error instanceof ApiError) throw new AdminServiceError(error.message);
     throw new AdminServiceError("Data admin gagal diproses.");

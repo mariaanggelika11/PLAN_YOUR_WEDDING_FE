@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppInput } from "@/components/ui/FormFields";
 import { DashboardCard } from "@/components/cards/Cards";
 import { SectionHeader } from "@/components/common/Headers";
 import { EntityForm, type FormField } from "@/components/forms/EntityForm";
-import { ProfileForm } from "@/components/forms/ProfileForm";
+import { VendorProfileForm } from "@/components/forms/VendorProfileForm";
 import { DetailGrid, PlaceholderPanel } from "@/features/shared/DetailBlocks";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { DataTable } from "@/components/tables/DataTable";
@@ -25,8 +25,10 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
-import { getVendorProfile } from "@/services/profileService";
 import type { VendorApiProfile } from "@/types/profile";
+import { useVendorProfile } from "@/hooks/useVendorProfile";
+import { cn } from "@/utils/cn";
+import { canVendorSell, vendorDisplayStatus, vendorProfileStatus } from "@/domain/profileRules";
 
 const productFields: FormField[] = [
   { label: "Nama produk atau paket", name: "name", required: true, step: 0 },
@@ -77,7 +79,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
   if (page === "profile")
     return (
       <Page title="Profil Bisnis" description="Informasi ini tampil di halaman toko vendor.">
-        <ProfileForm type="vendor" />
+        <VendorProfileForm />
       </Page>
     );
   if (page === "products" && slug[1] === "create")
@@ -167,20 +169,47 @@ export function VendorPage({ slug }: { slug: string[] }) {
   return <EmptyState title="Halaman tidak ditemukan" />;
 }
 function VendorDashboard() {
-  // TODO API: Ambil ringkasan dashboard vendor dari backend
+  const vendor = useVendorProfile();
+  if (vendor.loading)
+    return (
+      <Page title="Seller Center" description="Memuat informasi bisnis Anda...">
+        <LoadingSkeleton />
+      </Page>
+    );
+  if (vendor.error)
+    return (
+      <Page title="Seller Center" description="Informasi bisnis tidak dapat dimuat.">
+        <ErrorState retry={() => void vendor.reload()} />
+      </Page>
+    );
+
+  const profile = vendor.profile;
+  const canSell = canVendorSell(profile);
+  const businessName =
+    profile?.businessName?.trim() ||
+    profile?.ownerName?.trim() ||
+    profile?.user?.fullname?.trim() ||
+    "Vendor";
+
+  // TODO API: Ambil statistik paket, pesanan, dan pendapatan dari backend.
   return (
     <Page title="Seller Center" description="Pantau performa bisnis dan pesanan terbaru.">
-      <section className="rounded-[2rem] border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-6">
+      <section
+        className={cn(
+          "rounded-[2rem] border bg-gradient-to-r to-white p-6",
+          canSell ? "border-emerald-200 from-emerald-50" : "border-amber-200 from-amber-50",
+        )}
+      >
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <StatusBadge status="VERIFIED_ACTIVE" />
-            <h2 className="mt-3 text-2xl font-semibold">Selamat datang, Atelier Aurora</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Profil Anda aktif dan dapat menerima pesanan baru.
-            </p>
+            <StatusBadge status={vendorDisplayStatus(profile)} />
+            <h2 className="mt-3 text-2xl font-semibold">Selamat datang, {businessName}</h2>
+            <p className="mt-1 text-sm text-stone-500">{vendorDashboardMessage(profile)}</p>
           </div>
-          <AppButton asChild>
-            <Link href={ROUTES.vendor.createProduct}>Buat paket baru</Link>
+          <AppButton asChild variant={canSell ? "primary" : "secondary"}>
+            <Link href={canSell ? ROUTES.vendor.createProduct : ROUTES.vendor.profile}>
+              {canSell ? "Buat paket baru" : "Lengkapi profil"}
+            </Link>
           </AppButton>
         </div>
       </section>
@@ -210,38 +239,21 @@ function VendorDashboard() {
   );
 }
 function ProductAccessGate({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<VendorApiProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setFailed(false);
-    try {
-      setProfile(await getVendorProfile());
-    } catch {
-      setFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => void load(), [load]);
-  if (loading)
+  const vendor = useVendorProfile();
+  const { profile } = vendor;
+  if (vendor.loading)
     return (
       <Page title="Produk" description="Memeriksa status vendor...">
         <LoadingSkeleton />
       </Page>
     );
-  if (failed)
+  if (vendor.error)
     return (
       <Page title="Produk" description="Status vendor tidak dapat dimuat.">
-        <ErrorState retry={() => void load()} />
+        <ErrorState retry={() => void vendor.reload()} />
       </Page>
     );
-  const canSell = Boolean(
-    profile?.isVerified && profile.active !== false && ![5, 6].includes(profile.status ?? 0),
-  );
+  const canSell = canVendorSell(profile);
   if (!canSell) {
     return (
       <Page
@@ -268,19 +280,19 @@ function ProductAccessGate({ children }: { children: ReactNode }) {
   return children;
 }
 
-function vendorProfileStatus(status?: number | null) {
-  return (
-    (
-      {
-        1: "DRAFT",
-        2: "PENDING_VERIFICATION",
-        3: "VERIFIED",
-        4: "REJECTED",
-        5: "SUSPENDED",
-        6: "INACTIVE",
-      } as const
-    )[status as 1] ?? "INACTIVE"
-  );
+function vendorDashboardMessage(profile: VendorApiProfile | null) {
+  if (canVendorSell(profile)) return "Profil Anda aktif dan dapat menerima pesanan baru.";
+  if (!profile) return "Lengkapi profil bisnis untuk memulai proses verifikasi.";
+  if (profile.active === false || profile.status === 6)
+    return "Profil bisnis sedang tidak aktif. Hubungi admin jika Anda memerlukan bantuan.";
+  if (profile.status === 5)
+    return "Profil bisnis sedang ditangguhkan. Hubungi admin untuk informasi lebih lanjut.";
+  if (profile.status === 4)
+    return profile.rejectReason?.trim()
+      ? `Verifikasi ditolak: ${profile.rejectReason}`
+      : "Verifikasi bisnis ditolak. Periksa kembali data dan dokumen Anda.";
+  if (profile.status === 2) return "Profil bisnis sedang menunggu pemeriksaan admin.";
+  return "Lengkapi profil dan dokumen bisnis untuk mulai berjualan.";
 }
 function ProductsPage() {
   return (

@@ -19,8 +19,9 @@ import { mockNotifications, mockUsers } from "@/constants/mockData";
 import { USER_MENU_ITEMS, type NavigationItem } from "@/constants/menu";
 import { roleRoute, ROUTES, type AppRole } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileData } from "@/components/providers/ProfileProvider";
 import { getAttachmentBlob, getVendorLogo } from "@/services/attachmentService";
-import { getCustomerProfile, getVendorProfile } from "@/services/profileService";
+import type { CustomerApiProfile, VendorApiProfile } from "@/types/profile";
 import { cn } from "@/utils/cn";
 
 interface AppShellProps {
@@ -251,6 +252,10 @@ function MobileSidebar(props: {
             props.dark ? "bg-[#101828] text-white" : "bg-white",
           )}
         >
+          <Dialog.Title className="sr-only">Menu {props.label}</Dialog.Title>
+          <Dialog.Description className="sr-only">
+            Navigasi utama untuk halaman {props.label}.
+          </Dialog.Description>
           <div className="flex items-center justify-between">
             <BrandMark dark={props.dark} />
             <Dialog.Close
@@ -325,6 +330,10 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const { user, logout } = useAuth();
+  const profileResource = useProfileData(
+    role === "vendor" ? "vendor" : "customer",
+    role !== "admin",
+  );
   const fallbackUser = mockUsers.find((item) => item.role.toLowerCase() === role);
   const currentUser = user ?? fallbackUser;
   const name = currentUser?.name ?? "Pengguna";
@@ -344,13 +353,13 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
       try {
         let attachmentId: string | null | undefined;
         if (role === "vendor") {
-          const profile = await getVendorProfile();
+          const profile = profileResource.data as VendorApiProfile | null;
           attachmentId = profile?.logoAttachmentId;
           if (!attachmentId && profile?.id) {
             attachmentId = (await getVendorLogo(profile.id))?.id;
           }
         } else {
-          attachmentId = (await getCustomerProfile())?.avatarAttachmentId;
+          attachmentId = (profileResource.data as CustomerApiProfile | null)?.avatarAttachmentId;
         }
         if (!attachmentId || disposed) return setAvatarUrl("");
         const blob = await getAttachmentBlob(attachmentId);
@@ -364,13 +373,11 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     }
 
     void loadAvatar();
-    window.addEventListener("pyw-profile-change", loadAvatar);
     return () => {
       disposed = true;
-      window.removeEventListener("pyw-profile-change", loadAvatar);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [role]);
+  }, [profileResource.data, role]);
 
   async function handleLogout() {
     if (isLoggingOut) return;

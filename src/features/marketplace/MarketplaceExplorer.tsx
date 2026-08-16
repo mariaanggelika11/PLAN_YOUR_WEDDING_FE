@@ -343,6 +343,10 @@ function MobileFilter({ children }: { children: React.ReactNode }) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm" />
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-auto rounded-t-[2rem] bg-white p-6 shadow-2xl">
+          <Dialog.Title className="text-lg font-semibold text-ink">Filter vendor</Dialog.Title>
+          <Dialog.Description className="mt-1 text-sm text-stone-500">
+            Sesuaikan kategori, lokasi, harga, dan rating vendor.
+          </Dialog.Description>
           <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-stone-200" />
           {children}
           <Dialog.Close asChild>

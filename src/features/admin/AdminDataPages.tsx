@@ -11,7 +11,8 @@ import { AppButton } from "@/components/ui/AppButton";
 import { ROUTES } from "@/constants/routes";
 import { FeaturePage as Page } from "@/features/shared/FeaturePage";
 import { DetailGrid } from "@/features/shared/DetailBlocks";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
 import {
   AdminServiceError,
   getAdminUsers,
@@ -27,28 +28,25 @@ import { formatDate } from "@/utils/formatDate";
 const PAGE_SIZE = 10;
 
 export function AdminUsersPage() {
-  const table = useAdminList(getAdminUsers);
+  const table = usePaginatedResource(getAdminUsers, { mapError: errorMessage });
+  const action = useAsyncAction();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   async function toggleUser(user: AdminUser) {
     setUpdatingId(user.id);
-    table.clearMessage();
-    try {
-      await updateUserActive(user.id, !user.active);
-      table.setMessage(
-        user.active ? "Pengguna berhasil dinonaktifkan." : "Pengguna diaktifkan kembali.",
-      );
-      await table.reload();
-    } catch (error) {
-      table.setActionError(errorMessage(error));
-    } finally {
-      setUpdatingId(null);
-    }
+    const result = await action.run(() => updateUserActive(user.id, !user.active), {
+      errorMessage,
+      successMessage: user.active
+        ? "Pengguna berhasil dinonaktifkan."
+        : "Pengguna diaktifkan kembali.",
+    });
+    if (result.success) await table.reload();
+    setUpdatingId(null);
   }
 
   return (
     <Page title="Manajemen Pengguna" description="Kelola status dan akses pengguna.">
-      <ListFeedback {...table} />
+      <ListFeedback {...table} actionError={action.error} message={action.message} />
       {!table.loading && !table.error && (
         <DataTable
           columns={["Nama", "Email", "Role", "Verifikasi", "Status", "Aksi"]}
@@ -84,7 +82,7 @@ export function AdminUsersPage() {
 }
 
 export function AdminVendorsPage() {
-  const table = useAdminList(getAdminVendors);
+  const table = usePaginatedResource(getAdminVendors, { mapError: errorMessage });
   return (
     <Page title="Manajemen Vendor" description="Tinjau seluruh akun bisnis.">
       <ListFeedback {...table} />
@@ -114,7 +112,10 @@ export function AdminVendorsPage() {
 }
 
 export function AdminVendorVerificationPage() {
-  const list = useAdminList(getAdminVendors, 1000);
+  const list = usePaginatedResource(getAdminVendors, {
+    mapError: errorMessage,
+    pageSize: 1000,
+  });
   const pending = useMemo(() => list.data.filter((vendor) => vendor.status === 2), [list.data]);
   const start = (list.page - 1) * PAGE_SIZE;
   const visible = pending.slice(start, start + PAGE_SIZE);
@@ -302,80 +303,17 @@ function VendorDocuments({ vendor }: { vendor: VendorAdminProfile }) {
   );
 }
 
-function useAdminList<T>(
-  loader: (query: {
-    filter?: string;
-    pageNumber?: number;
-    pageSize?: number;
-  }) => Promise<{ data: T[]; total: number }>,
-  pageSize = PAGE_SIZE,
-) {
-  const [data, setData] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [message, setMessage] = useState("");
-  const debouncedSearch = useDebounce(search);
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await loader({
-        filter: debouncedSearch || undefined,
-        pageNumber: page,
-        pageSize,
-      });
-      setData(response.data);
-      setTotal(response.total);
-    } catch (loadError) {
-      setError(errorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, loader, page, pageSize]);
-
-  useEffect(() => void reload(), [reload]);
-  function changeSearch(value: string) {
-    setSearch(value);
-    setPage(1);
-  }
-  function clearMessage() {
-    setActionError("");
-    setMessage("");
-  }
-  return {
-    data,
-    total,
-    page,
-    setPage,
-    search,
-    changeSearch,
-    loading,
-    error,
-    actionError,
-    setActionError,
-    message,
-    setMessage,
-    clearMessage,
-    reload,
-  };
-}
-
 function ListFeedback({
   loading,
   error,
-  actionError,
-  message,
+  actionError = "",
+  message = "",
   reload,
 }: {
   loading: boolean;
   error: string;
-  actionError: string;
-  message: string;
+  actionError?: string;
+  message?: string;
   reload: () => Promise<void>;
 }) {
   if (loading) return <LoadingSkeleton />;

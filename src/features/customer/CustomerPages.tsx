@@ -16,7 +16,7 @@ import { DashboardCard, ProductCard, VendorCard } from "@/components/cards/Cards
 import { SectionHeader } from "@/components/common/Headers";
 import { OrderTimeline, PriceBreakdown } from "@/components/common/Commerce";
 import { EntityForm, type FormField } from "@/components/forms/EntityForm";
-import { ProfileForm } from "@/components/forms/ProfileForm";
+import { CustomerProfileForm } from "@/components/forms/CustomerProfileForm";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { DataTable } from "@/components/tables/DataTable";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/states/States";
@@ -35,6 +35,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { FeaturePage } from "@/features/shared/FeaturePage";
+import { CustomerDashboardProfile } from "@/features/customer/CustomerDashboardProfile";
 
 const checkoutFields: FormField[] = [
   { label: "Tanggal acara", name: "date", type: "date", required: true },
@@ -50,7 +51,7 @@ export function CustomerPage({ slug }: { slug: string[] }) {
   if (page === "profile")
     return (
       <Page title="Profil Wedding" description="Kelola informasi profile customer Anda.">
-        <ProfileForm type="customer" />
+        <CustomerProfileForm />
       </Page>
     );
   if (page === "marketplace")
@@ -77,7 +78,14 @@ export function CustomerPage({ slug }: { slug: string[] }) {
       <Page title="Beri Ulasan" description="Bagikan pengalaman Anda setelah pesanan selesai.">
         <EntityForm
           fields={[
-            { label: "Rating (1-5)", name: "rating", type: "number", required: true },
+            {
+              label: "Rating (1-5)",
+              name: "rating",
+              type: "number",
+              min: 1,
+              max: 5,
+              required: true,
+            },
             { label: "Komentar ulasan", name: "comment", type: "textarea", required: true },
             { label: "Foto ulasan (opsional)", name: "image", type: "file" },
           ]}
@@ -108,29 +116,10 @@ function Page({
 }
 
 function CustomerDashboard() {
-  // TODO API: Ambil ringkasan dashboard customer dari backend
+  // TODO API: Ambil statistik order, pembayaran, dan progress dari backend.
   return (
     <Page title="Dashboard Wedding" description="Ringkasan persiapan pernikahan Alya & Dimas.">
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink to-slate-700 p-7 text-white shadow-2xl">
-        <div className="absolute right-0 top-0 size-64 rounded-full bg-blush/30 blur-3xl" />
-        <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs backdrop-blur">
-              Wedding Anda semakin dekat
-            </span>
-            <h2 className="mt-4 text-3xl font-semibold">167 hari menuju hari istimewa</h2>
-            <p className="mt-2 text-sm text-stone-300">
-              {formatDate(mockCustomers[0].wedding.weddingDate)} · The Glass House, Jakarta
-            </p>
-          </div>
-          <div className="grid size-32 place-items-center rounded-full border-[10px] border-white/20 border-t-rose-300 text-center">
-            <span>
-              <strong className="block text-2xl">68%</strong>
-              <small className="text-stone-300">progress</small>
-            </span>
-          </div>
-        </div>
-      </section>
+      <CustomerDashboardProfile />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard label="Pesanan aktif" value="2 pesanan" />
         <DashboardCard label="Pembayaran perlu aksi" value="1 pembayaran" />

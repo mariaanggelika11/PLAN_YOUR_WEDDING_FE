@@ -1,7 +1,10 @@
 import { API_ROUTES } from "@/constants/apiRoutes";
-import { getSession } from "@/services/authService";
-import { ApiError, apiRequest } from "@/services/api";
-import type { ApiResponse } from "@/types/api";
+import { ApiError } from "@/services/api";
+import {
+  authenticatedDataRequest,
+  authenticatedRequest,
+  getAuthenticatedContext,
+} from "@/services/authenticatedApi";
 import type {
   CustomerApiProfile,
   VendorApiProfile,
@@ -22,12 +25,29 @@ export class ProfileError extends Error {
   }
 }
 
+let customerProfileRequest: Promise<CustomerApiProfile | null> | null = null;
+let vendorProfileRequest: Promise<VendorApiProfile | null> | null = null;
+
 export function getCustomerProfile() {
-  return getOwnProfile<CustomerApiProfile>(API_ROUTES.profile.customerByUserId);
+  if (!customerProfileRequest) {
+    customerProfileRequest = getOwnProfile<CustomerApiProfile>(
+      API_ROUTES.profile.customerByUserId,
+    ).finally(() => {
+      customerProfileRequest = null;
+    });
+  }
+  return customerProfileRequest;
 }
 
 export function getVendorProfile() {
-  return getOwnProfile<VendorApiProfile>(API_ROUTES.profile.vendorByUserId);
+  if (!vendorProfileRequest) {
+    vendorProfileRequest = getOwnProfile<VendorApiProfile>(
+      API_ROUTES.profile.vendorByUserId,
+    ).finally(() => {
+      vendorProfileRequest = null;
+    });
+  }
+  return vendorProfileRequest;
 }
 
 export function saveCustomerProfileDraft(data: FormData) {
@@ -43,43 +63,37 @@ export function submitVendorProfile(data: FormData) {
 }
 
 export async function updateVendorProfile(id: number, data: VendorProfileUpdatePayload) {
-  const { accessToken } = sessionContext();
   try {
-    const response = await apiRequest<ApiResponse<VendorApiProfile>>(
-      API_ROUTES.profile.vendorById(id),
-      {
-        method: "PUT",
-        headers: authorizationHeader(accessToken),
-        body: JSON.stringify(data),
-      },
-    );
-    return response.data;
+    return await authenticatedDataRequest<VendorApiProfile>(API_ROUTES.profile.vendorById(id), {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   } catch (error) {
     throw profileError(error, "Informasi bisnis gagal diperbarui.");
   }
 }
 
 export async function saveVendorRelatedData(data: VendorRelatedData) {
-  const { accessToken, userId } = sessionContext();
-  const headers = authorizationHeader(accessToken);
+  const { userId } = profileContext();
 
   for (const contact of data.contacts) {
     const { id, ...payload } = contact;
-    await apiRequest(id ? API_ROUTES.contacts.byId(id) : API_ROUTES.contacts.forUser(userId), {
-      method: id ? "PUT" : "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
+    await authenticatedRequest(
+      id ? API_ROUTES.contacts.byId(id) : API_ROUTES.contacts.forUser(userId),
+      {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      },
+    );
   }
 
   if (data.bankAccount) {
-    await apiRequest(
+    await authenticatedRequest(
       data.bankAccountId
         ? API_ROUTES.bankAccounts.byId(data.bankAccountId)
         : API_ROUTES.bankAccounts.forUser(userId),
       {
         method: data.bankAccountId ? "PUT" : "POST",
-        headers,
         body: JSON.stringify(data.bankAccount),
       },
     );
@@ -92,9 +106,8 @@ export async function saveVendorRelatedData(data: VendorRelatedData) {
       document.set("documentNumber", data.verificationDocument.documentNumber);
     }
     document.set("file", data.verificationDocument.file);
-    await apiRequest(API_ROUTES.verificationDocuments.forUser(userId), {
+    await authenticatedRequest(API_ROUTES.verificationDocuments.forUser(userId), {
       method: "POST",
-      headers,
       body: document,
     });
   }
@@ -115,25 +128,18 @@ export async function deleteVendorVerificationDocument(id: string) {
 }
 
 async function deleteVendorResource(endpoint: string) {
-  const { accessToken } = sessionContext();
   try {
-    await apiRequest(endpoint, {
-      method: "DELETE",
-      headers: authorizationHeader(accessToken),
-    });
+    await authenticatedRequest(endpoint, { method: "DELETE" });
   } catch (error) {
     throw profileError(error, "Data gagal dihapus.");
   }
 }
 
 async function getOwnProfile<T>(endpointForUser: (userId: number) => string) {
-  const { accessToken, userId } = sessionContext();
+  const { userId } = profileContext();
 
   try {
-    const response = await apiRequest<ApiResponse<T>>(endpointForUser(userId), {
-      headers: authorizationHeader(accessToken),
-    });
-    return response.data;
+    return await authenticatedDataRequest<T>(endpointForUser(userId));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw profileError(error, "Profile gagal dimuat.");
@@ -141,45 +147,39 @@ async function getOwnProfile<T>(endpointForUser: (userId: number) => string) {
 }
 
 async function saveCustomerProfileForm(endpoint: string, data: FormData) {
-  const { accessToken, userId } = sessionContext();
+  const { userId } = profileContext();
   data.set("userId", String(userId));
 
   try {
-    const response = await apiRequest<ApiResponse<CustomerApiProfile>>(endpoint, {
+    return await authenticatedDataRequest<CustomerApiProfile>(endpoint, {
       method: "POST",
-      headers: authorizationHeader(accessToken),
       body: data,
     });
-    return response.data;
   } catch (error) {
     throw profileError(error, "Profile gagal disimpan.");
   }
 }
 
 async function saveVendorProfileForm(endpoint: string, data: FormData) {
-  const { accessToken, userId } = sessionContext();
+  const { userId } = profileContext();
   data.set("userId", String(userId));
 
   try {
-    const response = await apiRequest<ApiResponse<VendorApiProfile>>(endpoint, {
+    return await authenticatedDataRequest<VendorApiProfile>(endpoint, {
       method: "POST",
-      headers: authorizationHeader(accessToken),
       body: data,
     });
-    return response.data;
   } catch (error) {
     throw profileError(error, "Profile vendor gagal disimpan.");
   }
 }
 
-function sessionContext() {
-  const session = getSession();
-  if (!session) throw new ProfileError("Sesi login tidak ditemukan. Silakan masuk kembali.");
-  return { accessToken: session.accessToken, userId: Number(session.user.id) };
-}
-
-function authorizationHeader(accessToken: string) {
-  return { Authorization: `Bearer ${accessToken}` };
+function profileContext() {
+  try {
+    return getAuthenticatedContext();
+  } catch (error) {
+    throw profileError(error, "Sesi login tidak ditemukan. Silakan masuk kembali.");
+  }
 }
 
 function profileError(error: unknown, fallback: string) {

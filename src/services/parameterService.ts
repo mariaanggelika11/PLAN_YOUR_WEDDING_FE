@@ -1,7 +1,5 @@
 import { API_ROUTES } from "@/constants/apiRoutes";
-import { apiRequest } from "@/services/api";
-import { getSession } from "@/services/authService";
-import type { ApiResponse } from "@/types/api";
+import { authenticatedDataRequest, authenticatedRequest } from "@/services/authenticatedApi";
 import type { ParameterPayload, SystemParameter } from "@/types/parameter";
 
 interface ParameterPage {
@@ -57,25 +55,21 @@ export async function getActiveParameterDetailsByCodes(codes: string[]) {
 }
 
 export async function createParameter(data: ParameterPayload) {
-  const response = await apiRequest<ApiResponse<SystemParameter>>(API_ROUTES.parameters.root, {
+  return authenticatedDataRequest<SystemParameter>(API_ROUTES.parameters.root, {
     method: "POST",
-    headers: authHeader(),
     body: JSON.stringify(data),
   });
-  return response.data;
 }
 
 export async function updateParameter(id: string, data: Partial<ParameterPayload>) {
-  const response = await apiRequest<ApiResponse<SystemParameter>>(API_ROUTES.parameters.byId(id), {
+  return authenticatedDataRequest<SystemParameter>(API_ROUTES.parameters.byId(id), {
     method: "PUT",
-    headers: authHeader(),
     body: JSON.stringify(data),
   });
-  return response.data;
 }
 
 export async function deleteParameter(id: string) {
-  await apiRequest(API_ROUTES.parameters.byId(id), { method: "DELETE", headers: authHeader() });
+  await authenticatedRequest(API_ROUTES.parameters.byId(id), { method: "DELETE" });
 }
 
 async function fetchParameterPage(filter: string, pageNumber: number, pageSize: number) {
@@ -84,17 +78,7 @@ async function fetchParameterPage(filter: string, pageNumber: number, pageSize: 
     pageSize: String(pageSize),
   });
   if (filter) query.set("filter", filter);
-  const response = await apiRequest<ApiResponse<ParameterPage>>(
-    `${API_ROUTES.parameters.root}?${query}`,
-    { headers: authHeader() },
-  );
-  return response.data;
-}
-
-function authHeader() {
-  const session = getSession();
-  if (!session) throw new Error("Sesi login tidak ditemukan.");
-  return { Authorization: `Bearer ${session.accessToken}` };
+  return authenticatedDataRequest<ParameterPage>(`${API_ROUTES.parameters.root}?${query}`);
 }
 
 function normalizeParameterValue(value: string) {

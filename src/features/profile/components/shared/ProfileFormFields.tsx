@@ -1,0 +1,144 @@
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import { Stepper } from "@/components/common/Interactive";
+import { AppSelect } from "@/components/ui/FormFields";
+import type { MasterParameterOption } from "@/hooks/useMasterParameters";
+import { cn } from "@/utils/cn";
+
+export function FormSection({
+  active,
+  children,
+  description,
+  step,
+  title,
+}: {
+  active: boolean;
+  children: ReactNode;
+  description: string;
+  step: number;
+  title: string;
+}) {
+  return (
+    <section className={cn("grid gap-5", !active && "hidden")} data-profile-step={step}>
+      <div className="rounded-2xl bg-rose-50 p-4">
+        <h2 className="font-semibold text-ink">{title}</h2>
+        <p className="mt-1 text-sm text-stone-500">{description}</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+export function FormGroupHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="border-b border-rose-100 pb-3 md:col-span-2">
+      <h3 className="font-semibold text-ink">{title}</h3>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{description}</p>
+    </div>
+  );
+}
+
+export function MasterParameterSelect({
+  emptyMessage,
+  label,
+  name,
+  options,
+  placeholder,
+  value,
+}: {
+  emptyMessage?: string;
+  label: string;
+  name: string;
+  options: MasterParameterOption[];
+  placeholder: string;
+  value: string;
+}) {
+  return (
+    <AppSelect
+      defaultValue={value}
+      disabled={options.length === 0}
+      helper={options.length === 0 ? emptyMessage : undefined}
+      key={`${name}-${options.map((item) => item.value).join("-")}`}
+      label={label}
+      name={name}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </AppSelect>
+  );
+}
+
+export function MasterParameterCheckboxGroup({
+  emptyMessage,
+  initialValues,
+  label,
+  name,
+  options,
+}: {
+  emptyMessage?: string;
+  initialValues: string[];
+  label: string;
+  name: string;
+  options: MasterParameterOption[];
+}) {
+  const [selectedValues, setSelectedValues] = useState(initialValues);
+
+  useEffect(() => setSelectedValues(initialValues), [initialValues]);
+
+  return (
+    <fieldset className="md:col-span-2">
+      <legend className="text-sm font-medium">{label}</legend>
+      {options.length === 0 ? (
+        <p className="mt-2 rounded-xl border border-dashed bg-stone-50 p-4 text-sm text-stone-500">
+          {emptyMessage ?? "Belum ada pilihan aktif."}
+        </p>
+      ) : (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {options.map((option) => (
+            <label
+              className="flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-sm font-normal hover:border-rose-200 hover:bg-rose-50"
+              key={option.value}
+            >
+              <input
+                checked={selectedValues.includes(option.value)}
+                className="size-4 accent-rose-500"
+                name={name}
+                onChange={(event) =>
+                  setSelectedValues((current) =>
+                    event.target.checked
+                      ? [...new Set([...current, option.value])]
+                      : current.filter((value) => value !== option.value),
+                  )
+                }
+                type="checkbox"
+                value={option.value}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+export function ProfileStepIndicator({
+  activeStep,
+  onStepChange,
+  steps,
+}: {
+  activeStep: number;
+  onStepChange: (step: number) => void;
+  steps: string[];
+}) {
+  return <Stepper active={activeStep} onStepChange={onStepChange} steps={steps} />;
+}
+
+export function ProfileNavigation({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap justify-between gap-3">{children}</div>;
+}
