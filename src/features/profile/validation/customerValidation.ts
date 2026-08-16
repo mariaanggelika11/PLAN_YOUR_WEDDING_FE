@@ -1,11 +1,14 @@
-import { formFile, formValue } from "@/features/profile/mappers/profileMappers";
+import { formFile, formValue } from "@/features/profile/mappers";
+import {
+  PROFILE_IMAGE_TYPES,
+  validateAttachment,
+} from "@/features/profile/validation/attachmentValidation";
 import {
   controlStep,
   fieldLabel,
   invalidPopulatedControl,
   type ProfileValidationError,
 } from "@/features/profile/validation/sharedValidation";
-import { PROFILE_IMAGE_TYPES, validateAttachment } from "@/utils/attachmentValidation";
 
 export function validateCustomerProfile(form: HTMLFormElement): ProfileValidationError | null {
   if (!formValue(form, "fullName")) {

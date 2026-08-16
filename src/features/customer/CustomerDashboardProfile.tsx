@@ -1,8 +1,8 @@
 "use client";
 
-import { useProfileData } from "@/components/providers/ProfileProvider";
-import { ErrorState, LoadingSkeleton } from "@/components/states/States";
-import { formatDate } from "@/utils/formatDate";
+import { useProfileData } from "@/features/profile/context/ProfileProvider";
+import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
+import { formatDate } from "@/shared/utils/formatDate";
 
 export function CustomerDashboardProfile() {
   const customer = useProfileData("customer");

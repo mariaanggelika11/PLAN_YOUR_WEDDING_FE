@@ -1,9 +1,9 @@
 "use client";
 
+import { PopupMessage } from "@/shared/components/feedback/Popup";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppInput } from "@/shared/components/ui/FormFields";
 import type { ChangeEvent } from "react";
-import { ToastMessage } from "@/components/common/Toast";
-import { AppButton } from "@/components/ui/AppButton";
-import { AppInput } from "@/components/ui/FormFields";
 
 interface ImageUploadPreviewProps {
   alt: string;
@@ -59,7 +59,7 @@ export function ImageUploadPreview({
             Hapus gambar
           </AppButton>
         )}
-        {error && <ToastMessage message={error} variant="error" />}
+        {error && <PopupMessage message={error} variant="error" />}
       </div>
     </div>
   );

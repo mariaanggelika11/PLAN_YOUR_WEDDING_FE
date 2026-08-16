@@ -1,8 +1,8 @@
+import { ProfileProvider } from "@/features/profile/context/ProfileProvider";
+import { PopupProvider } from "@/shared/components/feedback/Popup";
+import { APP_BRAND } from "@/shared/config/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { PopupProvider } from "@/components/common/Popup";
-import { ProfileProvider } from "@/components/providers/ProfileProvider";
-import { APP_BRAND } from "@/constants/menu";
 import "./globals.css";
 
 export const metadata: Metadata = {

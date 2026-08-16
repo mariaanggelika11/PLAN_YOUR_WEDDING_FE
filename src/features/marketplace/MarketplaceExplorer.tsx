@@ -1,6 +1,10 @@
 "use client";
+import { marketplaceRepository } from "@/features/marketplace/repository";
+import { VendorCard } from "@/shared/components/data-display/Cards";
+import { EmptyState } from "@/shared/components/feedback/AsyncStates";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppSelect } from "@/shared/components/ui/FormFields";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -11,12 +15,7 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { VendorCard } from "@/components/cards/Cards";
-import { EmptyState } from "@/components/states/States";
-import { AppButton } from "@/components/ui/AppButton";
-import { AppInput, AppSelect } from "@/components/ui/FormFields";
-import { mockCategories, mockVendors } from "@/constants/mockData";
-
+import { useMemo, useState } from "react";
 // MOCK DATA: Daftar kota sementara untuk filter lokasi
 // TODO API: Ambil daftar provinsi dan kota dari backend
 const cities = [
@@ -57,17 +56,19 @@ export function MarketplaceExplorer() {
   // TODO API: Kirim parameter sort ke backend
   const results = useMemo(
     () =>
-      mockVendors.filter(
-        (vendor) =>
-          vendor.status === "VERIFIED_ACTIVE" &&
-          (!keyword ||
-            `${vendor.name} ${vendor.description} ${vendor.categories.join(" ")}`
-              .toLowerCase()
-              .includes(keyword.toLowerCase())) &&
-          (!city || vendor.city === city) &&
-          (!categories.length || categories.some((item) => vendor.categories.includes(item))) &&
-          (!rating || vendor.rating >= Number(rating)),
-      ),
+      marketplaceRepository
+        .vendors()
+        .filter(
+          (vendor) =>
+            vendor.status === "VERIFIED_ACTIVE" &&
+            (!keyword ||
+              `${vendor.name} ${vendor.description} ${vendor.categories.join(" ")}`
+                .toLowerCase()
+                .includes(keyword.toLowerCase())) &&
+            (!city || vendor.city === city) &&
+            (!categories.length || categories.some((item) => vendor.categories.includes(item))) &&
+            (!rating || vendor.rating >= Number(rating)),
+        ),
     [keyword, city, categories, rating],
   );
   const reset = () => {
@@ -125,15 +126,18 @@ export function MarketplaceExplorer() {
         </div>
       </section>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {mockCategories.slice(0, 10).map((category) => (
-          <button
-            onClick={() => setCategories(toggle(categories, category.name))}
-            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${categories.includes(category.name) ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
-            key={category.id}
-          >
-            {category.name}
-          </button>
-        ))}
+        {marketplaceRepository
+          .categories()
+          .slice(0, 10)
+          .map((category) => (
+            <button
+              onClick={() => setCategories(toggle(categories, category.name))}
+              className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${categories.includes(category.name) ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
+              key={category.id}
+            >
+              {category.name}
+            </button>
+          ))}
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-stone-500">
@@ -217,7 +221,7 @@ function FilterContent({
       </FilterGroup>
       <FilterGroup title="Kategori">
         <div className="grid max-h-48 gap-2 overflow-auto pr-1">
-          {mockCategories.map((category) => (
+          {marketplaceRepository.categories().map((category) => (
             <label className="flex items-center gap-2 text-sm" key={category.id}>
               <input
                 checked={categories.includes(category.name)}

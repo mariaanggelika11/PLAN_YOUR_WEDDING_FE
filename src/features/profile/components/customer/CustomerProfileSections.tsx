@@ -1,7 +1,7 @@
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import { CustomerPersonalSections } from "@/features/profile/components/customer/PersonalProfileSections";
 import { CustomerWeddingDetailsSection } from "@/features/profile/components/customer/WeddingDetailsSection";
-import { useMasterParameters } from "@/hooks/useMasterParameters";
-import type { CustomerApiProfile } from "@/types/profile";
+import type { CustomerApiProfile } from "@/features/profile/types";
 
 export function CustomerProfileSections({
   activeStep,

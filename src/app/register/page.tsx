@@ -1,7 +1,7 @@
-import Link from "next/link";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { ROUTES } from "@/shared/config/routes";
 import { Store, Users } from "lucide-react";
-import { AppButton } from "@/components/ui/AppButton";
-import { ROUTES } from "@/constants/routes";
+import Link from "next/link";
 export default function RegisterPage() {
   return (
     <main className="grid min-h-screen place-items-center px-5 py-12">

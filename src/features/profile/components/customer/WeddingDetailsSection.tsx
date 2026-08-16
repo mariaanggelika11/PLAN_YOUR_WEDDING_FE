@@ -1,16 +1,16 @@
+import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import {
   FormGroupHeader,
   MasterParameterCheckboxGroup,
   MasterParameterSelect,
 } from "@/features/profile/components/shared/ProfileFormFields";
+import { RegionFields } from "@/features/profile/components/shared/RegionFields";
 import { WeddingDetailsSection } from "@/features/profile/components/shared/StepSectionLayouts";
-import { resolveEventTypeOption } from "@/features/profile/mappers/profileMappers";
-import { RegionFields } from "@/components/forms/RegionFields";
-import { AppInput, AppSelect, AppTextarea } from "@/components/ui/FormFields";
-import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
-import { MASTER_PARAMETER_CODES } from "@/constants/parameters";
-import { useMasterParameters } from "@/hooks/useMasterParameters";
-import type { CustomerApiProfile } from "@/types/profile";
+import { resolveEventTypeOption } from "@/features/profile/mappers";
+import type { CustomerApiProfile } from "@/features/profile/types";
+import { AppInput, AppSelect, AppTextarea } from "@/shared/components/ui/FormFields";
+import { FormattedNumberInput } from "@/shared/components/ui/FormattedNumberInput";
 
 export function CustomerWeddingDetailsSection({
   active,

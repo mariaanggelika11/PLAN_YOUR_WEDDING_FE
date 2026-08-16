@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback } from "react";
-import { usePopup } from "@/components/common/Popup";
-import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
+import { deleteCustomerAvatar, getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
-import { RegionFields } from "@/components/forms/RegionFields";
-import { AppInput, AppSelect, AppTextarea } from "@/components/ui/FormFields";
-import { useImageUpload } from "@/hooks/useImageUpload";
-import { deleteCustomerAvatar, getAttachmentBlob } from "@/services/attachmentService";
-import type { CustomerApiProfile } from "@/types/profile";
-import { customerProfileToForm } from "@/features/profile/mappers/profileMappers";
+import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
+import { RegionFields } from "@/features/profile/components/shared/RegionFields";
+import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
+import { customerProfileToForm } from "@/features/profile/mappers";
+import type { CustomerApiProfile } from "@/features/profile/types";
+import { usePopup } from "@/shared/components/feedback/Popup";
+import { AppInput, AppSelect, AppTextarea } from "@/shared/components/ui/FormFields";
+import { useCallback } from "react";
 
 export function CustomerPersonalSections({
   activeStep,
@@ -104,17 +104,14 @@ function CustomerAvatarUpload({
       variant: "error",
     });
     if (!result.confirmed) return;
-    image.setLoading(true);
-    image.setError("");
-    try {
-      await deleteCustomerAvatar(profileId);
-      image.clearPreview();
-      onDeleted();
-    } catch (error) {
-      image.setError(error instanceof Error ? error.message : "Foto profile gagal dihapus.");
-    } finally {
-      image.setLoading(false);
-    }
+    await image.run(
+      () => deleteCustomerAvatar(profileId),
+      "Foto profile gagal dihapus.",
+      () => {
+        image.clearPreview();
+        onDeleted();
+      },
+    );
   }
 
   return (

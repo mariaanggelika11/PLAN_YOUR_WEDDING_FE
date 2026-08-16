@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, FileCheck2 } from "lucide-react";
-import { StatusBadge } from "@/components/badges/StatusBadge";
-import { ToastMessage } from "@/components/common/Toast";
+import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { VerificationDocumentSection } from "@/features/profile/components/shared/StepSectionLayouts";
-import { primaryVerificationDocument } from "@/features/profile/mappers/profileMappers";
 import { vendorStatusDetails } from "@/features/profile/components/vendor/VendorStatus";
-import { AppButton } from "@/components/ui/AppButton";
-import { AppInput, AppSelect } from "@/components/ui/FormFields";
-import { getAttachmentBlob } from "@/services/attachmentService";
-import type { VendorApiProfile, VendorVerificationDocument } from "@/types/profile";
+import { primaryVerificationDocument } from "@/features/profile/mappers";
+import type { VendorApiProfile, VendorVerificationDocument } from "@/features/profile/types";
+import { PopupMessage } from "@/shared/components/feedback/Popup";
+import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppInput, AppSelect } from "@/shared/components/ui/FormFields";
+import { Eye, FileCheck2 } from "lucide-react";
+import { useState } from "react";
 
 export function VendorVerificationDocumentSection({
   active,
@@ -115,7 +115,7 @@ function VendorDocumentSummary({ document }: { document: VendorVerificationDocum
       {document.rejectReason && (
         <p className="mt-3 border-t pt-3 text-sm text-red-700">{document.rejectReason}</p>
       )}
-      {error && <ToastMessage message={error} variant="error" />}
+      {error && <PopupMessage message={error} variant="error" />}
     </div>
   );
 }

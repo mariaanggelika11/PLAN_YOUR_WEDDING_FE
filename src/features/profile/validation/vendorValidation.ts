@@ -3,19 +3,19 @@ import {
   formFile,
   formValue,
   formValues,
-} from "@/features/profile/mappers/profileMappers";
+} from "@/features/profile/mappers";
+import type { VendorApiProfile } from "@/features/profile/types";
+import {
+  PROFILE_IMAGE_TYPES,
+  VERIFICATION_DOCUMENT_TYPES,
+  validateAttachment,
+} from "@/features/profile/validation/attachmentValidation";
 import {
   controlStep,
   fieldLabel,
   invalidPopulatedControl,
   type ProfileValidationError,
 } from "@/features/profile/validation/sharedValidation";
-import type { VendorApiProfile } from "@/types/profile";
-import {
-  PROFILE_IMAGE_TYPES,
-  VERIFICATION_DOCUMENT_TYPES,
-  validateAttachment,
-} from "@/utils/attachmentValidation";
 
 export function validateVendorDraft(form: HTMLFormElement): ProfileValidationError | null {
   const invalid = invalidPopulatedControl(form);

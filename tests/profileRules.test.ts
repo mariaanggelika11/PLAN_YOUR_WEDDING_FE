@@ -5,9 +5,12 @@ import {
   eventTypeApiValue,
   serializeCategoryValues,
   vendorDisplayStatus,
-} from "../src/domain/profileRules.ts";
-import { formatThousands, parseFormattedInteger } from "../src/utils/number.ts";
-import { PROFILE_IMAGE_TYPES, validateAttachment } from "../src/utils/attachmentValidation.ts";
+} from "../src/features/profile/rules.ts";
+import { formatThousands, parseFormattedInteger } from "../src/shared/utils/number.ts";
+import {
+  PROFILE_IMAGE_TYPES,
+  validateAttachment,
+} from "../src/features/profile/validation/attachmentValidation.ts";
 
 const eventOptions = [
   { value: "1", label: "Akad" },

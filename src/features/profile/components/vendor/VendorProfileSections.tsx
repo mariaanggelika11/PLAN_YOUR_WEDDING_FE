@@ -1,11 +1,11 @@
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
+import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
 import { VendorBankAccountSection } from "@/features/profile/components/vendor/BankAccountSection";
 import { VendorBusinessInformationSection } from "@/features/profile/components/vendor/BusinessInformationSection";
-import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
 import { VendorContactSection } from "@/features/profile/components/vendor/ContactSection";
 import { VendorVerificationDocumentSection } from "@/features/profile/components/vendor/VerificationDocumentSection";
-import { AppInput } from "@/components/ui/FormFields";
-import { useMasterParameters } from "@/hooks/useMasterParameters";
-import type { VendorApiProfile } from "@/types/profile";
+import type { VendorApiProfile } from "@/features/profile/types";
+import { AppInput } from "@/shared/components/ui/FormFields";
 
 export function VendorProfileSections({
   activeStep,

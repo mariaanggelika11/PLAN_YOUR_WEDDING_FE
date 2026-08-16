@@ -1,10 +1,10 @@
 "use client";
 
+import type { MasterParameterOption } from "@/features/parameters/useMasterParameters";
+import { Stepper } from "@/shared/components/navigation/Interactive";
+import { AppSelect } from "@/shared/components/ui/FormFields";
+import { cn } from "@/shared/utils/cn";
 import { useEffect, useState, type ReactNode } from "react";
-import { Stepper } from "@/components/common/Interactive";
-import { AppSelect } from "@/components/ui/FormFields";
-import type { MasterParameterOption } from "@/hooks/useMasterParameters";
-import { cn } from "@/utils/cn";
 
 export function FormSection({
   active,

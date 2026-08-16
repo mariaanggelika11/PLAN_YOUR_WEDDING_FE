@@ -1,11 +1,15 @@
-import Image from "next/image";
-import Link from "next/link";
+import { marketplaceRepository } from "@/features/marketplace/repository";
+import { VendorCard } from "@/shared/components/data-display/Cards";
+import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
+import { PublicNavbar } from "@/shared/components/layout/PublicNavbar";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { APP_BRAND } from "@/shared/config/navigation";
+import { ROUTES } from "@/shared/config/routes";
 import {
   ArrowRight,
   BadgeCheck,
   Building2,
   CalendarCheck2,
-  CheckCircle2,
   Heart,
   MapPin,
   Search,
@@ -13,13 +17,8 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { PublicNavbar } from "@/components/layout/PublicNavbar";
-import { AppButton } from "@/components/ui/AppButton";
-import { SectionHeader } from "@/components/common/Headers";
-import { VendorCard } from "@/components/cards/Cards";
-import { mockCategories, mockVendors } from "@/constants/mockData";
-import { APP_BRAND } from "@/constants/menu";
-import { ROUTES } from "@/constants/routes";
+import Image from "next/image";
+import Link from "next/link";
 
 const stats = [
   ["800+", "Vendor terverifikasi"],
@@ -105,18 +104,21 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="mt-9 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {mockCategories.slice(0, 12).map((category, index) => (
-            <Link
-              className="group rounded-3xl border bg-white p-5 text-sm font-medium shadow-sm hover:-translate-y-1 hover:border-rose-200 hover:bg-rose-50 hover:text-blush hover:shadow-lg"
-              href={ROUTES.customer.marketplace}
-              key={category.id}
-            >
-              <span className="mb-5 grid size-10 place-items-center rounded-2xl bg-stone-100 text-stone-500 group-hover:bg-white group-hover:text-blush">
-                {index % 2 ? <Heart size={17} /> : <Sparkles size={17} />}
-              </span>
-              {category.name}
-            </Link>
-          ))}
+          {marketplaceRepository
+            .categories()
+            .slice(0, 12)
+            .map((category, index) => (
+              <Link
+                className="group rounded-3xl border bg-white p-5 text-sm font-medium shadow-sm hover:-translate-y-1 hover:border-rose-200 hover:bg-rose-50 hover:text-blush hover:shadow-lg"
+                href={ROUTES.customer.marketplace}
+                key={category.id}
+              >
+                <span className="mb-5 grid size-10 place-items-center rounded-2xl bg-stone-100 text-stone-500 group-hover:bg-white group-hover:text-blush">
+                  {index % 2 ? <Heart size={17} /> : <Sparkles size={17} />}
+                </span>
+                {category.name}
+              </Link>
+            ))}
         </div>
       </section>
 
@@ -132,7 +134,7 @@ export default function HomePage() {
             </AppButton>
           </div>
           <div className="mt-9 grid gap-6 md:grid-cols-3">
-            {mockVendors.map((vendor) => (
+            {marketplaceRepository.vendors().map((vendor) => (
               <VendorCard vendor={vendor} key={vendor.id} />
             ))}
           </div>

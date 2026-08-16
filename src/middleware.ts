@@ -1,5 +1,5 @@
+import { dashboardRoute, ROUTES, type AppRole } from "@/shared/config/routes";
 import { NextResponse, type NextRequest } from "next/server";
-import { dashboardRoute, ROUTES, type AppRole } from "@/constants/routes";
 
 // TODO API: Validasi session user dan role dari backend/auth provider
 export function middleware(request: NextRequest) {

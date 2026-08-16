@@ -1,21 +1,25 @@
 "use client";
 
-import { useCallback } from "react";
-import { usePopup } from "@/components/common/Popup";
+import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
+import {
+  deleteVendorLogo,
+  getAttachmentBlob,
+  getVendorLogo,
+} from "@/features/profile/api/attachmentApi";
+import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
 import {
   FormGroupHeader,
   MasterParameterCheckboxGroup,
 } from "@/features/profile/components/shared/ProfileFormFields";
+import { RegionFields } from "@/features/profile/components/shared/RegionFields";
 import { BusinessInformationSection } from "@/features/profile/components/shared/StepSectionLayouts";
-import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
-import { vendorProfileToForm } from "@/features/profile/mappers/profileMappers";
-import { RegionFields } from "@/components/forms/RegionFields";
-import { AppInput, AppTextarea } from "@/components/ui/FormFields";
-import { MASTER_PARAMETER_CODES } from "@/constants/parameters";
-import { useImageUpload } from "@/hooks/useImageUpload";
-import { useMasterParameters } from "@/hooks/useMasterParameters";
-import { deleteVendorLogo, getAttachmentBlob, getVendorLogo } from "@/services/attachmentService";
-import type { VendorApiProfile } from "@/types/profile";
+import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
+import { vendorProfileToForm } from "@/features/profile/mappers";
+import type { VendorApiProfile } from "@/features/profile/types";
+import { usePopup } from "@/shared/components/feedback/Popup";
+import { AppInput, AppTextarea } from "@/shared/components/ui/FormFields";
+import { useCallback } from "react";
 
 export function VendorBusinessInformationSection({
   active,
@@ -152,17 +156,14 @@ function VendorLogoUpload({
       variant: "error",
     });
     if (!result.confirmed) return;
-    image.setLoading(true);
-    image.setError("");
-    try {
-      await deleteVendorLogo(profileId);
-      image.clearPreview();
-      onDeleted();
-    } catch (error) {
-      image.setError(error instanceof Error ? error.message : "Logo gagal dihapus.");
-    } finally {
-      image.setLoading(false);
-    }
+    await image.run(
+      () => deleteVendorLogo(profileId),
+      "Logo gagal dihapus.",
+      () => {
+        image.clearPreview();
+        onDeleted();
+      },
+    );
   }
   return (
     <ImageUploadPreview

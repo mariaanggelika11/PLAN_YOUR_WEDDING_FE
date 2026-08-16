@@ -1,31 +1,31 @@
 "use client";
 
-import { useState, type FormEvent, type MouseEvent } from "react";
-import { ToastMessage } from "@/components/common/Toast";
+import {
+  CUSTOMER_PROFILE_PARAMETER_CODES,
+  MASTER_PARAMETER_CODES,
+  VENDOR_PROFILE_PARAMETER_CODES,
+} from "@/features/parameters/constants";
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
+import { ProfileError } from "@/features/profile/api/profileApi";
 import { CustomerProfileSections } from "@/features/profile/components/customer/CustomerProfileSections";
 import {
   ProfileNavigation,
   ProfileStepIndicator,
 } from "@/features/profile/components/shared/ProfileFormFields";
 import { VendorProfileSections } from "@/features/profile/components/vendor/VendorProfileSections";
+import { VendorProfileStatus } from "@/features/profile/components/vendor/VendorStatus";
+import { useCustomerProfileEditor } from "@/features/profile/hooks/useCustomerProfileEditor";
+import { useVendorProfileEditor } from "@/features/profile/hooks/useVendorProfileEditor";
+import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
 import { validateCustomerProfile } from "@/features/profile/validation/customerValidation";
 import {
   validateVendorDraft,
   validateVendorSubmission,
 } from "@/features/profile/validation/vendorValidation";
-import { VendorProfileStatus } from "@/features/profile/components/vendor/VendorStatus";
-import { ErrorState, LoadingSkeleton } from "@/components/states/States";
-import { AppButton } from "@/components/ui/AppButton";
-import {
-  CUSTOMER_PROFILE_PARAMETER_CODES,
-  MASTER_PARAMETER_CODES,
-  VENDOR_PROFILE_PARAMETER_CODES,
-} from "@/constants/parameters";
-import { useCustomerProfileForm } from "@/features/profile/hooks/useCustomerProfileForm";
-import { useMasterParameters } from "@/hooks/useMasterParameters";
-import { useVendorProfileForm } from "@/features/profile/hooks/useVendorProfileForm";
-import { ProfileError } from "@/services/profileService";
-import type { CustomerApiProfile, VendorApiProfile } from "@/types/profile";
+import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
+import { PopupMessage } from "@/shared/components/feedback/Popup";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { useState, type FormEvent, type MouseEvent } from "react";
 
 type ProfileType = "customer" | "vendor";
 
@@ -33,8 +33,8 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
   const masterParameters = useMasterParameters(
     type === "customer" ? CUSTOMER_PROFILE_PARAMETER_CODES : VENDOR_PROFILE_PARAMETER_CODES,
   );
-  const customerResource = useCustomerProfileForm(type === "customer");
-  const vendorResource = useVendorProfileForm(type === "vendor");
+  const customerResource = useCustomerProfileEditor(type === "customer");
+  const vendorResource = useVendorProfileEditor(type === "vendor");
   const resource = type === "customer" ? customerResource : vendorResource;
   const profile = resource.data;
   const [isSaving, setIsSaving] = useState(false);
@@ -181,9 +181,9 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
         />
       )}
       {error ? (
-        <ToastMessage message={error} variant="error" />
+        <PopupMessage message={error} variant="error" />
       ) : (
-        message && <ToastMessage message={message} />
+        message && <PopupMessage message={message} />
       )}
       <ProfileNavigation>
         <AppButton

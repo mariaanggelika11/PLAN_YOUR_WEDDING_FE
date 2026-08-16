@@ -1,5 +1,5 @@
-import { StatusBadge } from "@/components/badges/StatusBadge";
-import type { VendorApiProfile } from "@/types/profile";
+import type { VendorApiProfile } from "@/features/profile/types";
+import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 
 const VENDOR_STATUS = {
   1: { key: "DRAFT", label: "Draft", description: "Profile masih dapat dilengkapi dan disimpan." },

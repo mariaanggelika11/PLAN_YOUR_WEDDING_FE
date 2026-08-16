@@ -1,23 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { ToastMessage } from "@/components/common/Toast";
-import { usePopup } from "@/components/common/Popup";
-import { ContactSection } from "@/features/profile/components/shared/StepSectionLayouts";
+import { deleteVendorContact } from "@/features/profile/api/profileApi";
 import {
   EmptyCollection,
   SectionHeading,
 } from "@/features/profile/components/shared/CollectionState";
+import { ContactSection } from "@/features/profile/components/shared/StepSectionLayouts";
+import { useProfileCollectionDelete } from "@/features/profile/hooks/useProfileCollectionDelete";
 import {
   VENDOR_CONTACT_OPTIONS,
   savedVendorContact,
   type VendorContactField,
-} from "@/features/profile/mappers/profileMappers";
-import { AppButton } from "@/components/ui/AppButton";
-import { AppInput, AppSelect } from "@/components/ui/FormFields";
-import { deleteVendorContact } from "@/services/profileService";
-import type { VendorApiProfile } from "@/types/profile";
+} from "@/features/profile/mappers";
+import type { VendorApiProfile } from "@/features/profile/types";
+import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppInput, AppSelect } from "@/shared/components/ui/FormFields";
+import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export function VendorContactSection({
   onDeleted,
@@ -26,35 +25,27 @@ export function VendorContactSection({
   onDeleted: () => void;
   profile: VendorApiProfile | null;
 }) {
-  const { confirm } = usePopup();
+  const deletion = useProfileCollectionDelete();
   const initialFields = VENDOR_CONTACT_OPTIONS.filter(({ field }) =>
     Boolean(savedVendorContact(profile, field)?.contactValue),
   ).map(({ field }) => field);
   const [fields, setFields] = useState<VendorContactField[]>(
     initialFields.length ? initialFields : ["whatsappNumber"],
   );
-  const [deleteError, setDeleteError] = useState("");
   const availableOptions = VENDOR_CONTACT_OPTIONS.filter(({ field }) => !fields.includes(field));
 
   async function removeContact(field: VendorContactField) {
     const contact = savedVendorContact(profile, field);
-    if (contact) {
-      const result = await confirm({
-        confirmLabel: "Hapus",
-        message: `Kontak ${contact.contactType} akan dihapus dari profile vendor.`,
-        title: "Hapus kontak?",
-        variant: "error",
-      });
-      if (!result.confirmed) return;
-    }
-    try {
-      if (contact) await deleteVendorContact(contact.id);
-      setDeleteError("");
-      setFields((current) => current.filter((item) => item !== field));
-      onDeleted();
-    } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "Kontak gagal dihapus.");
-    }
+    await deletion.remove({
+      action: contact ? () => deleteVendorContact(contact.id) : undefined,
+      confirmMessage: `Kontak ${contact?.contactType ?? "ini"} akan dihapus dari profile vendor.`,
+      confirmTitle: "Hapus kontak?",
+      errorMessage: "Kontak gagal dihapus.",
+      onDeleted: () => {
+        setFields((current) => current.filter((item) => item !== field));
+        onDeleted();
+      },
+    });
   }
 
   return (
@@ -117,6 +108,7 @@ export function VendorContactSection({
                   <button
                     aria-label={`Hapus kontak ${option.label}`}
                     className="grid size-11 place-items-center rounded-xl border border-red-200 bg-white text-red-600 transition hover:bg-red-50"
+                    disabled={deletion.deleting}
                     onClick={() => void removeContact(field)}
                     title="Hapus kontak"
                     type="button"
@@ -128,7 +120,6 @@ export function VendorContactSection({
             })}
           </div>
         )}
-        {deleteError && <ToastMessage message={deleteError} variant="error" />}
       </div>
     </ContactSection>
   );

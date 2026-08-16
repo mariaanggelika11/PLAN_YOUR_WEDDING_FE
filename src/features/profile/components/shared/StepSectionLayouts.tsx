@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
+import type { ReactNode } from "react";
 
 interface StepSectionProps {
   active: boolean;
