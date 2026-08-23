@@ -14,6 +14,7 @@ import { OrderDetail, OrdersPage } from "@/features/vendor/OrderPages";
 import {
   ProductAccessGate,
   ProductDetailPage,
+  PRODUCT_FORM_STEPS,
   ProductsPage,
   productFields,
 } from "@/features/vendor/ProductPages";
@@ -37,15 +38,8 @@ export function VendorPage({ slug }: { slug: string[] }) {
         >
           <EntityForm
             fields={productFields}
-            steps={[
-              "Informasi Layanan",
-              "Harga & Kapasitas",
-              "Area Layanan",
-              "Foto & Portofolio",
-              "Ketentuan",
-              "Status Publish",
-            ]}
-            note="Pilih Draft jika produk belum siap ditampilkan."
+            steps={PRODUCT_FORM_STEPS}
+            note="Simpan sebagai draft jika informasi paket belum lengkap, atau publikasikan setelah semua data siap."
             submitLabel="Publish paket"
           />
         </Page>
@@ -57,14 +51,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
           <EntityForm
             fields={productFields}
-            steps={[
-              "Informasi Layanan",
-              "Harga & Kapasitas",
-              "Area Layanan",
-              "Foto & Portofolio",
-              "Ketentuan",
-              "Status Publish",
-            ]}
+            steps={PRODUCT_FORM_STEPS}
             note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
             submitLabel="Simpan perubahan"
           />

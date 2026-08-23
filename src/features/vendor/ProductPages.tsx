@@ -19,6 +19,8 @@ import { formatCurrency } from "@/shared/utils/formatCurrency";
 import Link from "next/link";
 import { type ReactNode } from "react";
 
+export const PRODUCT_FORM_STEPS = ["Informasi Layanan", "Harga & Publikasi"];
+
 export const productFields: FormField[] = [
   { label: "Nama produk atau paket", name: "name", required: true, step: 0 },
   {
@@ -30,17 +32,17 @@ export const productFields: FormField[] = [
     step: 0,
   },
   { label: "Deskripsi layanan", name: "description", type: "textarea", required: true, step: 0 },
-  { label: "Harga", name: "price", type: "number", min: 0, required: true, step: 1 },
-  { label: "Minimal DP", name: "dp", type: "number", min: 0, step: 1 },
-  { label: "Durasi layanan", name: "duration", placeholder: "Contoh: 8 jam", step: 1 },
-  { label: "Kapasitas tamu", name: "capacity", type: "number", min: 1, step: 1 },
+  { label: "Durasi layanan", name: "duration", placeholder: "Contoh: 8 jam", step: 0 },
+  { label: "Kapasitas tamu", name: "capacity", type: "number", min: 1, step: 0 },
   {
     label: "Area layanan",
     name: "area",
     placeholder: "Contoh: Jabodetabek",
     required: true,
-    step: 2,
+    step: 0,
   },
+  { label: "Harga", name: "price", type: "number", min: 0, required: true, step: 1 },
+  { label: "Minimal DP", name: "dp", type: "number", min: 0, step: 1 },
   {
     label: "Foto atau portofolio paket",
     name: "images",
@@ -48,17 +50,9 @@ export const productFields: FormField[] = [
     accept: "image/jpeg,image/png,image/webp",
     multiple: true,
     helper: "Pilih beberapa foto JPG, PNG, atau WebP.",
-    step: 3,
+    step: 1,
   },
-  { label: "Syarat dan ketentuan", name: "terms", type: "textarea", required: true, step: 4 },
-  {
-    label: "Status produk",
-    name: "status",
-    type: "select",
-    options: ["DRAFT", "ACTIVE", "INACTIVE"],
-    required: true,
-    step: 5,
-  },
+  { label: "Syarat dan ketentuan", name: "terms", type: "textarea", required: true, step: 1 },
 ];
 
 export function ProductAccessGate({ children }: { children: ReactNode }) {
