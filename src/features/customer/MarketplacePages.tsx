@@ -1,11 +1,18 @@
+"use client";
+
 import { ReviewList } from "@/features/customer/OrderPages";
 import { marketplaceRepository } from "@/features/marketplace/repository";
 import { orderRepository } from "@/features/orders/repository";
 import { productRepository } from "@/features/products/repository";
+import { getVendorProduct } from "@/features/products/api";
+import type { VendorProduct } from "@/features/products/types";
+import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
+import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { ProductCard } from "@/shared/components/data-display/Cards";
 import { PriceBreakdown } from "@/shared/components/data-display/Commerce";
 import { DetailGrid, PlaceholderPanel } from "@/shared/components/data-display/DetailBlocks";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
+import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { EntityForm, type FormField } from "@/shared/components/forms/EntityForm";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
@@ -18,10 +25,10 @@ import {
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
-import { Copy, Heart, MessageCircle, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Heart, MessageCircle, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 function Page({
   title,
@@ -137,60 +144,200 @@ export function VendorDetail() {
     </div>
   );
 }
-export function ProductDetail() {
-  const product = productRepository.list()[0];
-  // TODO API: Ambil detail product/package berdasarkan product_id
+export function ProductDetail({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<VendorProduct | null>(null);
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    try {
+      const result = await getVendorProduct(productId);
+      if (result.status !== "ACTIVE" || !result.active) {
+        throw new Error("Produk ini sedang tidak tersedia.");
+      }
+      setProduct(result);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Produk gagal dimuat.");
+    }
+  }, [productId]);
+  useEffect(() => void load(), [load]);
+  if (error)
+    return (
+      <Page title="Detail Produk" description="Produk tidak dapat ditampilkan.">
+        <ErrorState retry={() => void load()} />
+      </Page>
+    );
+  if (!product) return <LoadingSkeleton />;
+  const detailItems = [
+    product.description ? { title: "Deskripsi layanan", content: product.description } : null,
+    product.terms ? { title: "Syarat dan ketentuan", content: product.terms } : null,
+  ].filter((item): item is { title: string; content: string } => Boolean(item));
   return (
-    <Page title={product.name} description={product.description}>
+    <Page title={product.name} description={product.description ?? "Detail paket layanan vendor."}>
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="grid gap-6">
-          <div className="relative h-80 overflow-hidden rounded-[2rem]">
-            <Image src={product.image} alt={product.name} fill className="object-cover" />
-          </div>
-          <div className="grid grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map((item) => (
-              <div className="relative h-20 overflow-hidden rounded-xl" key={item}>
-                <Image src={product.image} alt="" fill className="object-cover" />
-              </div>
-            ))}
-          </div>
+          <ProductGallery attachmentIds={product.imageAttachmentIds} name={product.name} />
           <DetailGrid
             items={[
-              ["Vendor", marketplaceRepository.vendors()[0].name],
-              ["Kategori", product.category],
-              ["Kapasitas", `${product.guestCapacity} tamu`],
-              ["Durasi", product.duration],
-              ["Area layanan", product.serviceArea],
-              ["Minimum DP", formatCurrency(product.minimumDp)],
+              ["Vendor", product.vendor.businessName],
+              ["Kategori", product.category ?? "-"],
+              ["Kapasitas", product.guestCapacity ? `${product.guestCapacity} tamu` : "-"],
+              ["Durasi", product.duration ?? "-"],
+              ["Area layanan", product.serviceArea ?? "-"],
+              ["Minimum DP", formatCurrency(product.minimumDp ?? 0)],
             ]}
           />
-          <Accordion
-            items={[
-              { title: "Deskripsi layanan", content: product.description },
-              {
-                title: "Fasilitas yang termasuk",
-                content: "Tim profesional, konsultasi konsep, instalasi, dan dokumentasi proses.",
-              },
-              {
-                title: "Syarat dan ketentuan",
-                content: "Jadwal dan revisi mengikuti kesepakatan tertulis dengan vendor.",
-              },
-              {
-                title: "Kebijakan pembatalan",
-                content: "Pembatalan dan refund mengikuti waktu pembatalan serta ketentuan vendor.",
-              },
-            ]}
-          />
-          <ReviewList />
+          {detailItems.length > 0 && <Accordion items={detailItems} />}
+          <ProductReviewEmptyState />
         </div>
-        <aside className="h-fit lg:sticky lg:top-24">
-          <PriceBreakdown subtotal={product.price} />
+        <aside className="h-fit rounded-3xl border bg-white p-5 shadow-soft lg:sticky lg:top-20">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blush">
+            {product.category ?? "Layanan wedding"}
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold leading-tight text-ink">{product.name}</h1>
+          <p className="mt-2 text-sm text-stone-500">oleh {product.vendor.businessName}</p>
+          {product.description && (
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-stone-600">
+              {product.description}
+            </p>
+          )}
+          <div className="mt-5 border-t pt-5">
+            <PriceBreakdown subtotal={product.price} />
+          </div>
           <AppButton asChild className="mt-3 w-full">
             <Link href={ROUTES.customer.checkout}>Booking sekarang</Link>
           </AppButton>
         </aside>
       </div>
     </Page>
+  );
+}
+
+function ProductGallery({ attachmentIds, name }: { attachmentIds: string[]; name: string }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  useEffect(() => setActiveIndex(0), [attachmentIds]);
+  const hasMultipleImages = attachmentIds.length > 1;
+  function showPrevious() {
+    setActiveIndex((current) => (current === 0 ? attachmentIds.length - 1 : current - 1));
+  }
+  function showNext() {
+    setActiveIndex((current) => (current + 1) % attachmentIds.length);
+  }
+  function finishSwipe(clientX: number) {
+    if (touchStartX.current === null || !hasMultipleImages) return;
+    const distance = clientX - touchStartX.current;
+    if (Math.abs(distance) >= 45) distance > 0 ? showPrevious() : showNext();
+    touchStartX.current = null;
+  }
+
+  if (attachmentIds.length === 0) {
+    return (
+      <CustomerProductImage attachmentId={undefined} className="h-80 rounded-[2rem]" name={name} />
+    );
+  }
+  return (
+    <div className="grid gap-3">
+      <div
+        className="group relative"
+        onTouchEnd={(event) => finishSwipe(event.changedTouches[0]?.clientX ?? 0)}
+        onTouchStart={(event) => {
+          touchStartX.current = event.touches[0]?.clientX ?? null;
+        }}
+      >
+        <CustomerProductImage
+          attachmentId={attachmentIds[activeIndex]}
+          className="h-64 rounded-3xl sm:h-80 lg:h-[380px]"
+          name={`${name} - foto ${activeIndex + 1}`}
+        />
+        {hasMultipleImages && (
+          <>
+            <GalleryNavigationButton direction="previous" onClick={showPrevious} />
+            <GalleryNavigationButton direction="next" onClick={showNext} />
+            <span className="absolute bottom-4 right-4 rounded-full bg-ink/75 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+              {activeIndex + 1}/{attachmentIds.length}
+            </span>
+          </>
+        )}
+      </div>
+      {hasMultipleImages && (
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {attachmentIds.map((id, index) => (
+            <button
+              aria-label={`Tampilkan foto ${index + 1}`}
+              className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-18 sm:w-24 ${activeIndex === index ? "border-blush ring-2 ring-rose-100" : "border-transparent opacity-70 hover:opacity-100"}`}
+              key={id}
+              onClick={() => setActiveIndex(index)}
+              type="button"
+            >
+              <CustomerProductImage attachmentId={id} className="size-full" name={name} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GalleryNavigationButton({
+  direction,
+  onClick,
+}: {
+  direction: "previous" | "next";
+  onClick: () => void;
+}) {
+  const Icon = direction === "previous" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      aria-label={direction === "previous" ? "Foto sebelumnya" : "Foto berikutnya"}
+      className={`absolute top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink opacity-90 shadow-lg backdrop-blur transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 ${direction === "previous" ? "left-3" : "right-3"}`}
+      onClick={onClick}
+      type="button"
+    >
+      <Icon size={20} />
+    </button>
+  );
+}
+
+function ProductReviewEmptyState() {
+  return (
+    <section className="rounded-3xl border bg-white p-5 shadow-sm">
+      <h2 className="font-semibold text-ink">Ulasan customer</h2>
+      <div className="mt-4 rounded-2xl bg-stone-50 px-5 py-7 text-center">
+        <p className="text-sm font-medium text-stone-700">Belum ada ulasan</p>
+        <p className="mt-1 text-xs text-stone-500">
+          Ulasan akan tampil setelah customer menyelesaikan pesanan.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function CustomerProductImage({
+  attachmentId,
+  className,
+  name,
+}: {
+  attachmentId?: string;
+  className: string;
+  name: string;
+}) {
+  const load = useCallback(
+    () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
+    [attachmentId],
+  );
+  const image = useImageUpload({
+    enabled: Boolean(attachmentId),
+    load,
+    loadErrorMessage: "Gambar produk gagal dimuat.",
+  });
+  return (
+    <div className={`grid place-items-center overflow-hidden bg-stone-100 ${className}`}>
+      {image.previewUrl ? (
+        <img alt={name} className="size-full object-cover" src={image.previewUrl} />
+      ) : (
+        <span className="text-xs text-stone-400">Belum ada gambar</span>
+      )}
+    </div>
   );
 }
 export function CheckoutPage() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { replaceVendorLogo } from "@/features/profile/api/attachmentApi";
+import { deleteVendorLogo, replaceVendorLogo } from "@/features/profile/api/attachmentApi";
 import {
   saveVendorProfileDraft,
   saveVendorRelatedData,
@@ -10,9 +10,10 @@ import {
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import {
   formFile,
-  vendorFormToBusinessPayload,
+  formValue,
   vendorFormToPayload,
   vendorFormToRelatedData,
+  vendorFormToUpdatePayload,
 } from "@/features/profile/mappers";
 import type { VendorApiProfile } from "@/features/profile/types";
 import { useCallback } from "react";
@@ -48,22 +49,39 @@ export function useVendorProfileEditor(enabled = true) {
         } catch {
           logoUploadFailed = true;
         }
+      } else if (formValue(form, "removeVendorLogo") === "true") {
+        try {
+          await deleteVendorLogo(saved.id);
+        } catch {
+          logoUploadFailed = true;
+        }
       }
       profile = (await resource.reload()) ?? profile;
       resource.setData(profile);
-      return { logoUploadFailed, profile, uploadedDocument: Boolean(related.verificationDocument) };
+      return {
+        logoUploadFailed,
+        profile,
+        uploadedDocument: Boolean(related.verificationDocument),
+      };
     },
     [resource.reload, resource.setData],
   );
 
   const saveVerifiedProfile = useCallback(
     async (activeStep: number, form: HTMLFormElement, currentProfile: VendorApiProfile) => {
+      if ([1, 2].includes(activeStep)) {
+        if (activeStep === 1) {
+          await updateVendorProfile(currentProfile.id, vendorFormToUpdatePayload(form));
+        } else {
+          await saveVendorRelatedData(vendorFormToRelatedData(form, currentProfile));
+        }
+      }
       if (activeStep === 1) {
-        await updateVendorProfile(currentProfile.id, vendorFormToBusinessPayload(form));
         const logoFile = formFile(form, "logoFile");
         if (logoFile) await replaceVendorLogo(currentProfile.id, logoFile);
-      } else if (activeStep === 2) {
-        await saveVendorRelatedData(vendorFormToRelatedData(form, currentProfile));
+        else if (formValue(form, "removeVendorLogo") === "true") {
+          await deleteVendorLogo(currentProfile.id);
+        }
       }
       const profile = (await resource.reload()) ?? currentProfile;
       resource.setData(profile);

@@ -47,6 +47,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
           <VendorProductForm
             note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
+            productId={slug[1]}
             submitLabel="Simpan perubahan"
           />
         </Page>

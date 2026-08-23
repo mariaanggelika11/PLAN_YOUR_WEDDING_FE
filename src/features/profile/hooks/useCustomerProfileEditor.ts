@@ -1,7 +1,7 @@
 "use client";
 
 import type { MasterParameterOption } from "@/features/parameters/useMasterParameters";
-import { saveCustomerProfileDraft } from "@/features/profile/api/profileApi";
+import { saveCustomerProfileDraft, updateCustomerProfile } from "@/features/profile/api/profileApi";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import { customerFormToPayload } from "@/features/profile/mappers";
 import { useCallback } from "react";
@@ -15,12 +15,15 @@ export function useCustomerProfileEditor(enabled = true) {
 
   const saveProfile = useCallback(
     async (form: HTMLFormElement, eventTypeOptions: MasterParameterOption[]) => {
-      const saved = await saveCustomerProfileDraft(customerFormToPayload(form, eventTypeOptions));
+      const payload = customerFormToPayload(form, eventTypeOptions);
+      const saved = resource.data
+        ? await updateCustomerProfile(resource.data.id, payload)
+        : await saveCustomerProfileDraft(payload);
       resource.setData(saved);
       const refreshed = await resource.reload();
       return refreshed ?? saved;
     },
-    [resource.reload, resource.setData],
+    [resource.data, resource.reload, resource.setData],
   );
 
   return { ...resource, reloadAndNotify, saveProfile };

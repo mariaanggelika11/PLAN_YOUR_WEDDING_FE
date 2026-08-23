@@ -1,8 +1,4 @@
-import type {
-  CustomerApiProfile,
-  VendorApiProfile,
-  VendorProfileUpdatePayload,
-} from "@/features/profile/types";
+import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
 import { ApiError } from "@/shared/api/apiClient";
 import {
   authenticatedDataRequest,
@@ -54,6 +50,14 @@ export function saveCustomerProfileDraft(data: FormData) {
   return saveCustomerProfileForm(API_ROUTES.profile.customerSaveDraft, data);
 }
 
+export function updateCustomerProfile(id: number, data: FormData) {
+  return profileRequest<CustomerApiProfile>(
+    API_ROUTES.profile.customerById(id),
+    { method: "PUT", body: data },
+    "Profile customer gagal diperbarui.",
+  );
+}
+
 export function saveVendorProfileDraft(data: FormData) {
   return saveVendorProfileForm(API_ROUTES.profile.vendorSaveDraft, data);
 }
@@ -62,12 +66,12 @@ export function submitVendorProfile(data: FormData) {
   return saveVendorProfileForm(API_ROUTES.profile.vendorSubmit, data);
 }
 
-export async function updateVendorProfile(id: number, data: VendorProfileUpdatePayload) {
+export async function updateVendorProfile(id: number, data: FormData) {
   return profileRequest<VendorApiProfile>(
     API_ROUTES.profile.vendorById(id),
     {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: data,
     },
     "Informasi bisnis gagal diperbarui.",
   );

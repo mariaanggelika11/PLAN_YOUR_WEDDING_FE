@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   canVendorSell,
   eventTypeApiValue,
+  parameterOptionLabels,
   serializeCategoryValues,
   vendorDisplayStatus,
 } from "../src/features/profile/rules.ts";
@@ -32,7 +33,20 @@ test("angka menggunakan titik hanya pada tampilan", () => {
 });
 
 test("kategori dikirim sebagai JSON bersih tanpa nilai kosong", () => {
-  assert.equal(serializeCategoryValues(["1", " 2 ", ""]), '["1","2"]');
+  assert.equal(
+    serializeCategoryValues(["Photography", " Catering ", "1", ""]),
+    '["Photography","Catering"]',
+  );
+  assert.deepEqual(
+    parameterOptionLabels(
+      ["1", "Catering"],
+      [
+        { value: "1", label: "Photography" },
+        { value: "2", label: "Catering" },
+      ],
+    ),
+    ["Photography", "Catering"],
+  );
 });
 
 test("vendor verified aktif dapat menjual tanpa verifikasi ulang", () => {

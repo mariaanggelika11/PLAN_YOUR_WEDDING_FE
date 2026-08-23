@@ -1,5 +1,6 @@
 import type { ParameterDetail, SystemParameter } from "@/features/parameters/types";
-import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
+import { StatusToggle } from "@/shared/components/ui/StatusToggle";
 import { cn } from "@/shared/utils/cn";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 
@@ -48,22 +49,12 @@ export function ParameterRow({
         </td>
         <td className="p-4">
           <div className="flex justify-end gap-2">
-            <AppButton
-              aria-label="Edit parameter"
-              onClick={onEdit}
-              type="button"
-              variant="secondary"
-            >
-              <Pencil size={15} /> Edit
-            </AppButton>
-            <AppButton
-              aria-label="Hapus parameter"
-              onClick={onRemove}
-              type="button"
-              variant="danger"
-            >
+            <AppIconButton label="Edit parameter" onClick={onEdit}>
+              <Pencil size={15} />
+            </AppIconButton>
+            <AppIconButton label="Hapus parameter" onClick={onRemove} variant="danger">
               <Trash2 size={15} />
-            </AppButton>
+            </AppIconButton>
           </div>
         </td>
       </tr>
@@ -124,29 +115,5 @@ export function ParameterStatusToggle({
   onChange: (active: boolean) => void;
   showText?: boolean;
 }) {
-  return (
-    <label
-      className={cn(
-        "inline-flex items-center gap-2",
-        disabled ? "cursor-wait opacity-60" : "cursor-pointer",
-      )}
-    >
-      <input
-        aria-label={label}
-        checked={active}
-        className="peer sr-only"
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        type="checkbox"
-      />
-      <span className="relative h-6 w-11 rounded-full bg-stone-300 transition peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-rose-400 peer-focus-visible:ring-offset-2 after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
-      {showText && (
-        <span
-          className={cn("text-xs font-semibold", active ? "text-emerald-700" : "text-stone-500")}
-        >
-          {active ? "Aktif" : "Nonaktif"}
-        </span>
-      )}
-    </label>
-  );
+  return <StatusToggle {...{ active, disabled, label, onChange, showText }} />;
 }

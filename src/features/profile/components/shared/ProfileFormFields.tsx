@@ -1,6 +1,7 @@
 "use client";
 
 import type { MasterParameterOption } from "@/features/parameters/useMasterParameters";
+import { parameterOptionLabels } from "@/features/profile/rules";
 import { Stepper } from "@/shared/components/navigation/Interactive";
 import { AppSelect } from "@/shared/components/ui/FormFields";
 import { cn } from "@/shared/utils/cn";
@@ -86,9 +87,18 @@ export function MasterParameterCheckboxGroup({
   name: string;
   options: MasterParameterOption[];
 }) {
-  const [selectedValues, setSelectedValues] = useState(initialValues);
+  const [selectedValues, setSelectedValues] = useState(() =>
+    parameterOptionLabels(initialValues, options),
+  );
+  const initialValuesKey = initialValues.join("\u0000");
+  const optionsKey = options.map((option) => `${option.value}:${option.label}`).join("\u0000");
 
-  useEffect(() => setSelectedValues(initialValues), [initialValues]);
+  useEffect(
+    () => setSelectedValues(parameterOptionLabels(initialValues, options)),
+    // Array props dapat terbentuk ulang setiap render; gunakan isi datanya sebagai dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialValuesKey, optionsKey],
+  );
 
   return (
     <fieldset className="md:col-span-2">
@@ -105,18 +115,18 @@ export function MasterParameterCheckboxGroup({
               key={option.value}
             >
               <input
-                checked={selectedValues.includes(option.value)}
+                checked={selectedValues.includes(option.label)}
                 className="size-4 accent-rose-500"
                 name={name}
                 onChange={(event) =>
                   setSelectedValues((current) =>
                     event.target.checked
-                      ? [...new Set([...current, option.value])]
-                      : current.filter((value) => value !== option.value),
+                      ? [...new Set([...current, option.label])]
+                      : current.filter((value) => value !== option.label),
                   )
                 }
                 type="checkbox"
-                value={option.value}
+                value={option.label}
               />
               {option.label}
             </label>

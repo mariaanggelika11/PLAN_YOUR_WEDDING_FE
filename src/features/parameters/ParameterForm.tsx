@@ -1,5 +1,6 @@
 import type { ParameterDetail, SystemParameter } from "@/features/parameters/types";
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { AppInput, AppTextarea } from "@/shared/components/ui/FormFields";
 import { Plus, Trash2, X } from "lucide-react";
 import { type FormEvent } from "react";
@@ -111,22 +112,22 @@ export function ParameterForm({
               value={detail.description ?? ""}
               onChange={(event) => updateDetail(index, { description: event.target.value })}
             />
-            <label className="flex min-h-11 items-center gap-2 rounded-xl border bg-white px-3 text-sm">
-              <input
-                checked={detail.active}
-                onChange={(event) => updateDetail(index, { active: event.target.checked })}
-                type="checkbox"
-              />{" "}
-              Aktif
-            </label>
-            <button
-              aria-label="Hapus detail"
-              className="grid size-11 place-items-center rounded-xl text-red-600 hover:bg-red-50"
+            <div className="flex min-h-11 items-center rounded-xl border bg-white px-3">
+              <ParameterStatusToggle
+                active={detail.active}
+                label={`Status detail ${index + 1}`}
+                onChange={(active) => updateDetail(index, { active })}
+                showText
+              />
+            </div>
+            <AppIconButton
+              label="Hapus detail"
               onClick={() => onDetailsChange(details.filter((_, itemIndex) => itemIndex !== index))}
               type="button"
+              variant="danger"
             >
               <Trash2 size={17} />
-            </button>
+            </AppIconButton>
           </div>
         ))}
       </div>

@@ -7,21 +7,16 @@ import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
 import { mockUsers } from "@/mocks/mockData";
 import { BrandMark } from "@/shared/components/BrandMark";
+import {
+  PageHeaderContext,
+  type ShellPageHeader,
+} from "@/shared/components/layout/PageHeaderContext";
 import { USER_MENU_ITEMS, type NavigationItem } from "@/shared/config/navigation";
 import { roleRoute, ROUTES, type AppRole } from "@/shared/config/routes";
 import { useDismissibleLayer } from "@/shared/hooks/useDismissibleLayer";
 import { cn } from "@/shared/utils/cn";
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  Bell,
-  ChevronDown,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Search,
-  X,
-} from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -36,45 +31,51 @@ interface AppShellProps {
 export function AppShell({ role, label, nav, children }: AppShellProps) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [pageHeader, setPageHeader] = useState<ShellPageHeader | null>(null);
   const dark = false;
 
   // TODO API: Ambil data user login dari backend
   // TODO API: Ambil jumlah notifikasi belum dibaca dari backend
   // TODO API: Tampilkan menu mobile berdasarkan role user login
   return (
-    <div className="min-h-screen bg-[#faf8f5]">
-      <DesktopSidebar
-        collapsed={sidebarCollapsed}
-        dark={dark}
-        label={label}
-        nav={nav}
-        pathname={pathname}
-      />
-      <div
-        className={cn(
-          "transition-[padding] duration-300",
-          sidebarCollapsed ? "lg:pl-20" : "lg:pl-72",
-        )}
-      >
-        <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b bg-white/85 px-4 backdrop-blur-xl lg:px-8">
-          <MobileSidebar dark={dark} label={label} nav={nav} pathname={pathname} />
-          <button
-            aria-label={sidebarCollapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
-            onClick={() => setSidebarCollapsed((current) => !current)}
-            className="hidden size-10 place-items-center rounded-xl border bg-white text-stone-500 hover:border-blush hover:text-blush lg:grid"
-          >
-            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
-          <GlobalSearch />
-          <div className="ml-auto flex items-center gap-2">
-            <NotificationMenu />
-            <UserMenu role={role} />
-          </div>
-        </header>
-        <main className="mx-auto max-w-[1500px] p-4 pb-24 sm:p-6 lg:p-8">{children}</main>
-        {role === "customer" && <BottomNav nav={nav.slice(0, 4)} pathname={pathname} />}
+    <PageHeaderContext.Provider value={setPageHeader}>
+      <div className="min-h-screen bg-[#faf8f5]">
+        <DesktopSidebar
+          collapsed={sidebarCollapsed}
+          dark={dark}
+          label={label}
+          nav={nav}
+          onToggle={() => setSidebarCollapsed((current) => !current)}
+          pathname={pathname}
+        />
+        <div
+          className={cn(
+            "transition-[padding] duration-300",
+            sidebarCollapsed ? "lg:pl-20" : "lg:pl-72",
+          )}
+        >
+          <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-6">
+            <MobileSidebar dark={dark} label={label} nav={nav} pathname={pathname} />
+            {pageHeader && (
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-semibold tracking-tight text-ink">
+                  {pageHeader.title}
+                </h1>
+                <p className="mt-0.5 hidden truncate text-xs text-stone-500 sm:block">
+                  {pageHeader.description}
+                </p>
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <NotificationMenu />
+              <UserMenu role={role} />
+            </div>
+          </header>
+          <main className="mx-auto max-w-[1500px] p-4 pb-24 sm:p-6">{children}</main>
+          {role === "customer" && <BottomNav nav={nav.slice(0, 4)} pathname={pathname} />}
+        </div>
       </div>
-    </div>
+    </PageHeaderContext.Provider>
   );
 }
 
@@ -83,12 +84,14 @@ function DesktopSidebar({
   dark,
   label,
   nav,
+  onToggle,
   pathname,
 }: {
   collapsed: boolean;
   dark: boolean;
   label: string;
   nav: NavigationItem[];
+  onToggle: () => void;
   pathname: string;
 }) {
   return (
@@ -99,8 +102,23 @@ function DesktopSidebar({
         dark ? "border-slate-800 bg-[#101828] text-white" : "bg-white",
       )}
     >
-      <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-start")}>
+      <div
+        className={cn("flex items-center", collapsed ? "flex-col justify-center" : "justify-start")}
+      >
         <BrandMark compact={collapsed} dark={dark} />
+        <button
+          aria-label={collapsed ? "Tampilkan sidebar" : "Ciutkan sidebar"}
+          className={cn(
+            "ml-auto grid size-8 shrink-0 place-items-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-ink",
+            collapsed && "ml-0 mt-2",
+            dark && "hover:bg-slate-800 hover:text-white",
+          )}
+          onClick={onToggle}
+          title={collapsed ? "Tampilkan menu" : "Ciutkan menu"}
+          type="button"
+        >
+          {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+        </button>
       </div>
       {!collapsed && (
         <p
@@ -272,19 +290,6 @@ function MobileSidebar(props: {
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function GlobalSearch() {
-  return (
-    <div className="hidden max-w-md flex-1 items-center gap-2 rounded-xl border bg-stone-50 px-3 py-2.5 text-stone-400 md:flex">
-      <Search size={17} />
-      <input
-        aria-label="Pencarian global"
-        className="w-full bg-transparent text-sm outline-none"
-        placeholder="Cari halaman, order, atau vendor..."
-      />
-    </div>
   );
 }
 

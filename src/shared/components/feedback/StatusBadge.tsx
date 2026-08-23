@@ -1,6 +1,13 @@
 import { statusStyles } from "@/shared/config/status";
 import { cn } from "@/shared/utils/cn";
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Aktif",
+  DRAFT: "Draft",
+  INACTIVE: "Nonaktif",
+  REJECTED: "Ditolak",
+};
+
 export function StatusBadge({ status }: { status: string }) {
   return (
     <span
@@ -9,7 +16,7 @@ export function StatusBadge({ status }: { status: string }) {
         statusStyles[status] ?? "bg-stone-100 text-stone-700",
       )}
     >
-      {status.replaceAll("_", " ")}
+      {STATUS_LABELS[status] ?? status.replaceAll("_", " ")}
     </span>
   );
 }

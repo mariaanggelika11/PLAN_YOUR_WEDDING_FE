@@ -13,7 +13,27 @@ export function eventTypeApiValue(selectedValue: string, options: ParameterOptio
 }
 
 export function serializeCategoryValues(values: string[]) {
-  return JSON.stringify(values.map((value) => value.trim()).filter(Boolean));
+  return JSON.stringify(
+    values.map((value) => value.trim()).filter((value) => value && !/^\d+$/.test(value)),
+  );
+}
+
+export function parameterOptionLabels(values: string[], options: ParameterOption[]) {
+  return [
+    ...new Set(
+      values.flatMap((savedValue) => {
+        const normalizedSavedValue = normalizeParameterText(savedValue);
+        const option = options.find(
+          (item) =>
+            normalizeParameterText(item.value) === normalizedSavedValue ||
+            normalizeParameterText(item.label) === normalizedSavedValue,
+        );
+        if (option) return [option.label.trim()];
+        const trimmedValue = savedValue.trim();
+        return trimmedValue && !/^\d+$/.test(trimmedValue) ? [trimmedValue] : [];
+      }),
+    ),
+  ];
 }
 
 export function vendorProfileStatus(status?: number | null) {
@@ -53,4 +73,8 @@ function normalizeEnumValue(value: string) {
     .replace(/[^a-zA-Z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .toUpperCase();
+}
+
+function normalizeParameterText(value: string) {
+  return value.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ").toUpperCase();
 }

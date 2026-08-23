@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteCustomerAvatar, getAttachmentBlob } from "@/features/profile/api/attachmentApi";
+import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
 import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
 import { RegionFields } from "@/features/profile/components/shared/RegionFields";
@@ -9,15 +9,13 @@ import { customerProfileToForm } from "@/features/profile/mappers";
 import type { CustomerApiProfile } from "@/features/profile/types";
 import { usePopup } from "@/shared/components/feedback/Popup";
 import { AppInput, AppSelect, AppTextarea } from "@/shared/components/ui/FormFields";
-import { useCallback } from "react";
+import { useCallback, useState, type ChangeEvent } from "react";
 
 export function CustomerPersonalSections({
   activeStep,
-  onDataChanged,
   profile,
 }: {
   activeStep: number;
-  onDataChanged: () => void;
   profile: CustomerApiProfile | null;
 }) {
   const values = customerProfileToForm(profile);
@@ -65,25 +63,13 @@ export function CustomerPersonalSections({
         step={2}
         title="Foto profile"
       >
-        <CustomerAvatarUpload
-          attachmentId={profile?.avatarAttachmentId ?? null}
-          onDeleted={onDataChanged}
-          profileId={profile?.id ?? null}
-        />
+        <CustomerAvatarUpload attachmentId={profile?.avatarAttachmentId ?? null} />
       </FormSection>
     </>
   );
 }
 
-function CustomerAvatarUpload({
-  attachmentId,
-  onDeleted,
-  profileId,
-}: {
-  attachmentId: string | null;
-  onDeleted: () => void;
-  profileId: number | null;
-}) {
+function CustomerAvatarUpload({ attachmentId }: { attachmentId: string | null }) {
   const { confirm } = usePopup();
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
@@ -94,9 +80,9 @@ function CustomerAvatarUpload({
     load,
     loadErrorMessage: "Foto profile gagal dimuat.",
   });
+  const [removePending, setRemovePending] = useState(false);
 
   async function removeAvatar() {
-    if (!profileId) return;
     const result = await confirm({
       confirmLabel: "Hapus",
       message: "Foto profile Anda akan dihapus.",
@@ -104,29 +90,35 @@ function CustomerAvatarUpload({
       variant: "error",
     });
     if (!result.confirmed) return;
-    await image.run(
-      () => deleteCustomerAvatar(profileId),
-      "Foto profile gagal dihapus.",
-      () => {
-        image.clearPreview();
-        onDeleted();
-      },
-    );
+    image.clearPreview();
+    setRemovePending(true);
+  }
+
+  function selectAvatar(event: ChangeEvent<HTMLInputElement>) {
+    setRemovePending(false);
+    image.selectImage(event);
   }
 
   return (
-    <ImageUploadPreview
-      alt="Foto profile"
-      emptyLabel="Belum ada gambar"
-      error={image.error}
-      helper="JPG, PNG, atau WebP maksimal 5 MB."
-      inputLabel={image.previewUrl ? "Ganti foto profile" : "Upload foto profile"}
-      inputName="avatarPhoto"
-      isLoading={image.loading}
-      note="Foto akan diunggah saat profile disimpan."
-      onChange={image.selectImage}
-      onRemove={attachmentId ? () => void removeAvatar() : undefined}
-      previewUrl={image.previewUrl}
-    />
+    <>
+      <ImageUploadPreview
+        alt="Foto profile"
+        emptyLabel="Belum ada gambar"
+        error={image.error}
+        helper="JPG, PNG, atau WebP maksimal 5 MB."
+        inputLabel={image.previewUrl ? "Ganti foto profile" : "Upload foto profile"}
+        inputName="avatarPhoto"
+        isLoading={image.loading}
+        note={
+          removePending
+            ? "Foto akan dihapus saat perubahan disimpan."
+            : "Foto akan diunggah saat profile disimpan."
+        }
+        onChange={selectAvatar}
+        onRemove={attachmentId ? () => void removeAvatar() : undefined}
+        previewUrl={image.previewUrl}
+      />
+      <input name="removeAvatarPhoto" type="hidden" value={String(removePending)} />
+    </>
   );
 }

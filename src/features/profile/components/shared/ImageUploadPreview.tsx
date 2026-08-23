@@ -1,8 +1,9 @@
 "use client";
 
 import { PopupMessage } from "@/shared/components/feedback/Popup";
-import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
+import { Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 
 interface ImageUploadPreviewProps {
@@ -55,9 +56,14 @@ export function ImageUploadPreview({
         />
         <p className="text-xs leading-5 text-stone-500">{note}</p>
         {onRemove && previewUrl && (
-          <AppButton className="w-fit" onClick={onRemove} type="button" variant="danger">
-            Hapus gambar
-          </AppButton>
+          <AppIconButton
+            label={`Hapus ${inputLabel.toLowerCase()}`}
+            onClick={onRemove}
+            type="button"
+            variant="danger"
+          >
+            <Trash2 size={17} />
+          </AppIconButton>
         )}
         {error && <PopupMessage message={error} variant="error" />}
       </div>

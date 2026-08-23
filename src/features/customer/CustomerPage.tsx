@@ -39,7 +39,7 @@ export function CustomerPage({ slug }: { slug: string[] }) {
       </Page>
     );
   if (page === "vendors") return <VendorDetail />;
-  if (page === "products") return <ProductDetail />;
+  if (page === "products" && slug[1]) return <ProductDetail productId={slug[1]} />;
   if (page === "checkout") return <CheckoutPage />;
   if (page === "payment") return <PaymentPage />;
   if (page === "orders" && slug[1]) return <OrderDetail />;

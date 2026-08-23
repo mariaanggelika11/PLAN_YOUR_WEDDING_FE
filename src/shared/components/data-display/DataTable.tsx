@@ -1,6 +1,7 @@
 "use client";
 
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -14,6 +15,9 @@ interface DataTableProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   onPageChange?: (page: number) => void;
+  itemLabel?: string;
+  showToolbar?: boolean;
+  showPagination?: boolean;
 }
 export function DataTable({
   columns,
@@ -25,6 +29,9 @@ export function DataTable({
   searchValue,
   onSearchChange,
   onPageChange,
+  itemLabel = "data",
+  showToolbar = Boolean(onSearchChange),
+  showPagination = false,
 }: DataTableProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
@@ -32,23 +39,27 @@ export function DataTable({
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-semibold">{title}</h3>
-          <p className="text-xs text-stone-400">{total} data ditemukan</p>
+          <p className="text-xs text-stone-400">
+            {total} {itemLabel} ditemukan
+          </p>
         </div>
-        <div className="flex gap-2">
-          <label className="flex flex-1 items-center gap-2 rounded-xl border bg-stone-50 px-3 py-2 text-stone-400">
-            <Search size={15} />
-            <input
-              aria-label="Cari data"
-              className="w-full bg-transparent text-xs outline-none"
-              placeholder="Cari data..."
-              value={searchValue}
-              onChange={(event) => onSearchChange?.(event.target.value)}
-            />
-          </label>
-          <AppButton aria-label="Filter data" variant="secondary" className="min-h-9 px-3">
-            <SlidersHorizontal size={15} />
-          </AppButton>
-        </div>
+        {showToolbar && (
+          <div className="flex gap-2">
+            <label className="flex flex-1 items-center gap-2 rounded-xl border bg-stone-50 px-3 py-2 text-stone-400">
+              <Search size={15} />
+              <input
+                aria-label="Cari data"
+                className="w-full bg-transparent text-xs outline-none"
+                placeholder="Cari data..."
+                value={searchValue}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+              />
+            </label>
+            <AppButton aria-label="Filter data" variant="secondary" className="min-h-9 px-3">
+              <SlidersHorizontal size={15} />
+            </AppButton>
+          </div>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -85,29 +96,31 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-stone-500">
-        <span>
-          Halaman {page} dari {totalPages}
-        </span>
-        <div className="flex gap-1">
-          <button
-            aria-label="Halaman sebelumnya"
-            className="grid size-8 place-items-center rounded-lg border disabled:opacity-40"
-            disabled={page <= 1}
-            onClick={() => onPageChange?.(page - 1)}
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <button
-            aria-label="Halaman berikutnya"
-            className="grid size-8 place-items-center rounded-lg border disabled:opacity-40"
-            disabled={page >= totalPages}
-            onClick={() => onPageChange?.(page + 1)}
-          >
-            <ChevronRight size={15} />
-          </button>
+      {(showPagination || totalPages > 1) && (
+        <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-stone-500">
+          <span>
+            Halaman {page} dari {totalPages}
+          </span>
+          <div className="flex gap-1">
+            <AppIconButton
+              className="size-8 rounded-lg"
+              disabled={page <= 1}
+              label="Halaman sebelumnya"
+              onClick={() => onPageChange?.(page - 1)}
+            >
+              <ChevronLeft size={15} />
+            </AppIconButton>
+            <AppIconButton
+              className="size-8 rounded-lg"
+              disabled={page >= totalPages}
+              label="Halaman berikutnya"
+              onClick={() => onPageChange?.(page + 1)}
+            >
+              <ChevronRight size={15} />
+            </AppIconButton>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

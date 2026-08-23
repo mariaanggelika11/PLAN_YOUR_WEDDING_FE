@@ -54,4 +54,8 @@ export const API_ROUTES = {
     forUser: (userId: number) => `/verification-documents/user/${userId}`,
     byId: (id: string) => `/verification-documents/${id}`,
   },
+  vendorProducts: {
+    root: "/vendor-products",
+    byId: (id: string) => `/vendor-products/${id}`,
+  },
 } as const;

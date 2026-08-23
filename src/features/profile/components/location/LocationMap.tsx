@@ -14,9 +14,11 @@ const markerIcon = divIcon({
 const FALLBACK_LOCATION: Coordinates = { latitude: -6.2, longitude: 106.816666 };
 
 export default function LocationMap({
+  editable,
   value,
   onChange,
 }: {
+  editable: boolean;
   value: Coordinates;
   onChange: (value: Coordinates) => void;
 }) {
@@ -25,26 +27,38 @@ export default function LocationMap({
     <MapContainer
       center={[safeValue.latitude, safeValue.longitude]}
       className="h-72 w-full"
-      scrollWheelZoom
+      scrollWheelZoom={editable}
       zoom={15}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapInteraction onChange={onChange} value={safeValue} />
+      <MapInteraction editable={editable} onChange={onChange} value={safeValue} />
     </MapContainer>
   );
 }
 
 function MapInteraction({
+  editable,
   value,
   onChange,
 }: {
+  editable: boolean;
   value: Coordinates;
   onChange: (value: Coordinates) => void;
 }) {
   const map = useMap();
+
+  useEffect(() => {
+    const action = editable ? "enable" : "disable";
+    map.dragging[action]();
+    map.scrollWheelZoom[action]();
+    map.doubleClickZoom[action]();
+    map.touchZoom[action]();
+    map.boxZoom[action]();
+    map.keyboard[action]();
+  }, [editable, map]);
 
   useEffect(() => {
     if (!isValidCoordinates(value)) return;
@@ -68,13 +82,14 @@ function MapInteraction({
 
   useMapEvents({
     click(event: LeafletMouseEvent) {
+      if (!editable) return;
       onChange(normalizeCoordinates(event.latlng.lat, event.latlng.lng));
     },
   });
 
   return (
     <Marker
-      draggable
+      draggable={editable}
       eventHandlers={{
         dragend(event) {
           const marker = event.target as LeafletMarker;

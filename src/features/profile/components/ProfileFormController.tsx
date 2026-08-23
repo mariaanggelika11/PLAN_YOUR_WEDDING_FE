@@ -89,7 +89,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
       }
       if (result.logoUploadFailed)
         setError(
-          "Profile berhasil disimpan, tetapi logo bisnis gagal diunggah. Silakan coba lagi.",
+          "Profile berhasil disimpan, tetapi perubahan logo bisnis gagal diproses. Silakan coba lagi.",
         );
       setMessage(
         action === "draft"
@@ -166,7 +166,6 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
         <CustomerProfileSections
           activeStep={activeStep}
           masterParameters={masterParameters}
-          onDataChanged={() => void customerResource.reloadAndNotify()}
           profile={profile as CustomerApiProfile | null}
         />
       ) : (

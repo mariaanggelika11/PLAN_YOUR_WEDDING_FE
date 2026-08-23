@@ -10,6 +10,7 @@ import { useProfileCollectionDelete } from "@/features/profile/hooks/useProfileC
 import { primaryBankAccount } from "@/features/profile/mappers";
 import type { VendorApiProfile } from "@/features/profile/types";
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
 import { Landmark, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -65,16 +66,15 @@ export function VendorBankAccountSection({
                   <p className="text-xs text-stone-500">Digunakan sebagai tujuan pencairan dana</p>
                 </div>
               </div>
-              <button
-                aria-label="Hapus rekening"
-                className="grid size-10 place-items-center rounded-xl text-red-600 transition hover:bg-red-50"
+              <AppIconButton
                 disabled={deletion.deleting}
+                label="Hapus rekening"
                 onClick={() => void removeAccount()}
-                title="Hapus rekening"
                 type="button"
+                variant="danger"
               >
                 <Trash2 size={17} />
-              </button>
+              </AppIconButton>
             </div>
             <div className="grid gap-4 p-4 md:grid-cols-2">
               <AppInput

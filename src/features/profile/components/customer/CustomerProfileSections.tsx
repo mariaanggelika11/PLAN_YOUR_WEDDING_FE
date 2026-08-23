@@ -6,21 +6,15 @@ import type { CustomerApiProfile } from "@/features/profile/types";
 export function CustomerProfileSections({
   activeStep,
   masterParameters,
-  onDataChanged,
   profile,
 }: {
   activeStep: number;
   masterParameters: ReturnType<typeof useMasterParameters>;
-  onDataChanged: () => void;
   profile: CustomerApiProfile | null;
 }) {
   return (
     <>
-      <CustomerPersonalSections
-        activeStep={activeStep}
-        onDataChanged={onDataChanged}
-        profile={profile}
-      />
+      <CustomerPersonalSections activeStep={activeStep} profile={profile} />
       <CustomerWeddingDetailsSection
         active={activeStep === 3}
         masterParameters={masterParameters}

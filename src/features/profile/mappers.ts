@@ -97,6 +97,7 @@ export function customerFormToPayload(
     "estimatedBudget",
     "budgetRangeMin",
     "budgetRangeMax",
+    "removeAvatarPhoto",
   ] as const;
   fields.forEach((field) => {
     const value = formValue(form, field);
@@ -145,6 +146,10 @@ export function vendorFormToPayload(form: HTMLFormElement) {
   });
   data.set("categories", serializeCategoryValues(formValues(form, "categories")));
   return data;
+}
+
+export function vendorFormToUpdatePayload(form: HTMLFormElement) {
+  return vendorFormToPayload(form);
 }
 
 export function vendorFormToBusinessPayload(form: HTMLFormElement): VendorProfileUpdatePayload {

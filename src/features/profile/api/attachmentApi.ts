@@ -27,15 +27,43 @@ const VENDOR_PROFILE_REFERENCE = "vendor_profiles";
 const VENDOR_LOGO_CATEGORY = "logo";
 const CUSTOMER_PROFILE_REFERENCE = "customer_profiles";
 const CUSTOMER_AVATAR_CATEGORY = "avatar";
+const MAX_CACHED_ATTACHMENTS = 24;
+const attachmentBlobCache = new Map<string, Promise<Blob>>();
+let cacheResetListenerRegistered = false;
 
-export async function getAttachmentBlob(attachmentId: string): Promise<Blob> {
+export function getAttachmentBlob(attachmentId: string): Promise<Blob> {
+  registerAttachmentCacheReset();
+  const cached = attachmentBlobCache.get(attachmentId);
+  if (cached) {
+    attachmentBlobCache.delete(attachmentId);
+    attachmentBlobCache.set(attachmentId, cached);
+    return cached;
+  }
+
+  const request = fetchAttachmentBlob(attachmentId).catch((error) => {
+    attachmentBlobCache.delete(attachmentId);
+    throw error;
+  });
+  attachmentBlobCache.set(attachmentId, request);
+  while (attachmentBlobCache.size > MAX_CACHED_ATTACHMENTS) {
+    const oldestKey = attachmentBlobCache.keys().next().value;
+    if (oldestKey) attachmentBlobCache.delete(oldestKey);
+    else break;
+  }
+  return request;
+}
+
+function registerAttachmentCacheReset() {
+  if (cacheResetListenerRegistered || typeof window === "undefined") return;
+  window.addEventListener("pyw-auth-change", () => attachmentBlobCache.clear());
+  cacheResetListenerRegistered = true;
+}
+
+async function fetchAttachmentBlob(attachmentId: string) {
   const response = await authenticatedFetch(API_ROUTES.attachments.file(attachmentId), {
     headers: { Accept: "image/*,application/pdf" },
   });
-
-  if (!response.ok) {
-    throw new ApiError("File attachment tidak dapat dimuat.", response.status);
-  }
+  if (!response.ok) throw new ApiError("File attachment tidak dapat dimuat.", response.status);
   return response.blob();
 }
 
@@ -101,8 +129,9 @@ async function getAttachments(referenceTable: string, referenceId: number, categ
   return page.data;
 }
 
-async function deleteAttachment(attachmentId: string) {
-  return authenticatedRequest(API_ROUTES.attachments.byId(attachmentId), {
+export async function deleteAttachment(attachmentId: string) {
+  await authenticatedRequest(API_ROUTES.attachments.byId(attachmentId), {
     method: "DELETE",
   });
+  attachmentBlobCache.delete(attachmentId);
 }

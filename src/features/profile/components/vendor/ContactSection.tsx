@@ -14,6 +14,7 @@ import {
 } from "@/features/profile/mappers";
 import type { VendorApiProfile } from "@/features/profile/types";
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { AppInput, AppSelect } from "@/shared/components/ui/FormFields";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -105,16 +106,15 @@ export function VendorContactSection({
                     placeholder={option.placeholder}
                     type={option.type}
                   />
-                  <button
-                    aria-label={`Hapus kontak ${option.label}`}
-                    className="grid size-11 place-items-center rounded-xl border border-red-200 bg-white text-red-600 transition hover:bg-red-50"
+                  <AppIconButton
                     disabled={deletion.deleting}
+                    label={`Hapus kontak ${option.label}`}
                     onClick={() => void removeContact(field)}
-                    title="Hapus kontak"
                     type="button"
+                    variant="danger"
                   >
                     <Trash2 size={17} />
-                  </button>
+                  </AppIconButton>
                 </div>
               );
             })}

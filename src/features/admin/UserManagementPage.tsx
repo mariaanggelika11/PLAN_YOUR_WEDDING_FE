@@ -6,7 +6,7 @@ import { ListFeedback } from "@/features/admin/VerificationPages";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
-import { AppButton } from "@/shared/components/ui/AppButton";
+import { StatusToggle } from "@/shared/components/ui/StatusToggle";
 import { useAsyncAction } from "@/shared/hooks/useAsyncAction";
 import { usePaginatedResource } from "@/shared/hooks/usePaginatedResource";
 import { useState } from "react";
@@ -35,7 +35,7 @@ export function AdminUsersPage() {
       <ListFeedback {...table} />
       {!table.loading && !table.error && (
         <DataTable
-          columns={["Nama", "Email", "Role", "Verifikasi", "Status", "Aksi"]}
+          columns={["Nama", "Email", "Role", "Verifikasi", "Status"]}
           onPageChange={table.setPage}
           onSearchChange={table.changeSearch}
           page={table.page}
@@ -50,15 +50,14 @@ export function AdminUsersPage() {
               status={user.isEmailVerified ? "VERIFIED" : "PENDING"}
               key={`verify-${user.id}`}
             />,
-            <StatusBadge status={user.active ? "ACTIVE" : "INACTIVE"} key={`status-${user.id}`} />,
-            <AppButton
+            <StatusToggle
+              active={user.active}
               disabled={updatingId === user.id}
               key={user.id}
-              onClick={() => void toggleUser(user)}
-              variant={user.active ? "danger" : "secondary"}
-            >
-              {user.active ? "Nonaktifkan" : "Aktifkan"}
-            </AppButton>,
+              label={`Status pengguna ${user.fullname}`}
+              onChange={() => void toggleUser(user)}
+              showText
+            />,
           ])}
           title="Daftar pengguna"
         />

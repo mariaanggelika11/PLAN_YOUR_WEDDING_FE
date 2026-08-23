@@ -1,5 +1,7 @@
-import { PageHeader } from "@/shared/components/data-display/SectionHeaders";
-import type { ReactNode } from "react";
+"use client";
+
+import { usePageHeaderSetter } from "@/shared/components/layout/PageHeaderContext";
+import { useEffect, type ReactNode } from "react";
 
 interface FeaturePageProps {
   title: string;
@@ -9,10 +11,11 @@ interface FeaturePageProps {
 }
 
 export function FeaturePage({ title, description, children, showHeader = true }: FeaturePageProps) {
-  return (
-    <div className="grid gap-7">
-      {showHeader && <PageHeader title={title} description={description} />}
-      {children}
-    </div>
-  );
+  const setPageHeader = usePageHeaderSetter();
+  useEffect(() => {
+    if (!showHeader || !setPageHeader) return;
+    setPageHeader({ description, title });
+    return () => setPageHeader(null);
+  }, [description, setPageHeader, showHeader, title]);
+  return <div className="grid gap-5">{children}</div>;
 }

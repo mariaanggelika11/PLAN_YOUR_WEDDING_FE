@@ -1,366 +1,566 @@
 "use client";
-import { marketplaceRepository } from "@/features/marketplace/repository";
-import { VendorCard } from "@/shared/components/data-display/Cards";
-import { EmptyState } from "@/shared/components/feedback/AsyncStates";
+
+import { getVendorProducts } from "@/features/products/api";
+import type { VendorProduct } from "@/features/products/types";
+import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
+import { useMasterParameters } from "@/features/parameters/useMasterParameters";
+import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
+import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
+import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { FormattedNumberInput } from "@/shared/components/ui/FormattedNumberInput";
 import { AppSelect } from "@/shared/components/ui/FormFields";
+import { ROUTES } from "@/shared/config/routes";
+import { formatCurrency } from "@/shared/utils/formatCurrency";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
-  CalendarDays,
-  Check,
   ChevronDown,
-  MapPin,
+  Clock3,
+  ImageIcon,
+  RotateCcw,
   Search,
   SlidersHorizontal,
-  Star,
+  Users,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-// MOCK DATA: Daftar kota sementara untuk filter lokasi
-// TODO API: Ambil daftar provinsi dan kota dari backend
-const cities = [
-  "Jakarta",
-  "Bandung",
-  "Surabaya",
-  "Yogyakarta",
-  "Semarang",
-  "Palembang",
-  "Medan",
-  "Denpasar",
-  "Makassar",
-  "Bandar Lampung",
-  "Tangerang",
-  "Bekasi",
-  "Depok",
-  "Bogor",
-];
-const pricePresets = [
-  "Di bawah Rp5.000.000",
-  "Rp5.000.000 - Rp10.000.000",
-  "Rp10.000.000 - Rp25.000.000",
-  "Rp25.000.000 - Rp50.000.000",
-  "Di atas Rp50.000.000",
-];
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function MarketplaceExplorer() {
+  const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [city, setCity] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [rating, setRating] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [sort, setSort] = useState("Rekomendasi");
-  // TODO API: Ambil hasil pencarian vendor berdasarkan keyword dari backend
-  // TODO API: Ambil riwayat pencarian customer dari backend
-  // TODO API: Filter vendor berdasarkan kota atau area layanan
-  // TODO API: Filter vendor berdasarkan category_id, range harga, average_rating, dan tanggal acara
-  // TODO API: Kirim parameter sort ke backend
-  const results = useMemo(
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
+  const [minimumPrice, setMinimumPrice] = useState("");
+  const [maximumPrice, setMaximumPrice] = useState("");
+  const [minimumCapacity, setMinimumCapacity] = useState("");
+  const [sort, setSort] = useState("Terbaru");
+  const [categorySearch, setCategorySearch] = useState("");
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const masterParameters = useMasterParameters([MASTER_PARAMETER_CODES.vendorCategory]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await getVendorProducts({ status: "ACTIVE", pageNumber: 1, pageSize: 100 });
+      setProducts(result.data.filter((product) => product.active && product.status === "ACTIVE"));
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Produk marketplace gagal dimuat.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => void load(), [load]);
+
+  const categories = masterParameters.getOptions(MASTER_PARAMETER_CODES.vendorCategory);
+  const locations = useMemo(
     () =>
-      marketplaceRepository
-        .vendors()
-        .filter(
-          (vendor) =>
-            vendor.status === "VERIFIED_ACTIVE" &&
-            (!keyword ||
-              `${vendor.name} ${vendor.description} ${vendor.categories.join(" ")}`
-                .toLowerCase()
-                .includes(keyword.toLowerCase())) &&
-            (!city || vendor.city === city) &&
-            (!categories.length || categories.some((item) => vendor.categories.includes(item))) &&
-            (!rating || vendor.rating >= Number(rating)),
+      [
+        ...new Set(
+          products
+            .map((product) => product.serviceArea?.trim())
+            .filter((area): area is string => Boolean(area)),
         ),
-    [keyword, city, categories, rating],
+      ].sort((left, right) => left.localeCompare(right)),
+    [products],
   );
-  const reset = () => {
+  const featuredCategories = categories.slice(0, 7);
+  const visibleCategoryOptions = categories.filter((option) =>
+    normalizeSearchValue(option.label).includes(normalizeSearchValue(categorySearch)),
+  );
+  const results = useMemo(() => {
+    const normalizedKeyword = normalizeSearchValue(keyword);
+    const selectedCategory = categories.find((option) => option.value === category);
+    const filtered = products.filter((product) => {
+      const searchable =
+        `${product.name} ${product.description ?? ""} ${product.category ?? ""} ${product.vendor.businessName} ${product.serviceArea ?? ""}`.toLowerCase();
+      return (
+        searchable.includes(normalizedKeyword) &&
+        (!selectedCategory || categoryMatches(product.category, selectedCategory)) &&
+        (!location || product.serviceArea === location) &&
+        (!minimumPrice || product.price >= Number(minimumPrice)) &&
+        (!maximumPrice || product.price <= Number(maximumPrice)) &&
+        (!minimumCapacity || (product.guestCapacity ?? 0) >= Number(minimumCapacity))
+      );
+    });
+    return [...filtered].sort((left, right) =>
+      sort === "Harga terendah"
+        ? left.price - right.price
+        : sort === "Harga tertinggi"
+          ? right.price - left.price
+          : right.id.localeCompare(left.id),
+    );
+  }, [
+    categories,
+    category,
+    keyword,
+    location,
+    maximumPrice,
+    minimumCapacity,
+    minimumPrice,
+    products,
+    sort,
+  ]);
+
+  const hasFilters = Boolean(
+    keyword || category || location || minimumPrice || maximumPrice || minimumCapacity,
+  );
+  const advancedFilterCount = [location, minimumPrice, maximumPrice, minimumCapacity].filter(
+    Boolean,
+  ).length;
+  function resetFilters() {
     setKeyword("");
-    setCity("");
-    setCategories([]);
-    setRating("");
-    setEventDate("");
-  };
-  const filters = (
-    <FilterContent
-      city={city}
-      setCity={setCity}
-      categories={categories}
-      setCategories={setCategories}
-      rating={rating}
-      setRating={setRating}
-      eventDate={eventDate}
-      setEventDate={setEventDate}
-      reset={reset}
-    />
-  );
+    setCategory("");
+    setLocation("");
+    setMinimumPrice("");
+    setMaximumPrice("");
+    setMinimumCapacity("");
+  }
+
+  if (loading || masterParameters.loading) return <LoadingSkeleton />;
+  if (error) return <ErrorState retry={() => void load()} />;
+  if (masterParameters.error) return <ErrorState retry={() => window.location.reload()} />;
   return (
-    <div className="grid gap-6">
-      <section className="rounded-[2rem] border bg-gradient-to-br from-white to-rose-50 p-4 shadow-soft sm:p-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blush" size={20} />
-          <input
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            className="h-14 w-full rounded-2xl border bg-white pl-12 pr-12 text-sm shadow-sm outline-none focus:border-blush"
-            placeholder="Cari vendor, paket wedding, atau kategori..."
-          />
-          {keyword && (
-            <button
-              aria-label="Hapus pencarian"
-              onClick={() => setKeyword("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-ink"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="text-xs text-stone-400">Pencarian populer:</span>
-          {["Catering", "Venue Jakarta", "Photography"].map((item) => (
-            <button
-              onClick={() => setKeyword(item)}
-              className="text-xs font-semibold text-blush hover:underline"
-              key={item}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </section>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {marketplaceRepository
-          .categories()
-          .slice(0, 10)
-          .map((category) => (
-            <button
-              onClick={() => setCategories(toggle(categories, category.name))}
-              className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${categories.includes(category.name) ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
-              key={category.id}
-            >
-              {category.name}
-            </button>
-          ))}
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-stone-500">
-          <strong className="text-ink">{results.length} vendor</strong> sesuai pilihan Anda
-        </p>
-        <div className="flex gap-2">
-          <MobileFilter>{filters}</MobileFilter>
-          <AppSelect
-            aria-label="Urutkan vendor"
-            label=""
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="min-w-44"
+    <div className="grid gap-5">
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blush" size={19} />
+        <input
+          className="h-12 w-full rounded-2xl border bg-white pl-11 pr-11 text-sm shadow-sm outline-none transition focus:border-blush focus:ring-4 focus:ring-rose-100"
+          onChange={(event) => setKeyword(event.target.value)}
+          placeholder="Cari paket atau nama vendor..."
+          value={keyword}
+        />
+        {keyword && (
+          <button
+            aria-label="Hapus pencarian"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-ink"
+            onClick={() => setKeyword("")}
           >
-            <option>Rekomendasi</option>
-            <option>Harga terendah</option>
-            <option>Harga tertinggi</option>
-            <option>Rating tertinggi</option>
-            <option>Review terbanyak</option>
-            <option>Vendor terbaru</option>
-            <option>Paling populer</option>
-          </AppSelect>
-        </div>
+            <X size={17} />
+          </button>
+        )}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="hidden h-fit rounded-3xl border bg-white p-5 shadow-sm lg:block">
-          {filters}
-        </aside>
-        <div>
-          {results.length ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {results.map((vendor) => (
-                <VendorCard vendor={vendor} key={vendor.id} />
-              ))}
+      <div className="flex flex-wrap gap-2">
+        <button
+          className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${!category ? "border-blush bg-blush text-white" : "bg-white"}`}
+          onClick={() => setCategory("")}
+        >
+          Semua kategori
+        </button>
+        {featuredCategories.map((item) => (
+          <button
+            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${category === item.value ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
+            key={item.value}
+            onClick={() => setCategory(item.value)}
+          >
+            {item.label}
+          </button>
+        ))}
+        {categories.length > featuredCategories.length && (
+          <button
+            className="flex items-center gap-1 rounded-full border bg-white px-4 py-2 text-xs font-semibold hover:border-rose-300"
+            onClick={() => setCategoryDialogOpen(true)}
+          >
+            Kategori lainnya <ChevronDown size={14} />
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-3 border-y py-4">
+        <p className="text-sm text-stone-500">
+          <strong className="text-ink">{results.length} paket</strong>
+          {products.length > 0 && hasFilters ? ` dari ${products.length} tersedia` : " tersedia"}
+        </p>
+        <div className="flex items-end gap-2">
+          <AppButton onClick={() => setFilterDialogOpen(true)} variant="secondary">
+            <SlidersHorizontal size={16} /> Filter
+            {advancedFilterCount > 0 && (
+              <span className="grid size-5 place-items-center rounded-full bg-blush text-[10px] text-white">
+                {advancedFilterCount}
+              </span>
+            )}
+          </AppButton>
+          {results.length > 0 && (
+            <div className="min-w-44">
+              <AppSelect
+                aria-label="Urutkan produk"
+                label="Urutkan"
+                onChange={(event) => setSort(event.target.value)}
+                value={sort}
+              >
+                <option>Terbaru</option>
+                <option>Harga terendah</option>
+                <option>Harga tertinggi</option>
+              </AppSelect>
             </div>
-          ) : (
-            <EmptyState
-              type="search"
-              title="Vendor belum ditemukan"
-              description="Coba ubah kategori, lokasi, atau range harga."
-              actionLabel="Reset filter"
-              onAction={reset}
-            />
           )}
         </div>
       </div>
+      {hasFilters && (
+        <ActiveFilterChips
+          category={categories.find((option) => option.value === category)?.label}
+          keyword={keyword}
+          location={location}
+          maximumPrice={maximumPrice}
+          minimumCapacity={minimumCapacity}
+          minimumPrice={minimumPrice}
+          onClearCategory={() => setCategory("")}
+          onClearKeyword={() => setKeyword("")}
+          onClearLocation={() => setLocation("")}
+          onClearMaximumPrice={() => setMaximumPrice("")}
+          onClearMinimumCapacity={() => setMinimumCapacity("")}
+          onClearMinimumPrice={() => setMinimumPrice("")}
+        />
+      )}
+      {results.length ? (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {results.map((product) => (
+            <MarketplaceProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <CompactMarketplaceEmptyState hasProducts={products.length > 0} onReset={resetFilters} />
+      )}
+      <CategoryDialog
+        categories={visibleCategoryOptions}
+        category={category}
+        onCategoryChange={(value) => {
+          setCategory(value);
+          setCategoryDialogOpen(false);
+          setCategorySearch("");
+        }}
+        onOpenChange={setCategoryDialogOpen}
+        onSearchChange={setCategorySearch}
+        open={categoryDialogOpen}
+        search={categorySearch}
+      />
+      <FilterDialog
+        location={location}
+        locations={locations}
+        maximumPrice={maximumPrice}
+        minimumCapacity={minimumCapacity}
+        minimumPrice={minimumPrice}
+        onLocationChange={setLocation}
+        onMaximumPriceChange={setMaximumPrice}
+        onMinimumCapacityChange={setMinimumCapacity}
+        onMinimumPriceChange={setMinimumPrice}
+        onOpenChange={setFilterDialogOpen}
+        onReset={() => {
+          setLocation("");
+          setMinimumPrice("");
+          setMaximumPrice("");
+          setMinimumCapacity("");
+        }}
+        open={filterDialogOpen}
+      />
     </div>
   );
 }
-function FilterContent({
-  city,
-  setCity,
+
+type CategoryOption = { label: string; value: string };
+
+interface MarketplaceFiltersProps {
+  location: string;
+  locations: string[];
+  maximumPrice: string;
+  minimumCapacity: string;
+  minimumPrice: string;
+  onLocationChange: (value: string) => void;
+  onMaximumPriceChange: (value: string) => void;
+  onMinimumCapacityChange: (value: string) => void;
+  onMinimumPriceChange: (value: string) => void;
+  onReset: () => void;
+}
+
+function MarketplaceFilters(props: MarketplaceFiltersProps) {
+  return (
+    <div className="grid gap-5">
+      <AppSelect
+        label="Area layanan"
+        onChange={(event) => props.onLocationChange(event.target.value)}
+        value={props.location}
+      >
+        <option value="">Semua area</option>
+        {props.locations.map((item) => (
+          <option key={item}>{item}</option>
+        ))}
+      </AppSelect>
+      <div className="grid grid-cols-2 gap-3">
+        <FormattedNumberInput
+          label="Harga minimum"
+          name="minimumPriceFilter"
+          onValueChange={props.onMinimumPriceChange}
+          placeholder="0"
+          defaultValue={props.minimumPrice}
+        />
+        <FormattedNumberInput
+          label="Harga maksimum"
+          name="maximumPriceFilter"
+          onValueChange={props.onMaximumPriceChange}
+          placeholder="50.000.000"
+          defaultValue={props.maximumPrice}
+        />
+      </div>
+      <FormattedNumberInput
+        label="Kapasitas minimum"
+        name="minimumCapacityFilter"
+        onValueChange={props.onMinimumCapacityChange}
+        placeholder="100"
+        defaultValue={props.minimumCapacity}
+      />
+    </div>
+  );
+}
+
+function DialogFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-[100] bg-ink/40 backdrop-blur-sm" />
+      <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] max-h-[85vh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border bg-white p-6 shadow-2xl">
+        {children}
+        <Dialog.Close className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-ink">
+          <X size={18} />
+          <span className="sr-only">Tutup</span>
+        </Dialog.Close>
+      </Dialog.Content>
+    </Dialog.Portal>
+  );
+}
+
+function CategoryDialog({
   categories,
-  setCategories,
-  rating,
-  setRating,
-  eventDate,
-  setEventDate,
-  reset,
+  category,
+  onCategoryChange,
+  onOpenChange,
+  onSearchChange,
+  open,
+  search,
 }: {
-  city: string;
-  setCity: (v: string) => void;
-  categories: string[];
-  setCategories: (v: string[]) => void;
-  rating: string;
-  setRating: (v: string) => void;
-  eventDate: string;
-  setEventDate: (v: string) => void;
-  reset: () => void;
+  categories: CategoryOption[];
+  category: string;
+  onCategoryChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSearchChange: (value: string) => void;
+  open: boolean;
+  search: string;
 }) {
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Filter</h3>
-        <button onClick={reset} className="text-xs font-semibold text-blush">
-          Reset semua
-        </button>
-      </div>
-      <FilterGroup title="Lokasi">
-        <LocationPicker value={city} onChange={setCity} />
-      </FilterGroup>
-      <FilterGroup title="Kategori">
-        <div className="grid max-h-48 gap-2 overflow-auto pr-1">
-          {marketplaceRepository.categories().map((category) => (
-            <label className="flex items-center gap-2 text-sm" key={category.id}>
-              <input
-                checked={categories.includes(category.name)}
-                onChange={() => setCategories(toggle(categories, category.name))}
-                type="checkbox"
-                className="accent-rose-600"
-              />
-              {category.name}
-            </label>
-          ))}
+    <Dialog.Root onOpenChange={onOpenChange} open={open}>
+      <DialogFrame>
+        <Dialog.Title className="text-lg font-semibold">Pilih kategori</Dialog.Title>
+        <Dialog.Description className="mt-1 text-sm text-stone-500">
+          Cari dan pilih kategori layanan yang Anda butuhkan.
+        </Dialog.Description>
+        <div className="relative mt-5">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
+          <input
+            autoFocus
+            className="h-11 w-full rounded-xl border bg-stone-50 pl-10 pr-3 text-sm outline-none focus:border-blush"
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Cari kategori..."
+            value={search}
+          />
         </div>
-      </FilterGroup>
-      <FilterGroup title="Range harga">
-        <div className="grid gap-2">
-          {pricePresets.map((price) => (
-            <label className="flex gap-2 text-xs" key={price}>
-              <input name="price" type="radio" className="accent-rose-600" />
-              {price}
-            </label>
-          ))}
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <input className="rounded-lg border px-2 py-2 text-xs" placeholder="Harga min" />
-          <input className="rounded-lg border px-2 py-2 text-xs" placeholder="Harga max" />
-        </div>
-      </FilterGroup>
-      <FilterGroup title="Rating">
-        <div className="grid gap-2">
-          {[5, 4, 3].map((value) => (
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            className={`rounded-xl border px-4 py-3 text-left text-sm ${!category ? "border-blush bg-rose-50 font-semibold text-blush" : "hover:bg-stone-50"}`}
+            onClick={() => onCategoryChange("")}
+          >
+            Semua kategori
+          </button>
+          {categories.map((option) => (
             <button
-              onClick={() => setRating(String(value))}
-              className={`flex items-center gap-1 rounded-xl border px-3 py-2 text-xs ${rating === String(value) ? "border-amber-300 bg-amber-50" : ""}`}
-              key={value}
+              className={`rounded-xl border px-4 py-3 text-left text-sm ${category === option.value ? "border-blush bg-rose-50 font-semibold text-blush" : "hover:bg-stone-50"}`}
+              key={option.value}
+              onClick={() => onCategoryChange(option.value)}
             >
-              <Star size={13} className="fill-amber-400 text-amber-400" /> {value}{" "}
-              {value < 5 && "ke atas"}
+              {option.label}
             </button>
           ))}
         </div>
-      </FilterGroup>
-      <FilterGroup title="Tanggal acara">
-        <label className="relative block">
-          <CalendarDays className="absolute left-3 top-3 text-stone-400" size={16} />
-          <input
-            min={new Date().toISOString().split("T")[0]}
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            type="date"
-            className="w-full rounded-xl border py-2.5 pl-10 pr-3 text-xs"
-          />
-        </label>
-        {eventDate && (
-          <span className="mt-2 inline-flex rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-700">
-            Tanggal acara: {eventDate}
-          </span>
+        {categories.length === 0 && (
+          <p className="mt-5 text-center text-sm text-stone-500">Kategori tidak ditemukan.</p>
         )}
-      </FilterGroup>
-    </div>
+      </DialogFrame>
+    </Dialog.Root>
   );
 }
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-400">{title}</h4>
-      {children}
-    </section>
+
+function FilterDialog(
+  props: MarketplaceFiltersProps & {
+    onOpenChange: (open: boolean) => void;
+    open: boolean;
+  },
+) {
+  const active = Boolean(
+    props.location || props.minimumPrice || props.maximumPrice || props.minimumCapacity,
   );
-}
-function LocationPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm"
-      >
-        <span className="flex items-center gap-2">
-          <MapPin size={15} className="text-blush" />
-          {value || "Pilih kota"}
-        </span>
-        <ChevronDown size={15} />
-      </button>
-      {open && (
-        <div className="absolute z-20 mt-2 w-full rounded-2xl border bg-white p-2 shadow-2xl">
-          <input
-            autoFocus
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border px-3 py-2 text-xs"
-            placeholder="Cari kota..."
-          />
-          <div className="mt-2 max-h-48 overflow-auto">
-            {cities
-              .filter((item) => item.toLowerCase().includes(search.toLowerCase()))
-              .map((item) => (
-                <button
-                  onClick={() => {
-                    onChange(item);
-                    setOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs hover:bg-rose-50"
-                  key={item}
-                >
-                  {item}
-                  {value === item && <Check size={14} className="text-blush" />}
-                </button>
-              ))}
-          </div>
+    <Dialog.Root onOpenChange={props.onOpenChange} open={props.open}>
+      <DialogFrame>
+        <Dialog.Title className="text-lg font-semibold">Filter produk</Dialog.Title>
+        <Dialog.Description className="mt-1 text-sm text-stone-500">
+          Sesuaikan lokasi, rentang harga, dan kapasitas layanan.
+        </Dialog.Description>
+        <div className="mt-6">
+          <MarketplaceFilters {...props} />
         </div>
+        <div className="mt-6 flex justify-between gap-3 border-t pt-5">
+          <AppButton disabled={!active} onClick={props.onReset} variant="ghost">
+            <RotateCcw size={15} /> Reset
+          </AppButton>
+          <AppButton onClick={() => props.onOpenChange(false)}>Tampilkan hasil</AppButton>
+        </div>
+      </DialogFrame>
+    </Dialog.Root>
+  );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <button
+      className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
+      onClick={onRemove}
+    >
+      {label} <X size={13} />
+    </button>
+  );
+}
+
+function ActiveFilterChips(props: {
+  category?: string;
+  keyword: string;
+  location: string;
+  maximumPrice: string;
+  minimumCapacity: string;
+  minimumPrice: string;
+  onClearCategory: () => void;
+  onClearKeyword: () => void;
+  onClearLocation: () => void;
+  onClearMaximumPrice: () => void;
+  onClearMinimumCapacity: () => void;
+  onClearMinimumPrice: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium text-stone-500">Filter aktif:</span>
+      {props.keyword && <FilterChip label={`“${props.keyword}”`} onRemove={props.onClearKeyword} />}
+      {props.category && <FilterChip label={props.category} onRemove={props.onClearCategory} />}
+      {props.location && <FilterChip label={props.location} onRemove={props.onClearLocation} />}
+      {props.minimumPrice && (
+        <FilterChip
+          label={`Min. ${formatCurrency(Number(props.minimumPrice))}`}
+          onRemove={props.onClearMinimumPrice}
+        />
+      )}
+      {props.maximumPrice && (
+        <FilterChip
+          label={`Maks. ${formatCurrency(Number(props.maximumPrice))}`}
+          onRemove={props.onClearMaximumPrice}
+        />
+      )}
+      {props.minimumCapacity && (
+        <FilterChip
+          label={`Min. ${Number(props.minimumCapacity).toLocaleString("id-ID")} tamu`}
+          onRemove={props.onClearMinimumCapacity}
+        />
       )}
     </div>
   );
 }
-function MobileFilter({ children }: { children: React.ReactNode }) {
+
+function CompactMarketplaceEmptyState({
+  hasProducts,
+  onReset,
+}: {
+  hasProducts: boolean;
+  onReset: () => void;
+}) {
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>
-        <AppButton variant="secondary" className="lg:hidden">
-          <SlidersHorizontal size={16} /> Filter
+    <div className="rounded-2xl border border-dashed bg-white px-5 py-8 text-center shadow-sm">
+      <h3 className="font-semibold text-ink">
+        {hasProducts ? "Tidak ada produk yang sesuai filter" : "Produk belum tersedia"}
+      </h3>
+      <p className="mt-1 text-sm text-stone-500">
+        {hasProducts
+          ? "Coba ubah kata kunci atau filter pencarian Anda."
+          : "Belum ada produk aktif yang dapat ditampilkan."}
+      </p>
+      {hasProducts && (
+        <AppButton className="mt-4" onClick={onReset} variant="secondary">
+          Reset filter
         </AppButton>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-auto rounded-t-[2rem] bg-white p-6 shadow-2xl">
-          <Dialog.Title className="text-lg font-semibold text-ink">Filter vendor</Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-stone-500">
-            Sesuaikan kategori, lokasi, harga, dan rating vendor.
-          </Dialog.Description>
-          <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-stone-200" />
-          {children}
-          <Dialog.Close asChild>
-            <AppButton className="sticky bottom-0 mt-6 w-full">Terapkan Filter</AppButton>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      )}
+    </div>
   );
 }
-function toggle(values: string[], value: string) {
-  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+
+function normalizeSearchValue(value: string | null | undefined) {
+  return (value ?? "").trim().toLocaleLowerCase("id-ID");
+}
+
+function categoryMatches(category: string | null | undefined, option: CategoryOption) {
+  const normalizedCategory = normalizeSearchValue(category).replace(/[_-]+/g, " ");
+  return [option.value, option.label].some(
+    (value) => normalizeSearchValue(value).replace(/[_-]+/g, " ") === normalizedCategory,
+  );
+}
+
+function MarketplaceProductCard({ product }: { product: VendorProduct }) {
+  const attachmentId = product.imageAttachmentIds[0];
+  const load = useCallback(
+    () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
+    [attachmentId],
+  );
+  const image = useImageUpload({
+    enabled: Boolean(attachmentId),
+    load,
+    loadErrorMessage: "Gambar gagal dimuat.",
+  });
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-xl">
+      <div className="grid h-48 place-items-center overflow-hidden bg-stone-100">
+        {image.previewUrl ? (
+          <img
+            alt={product.name}
+            className="size-full object-cover transition duration-500 group-hover:scale-105"
+            src={image.previewUrl}
+          />
+        ) : (
+          <ImageIcon className="text-stone-300" size={36} />
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-blush">
+          {product.category ?? "Layanan Wedding"}
+        </p>
+        <h3 className="mt-1 font-semibold text-ink">{product.name}</h3>
+        <p className="mt-1 text-xs text-stone-500">oleh {product.vendor.businessName}</p>
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">
+          {product.description ?? "Detail layanan tersedia pada halaman produk."}
+        </p>
+        <p className="mt-3 text-lg font-semibold">{formatCurrency(product.price)}</p>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">
+          {product.guestCapacity && (
+            <span className="flex items-center gap-1">
+              <Users size={13} />
+              {product.guestCapacity} tamu
+            </span>
+          )}
+          {product.duration && (
+            <span className="flex items-center gap-1">
+              <Clock3 size={13} />
+              {product.duration}
+            </span>
+          )}
+        </div>
+        <AppButton asChild className="mt-5 w-full">
+          <Link href={ROUTES.customer.product(product.id)}>Lihat paket</Link>
+        </AppButton>
+      </div>
+    </article>
+  );
 }

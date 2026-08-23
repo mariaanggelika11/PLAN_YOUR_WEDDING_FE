@@ -45,10 +45,8 @@ export function VendorProfileSections({
       <VendorBusinessInformationSection
         active={activeStep === 1}
         canEditBusiness={canEditBusiness}
-        canEditCore={canEditCore}
         canEditOperations={canEditOperations}
         masterParameters={masterParameters}
-        onDataChanged={onDataChanged}
         profile={profile}
       />
       <FormSection
