@@ -1,9 +1,11 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import { ChevronDown, UploadCloud } from "lucide-react";
 import { useState } from "react";
 
 export function Tabs({ items }: { items: { label: string; content: React.ReactNode }[] }) {
+  const { translateText } = useTranslation();
   const [active, setActive] = useState(0);
   return (
     <div>
@@ -17,7 +19,7 @@ export function Tabs({ items }: { items: { label: string; content: React.ReactNo
             )}
             key={item.label}
           >
-            {item.label}
+            {translateText(item.label)}
           </button>
         ))}
       </div>
@@ -34,6 +36,7 @@ export function Stepper({
   active?: number;
   onStepChange?: (step: number) => void;
 }) {
+  const { translateText } = useTranslation();
   return (
     <ol
       className={cn(
@@ -65,7 +68,7 @@ export function Stepper({
             >
               {index + 1}
             </span>
-            {step}
+            {translateText(step)}
           </button>
         </li>
       ))}
@@ -73,6 +76,7 @@ export function Stepper({
   );
 }
 export function Accordion({ items }: { items: { title: string; content: string }[] }) {
+  const { translateText } = useTranslation();
   const [open, setOpen] = useState(0);
   return (
     <div className="overflow-hidden rounded-2xl border bg-white">
@@ -82,11 +86,13 @@ export function Accordion({ items }: { items: { title: string; content: string }
             onClick={() => setOpen(open === index ? -1 : index)}
             className="flex w-full items-center justify-between p-5 text-left text-sm font-semibold"
           >
-            {item.title}
+            {translateText(item.title)}
             <ChevronDown className={cn("transition", open === index && "rotate-180")} size={17} />
           </button>
           {open === index && (
-            <p className="px-5 pb-5 text-sm leading-6 text-stone-500">{item.content}</p>
+            <p className="px-5 pb-5 text-sm leading-6 text-stone-500">
+              {translateText(item.content)}
+            </p>
           )}
         </section>
       ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import { AlertTriangle, Check, CircleX, Info, X, type LucideIcon } from "lucide-react";
 import {
@@ -199,6 +200,7 @@ function PopupView({
   popup: ActivePopup;
   reason: string;
 }) {
+  const { translateText } = useTranslation();
   const variant = popup.variant ?? "success";
   const style = VARIANT_STYLE[variant];
   const { Icon } = style;
@@ -216,7 +218,7 @@ function PopupView({
     >
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white px-6 pb-6 pt-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:px-8">
         <button
-          aria-label="Tutup popup"
+          aria-label={translateText("Tutup popup")}
           className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
           onClick={onCancel}
           type="button"
@@ -237,13 +239,13 @@ function PopupView({
           className="mt-6 text-xl font-bold tracking-tight text-slate-900"
           id={`popup-title-${popup.id}`}
         >
-          {popup.title || style.defaultTitle}
+          {translateText(popup.title || style.defaultTitle)}
         </h2>
         <p
           className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600"
           id={`popup-message-${popup.id}`}
         >
-          {popup.message}
+          {translateText(popup.message)}
         </p>
 
         {isConfirm && popup.requireReason && (
@@ -252,14 +254,14 @@ function PopupView({
               className="mb-2 block text-sm font-semibold text-slate-800"
               htmlFor={`popup-reason-${popup.id}`}
             >
-              {popup.reasonLabel ?? "Alasan"}
+              {translateText(popup.reasonLabel ?? "Alasan")}
             </label>
             <textarea
               autoFocus
               className="min-h-28 w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100"
               id={`popup-reason-${popup.id}`}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Tuliskan alasan secara singkat..."
+              placeholder={translateText("Tuliskan alasan secara singkat...")}
               value={reason}
             />
           </div>
@@ -268,7 +270,7 @@ function PopupView({
         <div className={cn("mt-7 flex gap-3", isConfirm ? "justify-center" : "justify-end")}>
           {isConfirm && (
             <AppButton className="min-w-28" onClick={onCancel} variant="secondary">
-              {popup.cancelLabel ?? "Batal"}
+              {translateText(popup.cancelLabel ?? "Batal")}
             </AppButton>
           )}
           <AppButton
@@ -277,7 +279,7 @@ function PopupView({
             onClick={onConfirm}
             variant={isDestructive ? "danger" : variant === "success" ? "success" : "primary"}
           >
-            {isConfirm ? (popup.confirmLabel ?? "Konfirmasi") : "OK"}
+            {isConfirm ? translateText(popup.confirmLabel ?? "Konfirmasi") : "OK"}
           </AppButton>
         </div>
       </div>

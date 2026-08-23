@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 
 export function StatusToggle({
@@ -13,13 +16,14 @@ export function StatusToggle({
   onChange: (active: boolean) => void;
   showText?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <label
       className={cn(
         "inline-flex items-center gap-2",
         disabled ? "cursor-wait opacity-60" : "cursor-pointer",
       )}
-      title={active ? "Nonaktifkan" : "Aktifkan"}
+      title={active ? t("status.inactive") : t("status.active")}
     >
       <input
         aria-label={label}
@@ -34,7 +38,7 @@ export function StatusToggle({
         <span
           className={cn("text-xs font-semibold", active ? "text-emerald-700" : "text-stone-500")}
         >
-          {active ? "Aktif" : "Nonaktif"}
+          {active ? t("status.active") : t("status.inactive")}
         </span>
       )}
     </label>

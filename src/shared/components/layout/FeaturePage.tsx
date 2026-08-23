@@ -1,6 +1,7 @@
 "use client";
 
 import { usePageHeaderSetter } from "@/shared/components/layout/PageHeaderContext";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useEffect, type ReactNode } from "react";
 
 interface FeaturePageProps {
@@ -11,11 +12,14 @@ interface FeaturePageProps {
 }
 
 export function FeaturePage({ title, description, children, showHeader = true }: FeaturePageProps) {
+  const { translateText } = useTranslation();
   const setPageHeader = usePageHeaderSetter();
+  const translatedTitle = translateText(title);
+  const translatedDescription = translateText(description);
   useEffect(() => {
     if (!showHeader || !setPageHeader) return;
-    setPageHeader({ description, title });
+    setPageHeader({ description: translatedDescription, title: translatedTitle });
     return () => setPageHeader(null);
-  }, [description, setPageHeader, showHeader, title]);
+  }, [setPageHeader, showHeader, translatedDescription, translatedTitle]);
   return <div className="grid gap-5">{children}</div>;
 }

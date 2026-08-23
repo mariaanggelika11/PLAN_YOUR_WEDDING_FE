@@ -1,9 +1,12 @@
+"use client";
+
 import { AppButton } from "@/shared/components/ui/AppButton";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { AlertCircle, Inbox, SearchX } from "lucide-react";
 
 export function EmptyState({
-  title = "Belum ada data",
-  description = "Data akan tampil di sini setelah tersedia.",
+  title,
+  description,
   actionLabel,
   onAction,
   type = "default",
@@ -14,6 +17,7 @@ export function EmptyState({
   onAction?: () => void;
   type?: "default" | "search";
 }) {
+  const { t } = useTranslation();
   const Icon = type === "search" ? SearchX : Inbox;
   // TODO API: Tampilkan empty state jika response API kosong
   return (
@@ -21,8 +25,10 @@ export function EmptyState({
       <span className="grid size-14 place-items-center rounded-2xl bg-rose-50 text-blush">
         <Icon />
       </span>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-1 max-w-md text-sm text-stone-500">{description}</p>
+      <h3 className="mt-4 text-lg font-semibold">{title ?? t("empty.title")}</h3>
+      <p className="mt-1 max-w-md text-sm text-stone-500">
+        {description ?? t("empty.description")}
+      </p>
       {actionLabel && (
         <AppButton className="mt-5" onClick={onAction}>
           {actionLabel}
@@ -32,14 +38,15 @@ export function EmptyState({
   );
 }
 export function ErrorState({ retry }: { retry?: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
       <AlertCircle className="mb-2 text-red-600" />
-      <h3 className="font-semibold text-red-800">Data gagal dimuat</h3>
-      <p className="mt-1 text-sm text-red-700">Periksa koneksi lalu coba kembali.</p>
+      <h3 className="font-semibold text-red-800">{t("error.loadTitle")}</h3>
+      <p className="mt-1 text-sm text-red-700">{t("error.loadDescription")}</p>
       {retry && (
         <AppButton className="mt-4" variant="secondary" onClick={retry}>
-          Coba lagi
+          {t("error.retry")}
         </AppButton>
       )}
     </div>

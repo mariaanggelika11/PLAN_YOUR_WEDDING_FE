@@ -2,6 +2,7 @@
 
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppIconButton } from "@/shared/components/ui/AppIconButton";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -22,7 +23,7 @@ interface DataTableProps {
 export function DataTable({
   columns,
   rows,
-  title = "Daftar data",
+  title,
   total = rows.length,
   page = 1,
   pageSize = Math.max(rows.length, 1),
@@ -33,14 +34,17 @@ export function DataTable({
   showToolbar = Boolean(onSearchChange),
   showPagination = false,
 }: DataTableProps) {
+  const { t, translateText } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-semibold">{title}</h3>
+          <h3 className="font-semibold">
+            {title ? translateText(title) : t("table.defaultTitle")}
+          </h3>
           <p className="text-xs text-stone-400">
-            {total} {itemLabel} ditemukan
+            {t("table.resultCount", { total, item: translateText(itemLabel) })}
           </p>
         </div>
         {showToolbar && (
@@ -48,14 +52,14 @@ export function DataTable({
             <label className="flex flex-1 items-center gap-2 rounded-xl border bg-stone-50 px-3 py-2 text-stone-400">
               <Search size={15} />
               <input
-                aria-label="Cari data"
+                aria-label={t("table.search")}
                 className="w-full bg-transparent text-xs outline-none"
-                placeholder="Cari data..."
+                placeholder={t("table.searchPlaceholder")}
                 value={searchValue}
                 onChange={(event) => onSearchChange?.(event.target.value)}
               />
             </label>
-            <AppButton aria-label="Filter data" variant="secondary" className="min-h-9 px-3">
+            <AppButton aria-label={t("table.filter")} variant="secondary" className="min-h-9 px-3">
               <SlidersHorizontal size={15} />
             </AppButton>
           </div>
@@ -70,7 +74,7 @@ export function DataTable({
                   className="px-4 py-3 text-xs font-semibold uppercase tracking-wide"
                   key={column}
                 >
-                  {column}
+                  {translateText(column)}
                 </th>
               ))}
             </tr>
@@ -89,7 +93,7 @@ export function DataTable({
             ) : (
               <tr className="border-t">
                 <td className="px-4 py-12 text-center text-stone-500" colSpan={columns.length}>
-                  Belum ada data.
+                  {t("table.empty")}
                 </td>
               </tr>
             )}
@@ -98,14 +102,12 @@ export function DataTable({
       </div>
       {(showPagination || totalPages > 1) && (
         <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-stone-500">
-          <span>
-            Halaman {page} dari {totalPages}
-          </span>
+          <span>{t("pagination.summary", { page, totalPages })}</span>
           <div className="flex gap-1">
             <AppIconButton
               className="size-8 rounded-lg"
               disabled={page <= 1}
-              label="Halaman sebelumnya"
+              label={t("pagination.previous")}
               onClick={() => onPageChange?.(page - 1)}
             >
               <ChevronLeft size={15} />
@@ -113,7 +115,7 @@ export function DataTable({
             <AppIconButton
               className="size-8 rounded-lg"
               disabled={page >= totalPages}
-              label="Halaman berikutnya"
+              label={t("pagination.next")}
               onClick={() => onPageChange?.(page + 1)}
             >
               <ChevronRight size={15} />

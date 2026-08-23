@@ -14,6 +14,8 @@ import {
 import { USER_MENU_ITEMS, type NavigationItem } from "@/shared/config/navigation";
 import { roleRoute, ROUTES, type AppRole } from "@/shared/config/routes";
 import { useDismissibleLayer } from "@/shared/hooks/useDismissibleLayer";
+import { LanguageSwitcher } from "@/shared/i18n/LanguageSwitcher";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
@@ -29,10 +31,18 @@ interface AppShellProps {
 }
 
 export function AppShell({ role, label, nav, children }: AppShellProps) {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pageHeader, setPageHeader] = useState<ShellPageHeader | null>(null);
   const dark = false;
+  const translatedLabel = t(
+    role === "customer"
+      ? "shell.customerArea"
+      : role === "vendor"
+        ? "shell.vendorArea"
+        : "shell.adminArea",
+  );
 
   // TODO API: Ambil data user login dari backend
   // TODO API: Ambil jumlah notifikasi belum dibaca dari backend
@@ -43,7 +53,7 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
         <DesktopSidebar
           collapsed={sidebarCollapsed}
           dark={dark}
-          label={label}
+          label={translatedLabel || label}
           nav={nav}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           pathname={pathname}
@@ -55,7 +65,12 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
           )}
         >
           <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-6">
-            <MobileSidebar dark={dark} label={label} nav={nav} pathname={pathname} />
+            <MobileSidebar
+              dark={dark}
+              label={translatedLabel || label}
+              nav={nav}
+              pathname={pathname}
+            />
             {pageHeader && (
               <div className="min-w-0">
                 <h1 className="truncate text-xl font-semibold tracking-tight text-ink">
@@ -67,6 +82,7 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
               </div>
             )}
             <div className="ml-auto flex items-center gap-2">
+              <LanguageSwitcher className="min-h-10 px-3 py-2" />
               <NotificationMenu />
               <UserMenu role={role} />
             </div>
@@ -94,6 +110,7 @@ function DesktopSidebar({
   onToggle: () => void;
   pathname: string;
 }) {
+  const { t } = useTranslation();
   return (
     <aside
       className={cn(
@@ -107,14 +124,14 @@ function DesktopSidebar({
       >
         <BrandMark compact={collapsed} dark={dark} />
         <button
-          aria-label={collapsed ? "Tampilkan sidebar" : "Ciutkan sidebar"}
+          aria-label={collapsed ? t("shell.showSidebar") : t("shell.collapseSidebar")}
           className={cn(
             "ml-auto grid size-8 shrink-0 place-items-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-ink",
             collapsed && "ml-0 mt-2",
             dark && "hover:bg-slate-800 hover:text-white",
           )}
           onClick={onToggle}
-          title={collapsed ? "Tampilkan menu" : "Ciutkan menu"}
+          title={collapsed ? t("shell.showSidebar") : t("shell.collapseSidebar")}
           type="button"
         >
           {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
@@ -138,8 +155,8 @@ function DesktopSidebar({
             dark ? "bg-slate-800 text-slate-300" : "bg-rose-50 text-stone-600",
           )}
         >
-          <p className="font-semibold">Butuh bantuan?</p>
-          <p className="mt-1 opacity-70">Tim support siap membantu Anda.</p>
+          <p className="font-semibold">{t("shell.helpTitle")}</p>
+          <p className="mt-1 opacity-70">{t("shell.helpDescription")}</p>
         </div>
       )}
     </aside>
@@ -157,10 +174,11 @@ function NavList({
   nav: NavigationItem[];
   pathname: string;
 }) {
+  const { t } = useTranslation();
   const [openGroups, setOpenGroups] = useState<string[]>(() =>
     nav
       .filter((item) => item.children?.some((child) => pathname.startsWith(child.href)))
-      .map((item) => item.label),
+      .map((item) => item.href),
   );
   return (
     <nav className={cn("grid gap-1", collapsed ? "mt-8" : "mt-3")}>
@@ -172,9 +190,9 @@ function NavList({
           childActive || pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         if (item.children && !collapsed) {
-          const open = openGroups.includes(item.label);
+          const open = openGroups.includes(item.href);
           return (
-            <div className="grid gap-1" key={item.label}>
+            <div className="grid gap-1" key={item.href}>
               <button
                 aria-expanded={open}
                 className={cn(
@@ -185,15 +203,15 @@ function NavList({
                 )}
                 onClick={() =>
                   setOpenGroups((current) =>
-                    current.includes(item.label)
-                      ? current.filter((label) => label !== item.label)
-                      : [...current, item.label],
+                    current.includes(item.href)
+                      ? current.filter((href) => href !== item.href)
+                      : [...current, item.href],
                   )
                 }
                 type="button"
               >
                 <Icon className="shrink-0" size={17} />
-                <span>{item.label}</span>
+                <span>{t(item.translationKey)}</span>
                 <ChevronDown className={cn("ml-auto transition", open && "rotate-180")} size={15} />
               </button>
               {open && (
@@ -212,7 +230,7 @@ function NavList({
                         href={child.href}
                         key={child.href}
                       >
-                        {child.label}
+                        {t(child.translationKey)}
                       </Link>
                     );
                   })}
@@ -223,8 +241,8 @@ function NavList({
         }
         return (
           <Link
-            aria-label={item.label}
-            title={collapsed ? item.label : undefined}
+            aria-label={t(item.translationKey)}
+            title={collapsed ? t(item.translationKey) : undefined}
             className={cn(
               "flex items-center rounded-xl text-sm transition",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
@@ -240,7 +258,7 @@ function NavList({
             key={item.href}
           >
             <Icon className="shrink-0" size={17} />
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && <span>{t(item.translationKey)}</span>}
           </Link>
         );
       })}
@@ -254,11 +272,12 @@ function MobileSidebar(props: {
   nav: NavigationItem[];
   pathname: string;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
         <button
-          aria-label="Buka menu"
+          aria-label={t("shell.openMenu")}
           className="grid size-10 place-items-center rounded-xl border bg-white lg:hidden"
         >
           <Menu size={18} />
@@ -274,12 +293,12 @@ function MobileSidebar(props: {
         >
           <Dialog.Title className="sr-only">Menu {props.label}</Dialog.Title>
           <Dialog.Description className="sr-only">
-            Navigasi utama untuk halaman {props.label}.
+            {t("shell.mainNavigation", { area: props.label })}
           </Dialog.Description>
           <div className="flex items-center justify-between">
             <BrandMark dark={props.dark} />
             <Dialog.Close
-              aria-label="Tutup menu"
+              aria-label={t("shell.closeMenu")}
               className="grid size-9 place-items-center rounded-xl border"
             >
               <X size={18} />
@@ -294,6 +313,7 @@ function MobileSidebar(props: {
 }
 
 function NotificationMenu() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const containerRef = useDismissibleLayer<HTMLDivElement>(open, () => setOpen(false));
   const unreadCount = notificationRepository
@@ -303,7 +323,7 @@ function NotificationMenu() {
     <div className="relative" ref={containerRef}>
       <button
         aria-expanded={open}
-        aria-label="Buka notifikasi"
+        aria-label={t("notification.open")}
         onClick={() => setOpen((current) => !current)}
         className="relative grid size-10 place-items-center rounded-xl border bg-white text-stone-500 hover:text-blush"
       >
@@ -316,7 +336,7 @@ function NotificationMenu() {
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-[min(88vw,390px)] rounded-3xl border bg-white p-5 shadow-2xl">
-          <h3 className="font-semibold">Notifikasi terbaru</h3>
+          <h3 className="font-semibold">{t("notification.latest")}</h3>
           <div className="mt-4 grid gap-2">
             {notificationRepository.list().map((notification) => (
               <article className="rounded-2xl bg-rose-50 p-4" key={notification.id}>
@@ -326,7 +346,7 @@ function NotificationMenu() {
             ))}
           </div>
           <button className="mt-4 text-sm font-semibold text-blush">
-            Tandai semua sudah dibaca
+            {t("notification.markAllRead")}
           </button>
         </div>
       )}
@@ -335,6 +355,7 @@ function NotificationMenu() {
 }
 
 function UserMenu({ role }: { role: AppShellProps["role"] }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -347,7 +368,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
   );
   const fallbackUser = mockUsers.find((item) => item.role.toLowerCase() === role);
   const currentUser = user ?? fallbackUser;
-  const name = currentUser?.name ?? "Pengguna";
+  const name = currentUser?.name ?? t("account.user");
   const initials = name
     .split(" ")
     .map((item) => item[0])
@@ -439,7 +460,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
                 onClick={() => setOpen(false)}
               >
                 <Icon size={15} />
-                {item.label}
+                {t(item.translationKey)}
               </Link>
             );
           })}
@@ -450,7 +471,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
           >
             <LogOut size={15} />
-            {isLoggingOut ? "Sedang keluar..." : "Keluar"}
+            {isLoggingOut ? t("account.loggingOut") : t("account.logout")}
           </button>
         </div>
       )}
@@ -459,6 +480,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
 }
 
 function BottomNav({ nav, pathname }: { nav: NavigationItem[]; pathname: string }) {
+  const { t } = useTranslation();
   return (
     <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-2xl border bg-white/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
       {nav.map((item) => {
@@ -473,7 +495,7 @@ function BottomNav({ nav, pathname }: { nav: NavigationItem[]; pathname: string 
             key={item.href}
           >
             <Icon size={15} />
-            {item.label}
+            {t(item.translationKey)}
           </Link>
         );
       })}

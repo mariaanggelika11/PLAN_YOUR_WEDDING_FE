@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import { ChevronDown } from "lucide-react";
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
@@ -16,14 +19,16 @@ export function AppInput({
   type = "text",
   ...props
 }: FieldBase & InputHTMLAttributes<HTMLInputElement>) {
+  const { locale, translateText } = useTranslation();
+  const translatedLabel = translateText(label);
   const generatedPlaceholder = supportsPlaceholder(type)
-    ? `Masukkan ${label.toLowerCase()}`
+    ? `${locale === "en" ? "Enter" : "Masukkan"} ${translatedLabel.toLowerCase()}`
     : undefined;
 
   return (
     <label className="grid gap-1.5 text-sm font-medium">
       <span>
-        {label}
+        {translatedLabel}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
       <input
@@ -32,14 +37,14 @@ export function AppInput({
           error && "border-red-500",
           className,
         )}
-        placeholder={placeholder ?? generatedPlaceholder}
+        placeholder={placeholder ? translateText(placeholder) : generatedPlaceholder}
         type={type}
         {...props}
       />
       {error ? (
-        <span className="text-xs text-red-600">{error}</span>
+        <span className="text-xs text-red-600">{translateText(error)}</span>
       ) : helper ? (
-        <span className="text-xs text-stone-500">{helper}</span>
+        <span className="text-xs text-stone-500">{translateText(helper)}</span>
       ) : null}
     </label>
   );
@@ -52,10 +57,12 @@ export function AppTextarea({
   placeholder,
   ...props
 }: FieldBase & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const { locale, translateText } = useTranslation();
+  const translatedLabel = translateText(label);
   return (
     <label className="grid gap-1.5 text-sm font-medium">
       <span>
-        {label}
+        {translatedLabel}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
       <textarea
@@ -64,13 +71,17 @@ export function AppTextarea({
           error && "border-red-500",
           className,
         )}
-        placeholder={placeholder ?? `Masukkan ${label.toLowerCase()}`}
+        placeholder={
+          placeholder
+            ? translateText(placeholder)
+            : `${locale === "en" ? "Enter" : "Masukkan"} ${translatedLabel.toLowerCase()}`
+        }
         {...props}
       />
       {error ? (
-        <span className="text-xs text-red-600">{error}</span>
+        <span className="text-xs text-red-600">{translateText(error)}</span>
       ) : helper ? (
-        <span className="text-xs text-stone-500">{helper}</span>
+        <span className="text-xs text-stone-500">{translateText(helper)}</span>
       ) : null}
     </label>
   );
@@ -83,10 +94,11 @@ export function AppSelect({
   className,
   ...props
 }: FieldBase & SelectHTMLAttributes<HTMLSelectElement>) {
+  const { translateText } = useTranslation();
   return (
     <label className="grid gap-1.5 text-sm font-medium">
       <span>
-        {label}
+        {translateText(label)}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
       <span className="relative block">
@@ -112,9 +124,9 @@ export function AppSelect({
         />
       </span>
       {error ? (
-        <span className="text-xs text-red-600">{error}</span>
+        <span className="text-xs text-red-600">{translateText(error)}</span>
       ) : helper ? (
-        <span className="text-xs text-stone-500">{helper}</span>
+        <span className="text-xs text-stone-500">{translateText(helper)}</span>
       ) : null}
     </label>
   );

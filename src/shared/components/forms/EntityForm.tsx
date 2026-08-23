@@ -12,6 +12,7 @@ import {
   AppTextarea,
 } from "@/shared/components/ui/FormFields";
 import { cn } from "@/shared/utils/cn";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useState, type FormEvent } from "react";
 
 export type FormField = {
@@ -49,6 +50,7 @@ export function EntityForm({
   note?: string;
   steps?: string[];
 }) {
+  const { locale, translateText } = useTranslation();
   const [activeStep, setActiveStep] = useState(0);
   const lastStep = (steps?.length ?? 1) - 1;
 
@@ -72,7 +74,9 @@ export function EntityForm({
   return (
     <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
       {steps && <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />}
-      {note && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{note}</p>}
+      {note && (
+        <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{translateText(note)}</p>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         {fields.map(({ options, step: fieldStep, ...field }) => (
           <div
@@ -91,7 +95,9 @@ export function EntityForm({
                 defaultValue={initialValues[field.name] ?? ""}
                 disabled={!options?.length}
               >
-                <option value="">Pilih {field.label.toLowerCase()}</option>
+                <option value="">
+                  {locale === "en" ? "Select" : "Pilih"} {translateText(field.label).toLowerCase()}
+                </option>
                 {options?.map((option) => (
                   <option key={option}>{option}</option>
                 ))}

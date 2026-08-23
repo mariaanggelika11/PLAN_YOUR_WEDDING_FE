@@ -1,14 +1,18 @@
+"use client";
+
 import { statusStyles } from "@/shared/config/status";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Aktif",
-  DRAFT: "Draft",
-  INACTIVE: "Nonaktif",
-  REJECTED: "Ditolak",
-};
-
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
+  const statusLabels: Record<string, string> = {
+    ACTIVE: t("status.active"),
+    DRAFT: t("status.draft"),
+    INACTIVE: t("status.inactive"),
+    REJECTED: t("status.rejected"),
+    VERIFIED: t("status.verified"),
+  };
   return (
     <span
       className={cn(
@@ -16,7 +20,7 @@ export function StatusBadge({ status }: { status: string }) {
         statusStyles[status] ?? "bg-stone-100 text-stone-700",
       )}
     >
-      {STATUS_LABELS[status] ?? status.replaceAll("_", " ")}
+      {statusLabels[status] ?? status.replaceAll("_", " ")}
     </span>
   );
 }

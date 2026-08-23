@@ -1,6 +1,9 @@
+"use client";
+
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import type { Product, Vendor } from "@/shared/types/models";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
 import { BadgeCheck, Clock3, Heart, MapPin, MessageCircle, Star, Users } from "lucide-react";
@@ -16,18 +19,20 @@ export function DashboardCard({
   value: string | number;
   note?: string;
 }) {
+  const { translateText } = useTranslation();
   return (
     <article className="group rounded-3xl border bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:border-rose-200 hover:shadow-xl">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-stone-500">{label}</p>
+        <p className="text-sm text-stone-500">{translateText(label)}</p>
         <span className="size-2 rounded-full bg-blush/70 transition group-hover:scale-150" />
       </div>
       <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
-      {note && <p className="mt-2 text-xs text-stone-500">{note}</p>}
+      {note && <p className="mt-2 text-xs text-stone-500">{translateText(note)}</p>}
     </article>
   );
 }
 export function VendorCard({ vendor }: { vendor: Vendor }) {
+  const { translateText } = useTranslation();
   if (vendor.status !== "VERIFIED_ACTIVE") return null;
   // TODO API: Data vendor card berasal dari endpoint marketplace vendor list
   return (
@@ -82,7 +87,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
         </div>
         <div className="mt-auto flex items-stretch gap-2 pt-5">
           <AppButton asChild className="h-11 min-h-11 flex-1 whitespace-nowrap">
-            <Link href={ROUTES.customer.vendor(vendor.id)}>Lihat Detail</Link>
+            <Link href={ROUTES.customer.vendor(vendor.id)}>{translateText("Lihat Detail")}</Link>
           </AppButton>
           <AppButton
             aria-label="Chat vendor"
@@ -97,6 +102,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   );
 }
 export function ProductCard({ product }: { product: Product }) {
+  const { translateText } = useTranslation();
   // TODO API: Ambil daftar package aktif dari backend
   return (
     <article className="group flex h-full flex-col rounded-3xl border bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
@@ -118,7 +124,7 @@ export function ProductCard({ product }: { product: Product }) {
       <p className="mt-2 text-lg font-semibold">{formatCurrency(product.price)}</p>
       <p className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">
         <span className="flex items-center gap-1">
-          <Users size={13} /> {product.guestCapacity} tamu
+          <Users size={13} /> {product.guestCapacity} {translateText("tamu")}
         </span>
         <span className="flex items-center gap-1">
           <Clock3 size={13} /> {product.duration}
@@ -133,10 +139,10 @@ export function ProductCard({ product }: { product: Product }) {
           variant="secondary"
           className="h-11 min-h-11 flex-1 whitespace-nowrap px-3"
         >
-          <Link href={ROUTES.customer.product(product.id)}>Lihat Paket</Link>
+          <Link href={ROUTES.customer.product(product.id)}>{translateText("Lihat Paket")}</Link>
         </AppButton>
         <AppButton asChild className="h-11 min-h-11 flex-1 whitespace-nowrap px-3">
-          <Link href={ROUTES.customer.checkout}>Booking</Link>
+          <Link href={ROUTES.customer.checkout}>{translateText("Booking")}</Link>
         </AppButton>
       </div>
     </article>

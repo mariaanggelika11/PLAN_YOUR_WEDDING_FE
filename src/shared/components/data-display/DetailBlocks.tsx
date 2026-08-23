@@ -1,11 +1,17 @@
+"use client";
+
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 export function DetailGrid({ items }: { items: [string, React.ReactNode][] }) {
+  const { translateText } = useTranslation();
   return (
     <dl className="grid gap-4 rounded-2xl border bg-white p-6 md:grid-cols-2">
       {items.map(([label, value]) => (
         <div key={label}>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-stone-400">{label}</dt>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+            {translateText(label)}
+          </dt>
           <dd className="mt-1 text-sm font-medium">{value}</dd>
         </div>
       ))}
