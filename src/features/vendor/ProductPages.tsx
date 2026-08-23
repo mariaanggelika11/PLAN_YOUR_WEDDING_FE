@@ -1,7 +1,6 @@
 "use client";
 import { productRepository } from "@/features/products/repository";
 
-import { marketplaceRepository } from "@/features/marketplace/repository";
 import { useVendorProfile } from "@/features/profile/hooks/useVendorProfile";
 import { canVendorSell, vendorProfileStatus } from "@/features/profile/rules";
 import { DashboardCard } from "@/shared/components/data-display/Cards";
@@ -10,7 +9,7 @@ import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { PopupConfirm } from "@/shared/components/feedback/Popup";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
-import { type FormField } from "@/shared/components/forms/EntityForm";
+import { EntityForm, type FormField } from "@/shared/components/forms/EntityForm";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
@@ -19,18 +18,10 @@ import { formatCurrency } from "@/shared/utils/formatCurrency";
 import Link from "next/link";
 import { type ReactNode } from "react";
 
-export const PRODUCT_FORM_STEPS = ["Informasi Layanan", "Harga & Publikasi"];
+const PRODUCT_FORM_STEPS = ["Informasi Layanan", "Harga & Publikasi"];
 
-export const productFields: FormField[] = [
+const PRODUCT_FIELDS: FormField[] = [
   { label: "Nama produk atau paket", name: "name", required: true, step: 0 },
-  {
-    label: "Kategori",
-    name: "category",
-    type: "select",
-    options: marketplaceRepository.categories().map((item) => item.name),
-    required: true,
-    step: 0,
-  },
   { label: "Deskripsi layanan", name: "description", type: "textarea", required: true, step: 0 },
   { label: "Durasi layanan", name: "duration", placeholder: "Contoh: 8 jam", step: 0 },
   { label: "Kapasitas tamu", name: "capacity", type: "number", min: 1, step: 0 },
@@ -54,6 +45,46 @@ export const productFields: FormField[] = [
   },
   { label: "Syarat dan ketentuan", name: "terms", type: "textarea", required: true, step: 1 },
 ];
+
+export function VendorProductForm({ note, submitLabel }: { note: string; submitLabel: string }) {
+  const vendor = useVendorProfile();
+  if (vendor.loading) return <LoadingSkeleton />;
+  if (vendor.error) return <ErrorState retry={() => void vendor.reload()} />;
+
+  const categories = uniqueCategories(vendor.profile?.categories);
+  const fields: FormField[] = [
+    PRODUCT_FIELDS[0],
+    {
+      label: "Kategori",
+      name: "category",
+      type: "select",
+      options: categories,
+      required: true,
+      helper: categories.length
+        ? "Pilihan kategori mengikuti kategori layanan pada profil bisnis Anda."
+        : "Tambahkan kategori melalui menu Profil Bisnis.",
+      step: 0,
+    },
+    ...PRODUCT_FIELDS.slice(1),
+  ];
+
+  return (
+    <EntityForm
+      fields={fields}
+      note={
+        categories.length
+          ? note
+          : "Belum ada kategori layanan pada profil. Tambahkan kategori di Profil Bisnis terlebih dahulu."
+      }
+      steps={PRODUCT_FORM_STEPS}
+      submitLabel={submitLabel}
+    />
+  );
+}
+
+function uniqueCategories(categories: string[] | null | undefined) {
+  return [...new Set((categories ?? []).map((category) => category.trim()).filter(Boolean))];
+}
 
 export function ProductAccessGate({ children }: { children: ReactNode }) {
   const vendor = useVendorProfile();

@@ -4,7 +4,6 @@ import { reviewRepository } from "@/features/reviews/repository";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { EmptyState } from "@/shared/components/feedback/AsyncStates";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
-import { EntityForm } from "@/shared/components/forms/EntityForm";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 
 import { notificationRepository } from "@/features/notifications/repository";
@@ -14,9 +13,8 @@ import { OrderDetail, OrdersPage } from "@/features/vendor/OrderPages";
 import {
   ProductAccessGate,
   ProductDetailPage,
-  PRODUCT_FORM_STEPS,
   ProductsPage,
-  productFields,
+  VendorProductForm,
 } from "@/features/vendor/ProductPages";
 
 export function VendorPage({ slug }: { slug: string[] }) {
@@ -36,9 +34,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
           title="Buat Paket Layanan"
           description="Buat paket yang jelas agar customer mudah membandingkan."
         >
-          <EntityForm
-            fields={productFields}
-            steps={PRODUCT_FORM_STEPS}
+          <VendorProductForm
             note="Simpan sebagai draft jika informasi paket belum lengkap, atau publikasikan setelah semua data siap."
             submitLabel="Publish paket"
           />
@@ -49,9 +45,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
     return (
       <ProductAccessGate>
         <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
-          <EntityForm
-            fields={productFields}
-            steps={PRODUCT_FORM_STEPS}
+          <VendorProductForm
             note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
             submitLabel="Simpan perubahan"
           />

@@ -50,7 +50,7 @@ export function EntityForm({
       {steps && <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />}
       {note && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{note}</p>}
       <div className="grid gap-4 md:grid-cols-2">
-        {fields.map(({ step: fieldStep, ...field }) => (
+        {fields.map(({ options, step: fieldStep, ...field }) => (
           <div
             className={cn(
               field.type === "textarea" && "md:col-span-2",
@@ -61,9 +61,9 @@ export function EntityForm({
             {field.type === "textarea" ? (
               <AppTextarea {...field} />
             ) : field.type === "select" ? (
-              <AppSelect {...field}>
+              <AppSelect {...field} disabled={!options?.length}>
                 <option value="">Pilih {field.label.toLowerCase()}</option>
-                {field.options?.map((option) => (
+                {options?.map((option) => (
                   <option key={option}>{option}</option>
                 ))}
               </AppSelect>
