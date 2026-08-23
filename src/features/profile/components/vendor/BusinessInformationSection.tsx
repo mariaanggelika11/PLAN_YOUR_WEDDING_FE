@@ -8,6 +8,7 @@ import {
   getVendorLogo,
 } from "@/features/profile/api/attachmentApi";
 import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
+import { LocationPicker } from "@/features/profile/components/location/LocationPicker";
 import {
   FormGroupHeader,
   MasterParameterCheckboxGroup,
@@ -78,20 +79,7 @@ export function VendorBusinessInformationSection({
           title="Lokasi dan layanan"
         />
         <RegionFields initialCity={values.city} initialProvince={values.province} />
-        <AppInput
-          defaultValue={values.latitude}
-          label="Latitude"
-          name="latitude"
-          step="any"
-          type="number"
-        />
-        <AppInput
-          defaultValue={values.longitude}
-          label="Longitude"
-          name="longitude"
-          step="any"
-          type="number"
-        />
+        <LocationPicker initialLatitude={values.latitude} initialLongitude={values.longitude} />
         <AppInput defaultValue={values.serviceArea} label="Area layanan" name="serviceArea" />
         <div className="md:col-span-2">
           <AppTextarea
