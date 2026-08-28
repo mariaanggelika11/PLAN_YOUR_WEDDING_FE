@@ -142,7 +142,7 @@ export function ProductCard({ product }: { product: Product }) {
           <Link href={ROUTES.customer.product(product.id)}>{translateText("Lihat Paket")}</Link>
         </AppButton>
         <AppButton asChild className="h-11 min-h-11 flex-1 whitespace-nowrap px-3">
-          <Link href={ROUTES.customer.checkout}>{translateText("Booking")}</Link>
+          <Link href={ROUTES.customer.checkout(product.id)}>{translateText("Booking")}</Link>
         </AppButton>
       </div>
     </article>

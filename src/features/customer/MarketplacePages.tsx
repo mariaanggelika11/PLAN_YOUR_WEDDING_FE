@@ -2,32 +2,27 @@
 
 import { ReviewList } from "@/features/customer/OrderPages";
 import { marketplaceRepository } from "@/features/marketplace/repository";
-import { orderRepository } from "@/features/orders/repository";
 import { productRepository } from "@/features/products/repository";
 import { getVendorProduct } from "@/features/products/api";
 import type { VendorProduct } from "@/features/products/types";
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
+import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { ProductCard } from "@/shared/components/data-display/Cards";
 import { PriceBreakdown } from "@/shared/components/data-display/Commerce";
 import { DetailGrid, PlaceholderPanel } from "@/shared/components/data-display/DetailBlocks";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
-import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { EntityForm, type FormField } from "@/shared/components/forms/EntityForm";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
-import {
-  Accordion,
-  DragDropUpload,
-  Stepper,
-  Tabs,
-} from "@/shared/components/navigation/Interactive";
+import { Accordion, DragDropUpload, Tabs } from "@/shared/components/navigation/Interactive";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
 import { ChevronLeft, ChevronRight, Copy, Heart, MessageCircle, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 function Page({
@@ -52,6 +47,15 @@ const checkoutFields: FormField[] = [
   { label: "Jumlah tamu", name: "guests", type: "number", required: true },
   { label: "Catatan untuk vendor", name: "notes", type: "textarea" },
 ];
+
+type CheckoutDraft = {
+  date: string;
+  guests: string;
+  location: string;
+  notes: string;
+};
+
+const checkoutDraftKey = (productId: string) => `pyw-checkout:${productId}`;
 
 export function VendorDetail() {
   const vendor = marketplaceRepository.vendors()[0];
@@ -133,7 +137,9 @@ export function VendorDetail() {
           </p>
           <div className="mt-5 grid gap-2">
             <AppButton asChild>
-              <Link href={ROUTES.customer.checkout}>Book sekarang</Link>
+              <Link href={ROUTES.customer.checkout(productRepository.list()[0].id)}>
+                Book sekarang
+              </Link>
             </AppButton>
             <AppButton variant="secondary">
               <MessageCircle size={16} /> Chat vendor
@@ -204,7 +210,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             <PriceBreakdown subtotal={product.price} />
           </div>
           <AppButton asChild className="mt-3 w-full">
-            <Link href={ROUTES.customer.checkout}>Booking sekarang</Link>
+            <Link href={ROUTES.customer.checkout(product.id)}>Booking sekarang</Link>
           </AppButton>
         </aside>
       </div>
@@ -340,65 +346,317 @@ function CustomerProductImage({
     </div>
   );
 }
-export function CheckoutPage() {
-  // TODO API: Kirim data checkout ke backend untuk membuat order
+export function CheckoutPage({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<VendorProduct | null>(null);
+  const [error, setError] = useState("");
+  const customer = useProfileData("customer");
+  const router = useRouter();
+  const loadProduct = useCallback(async () => {
+    try {
+      const result = await getVendorProduct(productId);
+      if (!result.active || result.status !== "ACTIVE") {
+        throw new Error("Produk ini sedang tidak menerima pesanan.");
+      }
+      setProduct(result);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Produk gagal dimuat.");
+    }
+  }, [productId]);
+  useEffect(() => void loadProduct(), [loadProduct]);
+
+  if (error) return <ErrorState retry={() => void loadProduct()} />;
+  if (!product || customer.loading) return <LoadingSkeleton />;
+
+  const profile = customer.data;
+  const initialValues = {
+    date: profile?.weddingDate?.slice(0, 10) ?? "",
+    location:
+      profile?.weddingLocation?.trim() ||
+      [profile?.weddingCity, profile?.weddingProvince].filter(Boolean).join(", "),
+    guests: profile?.estimatedGuests ?? "",
+    notes: "",
+  };
+  const filledFromProfile = Boolean(
+    initialValues.date || initialValues.location || initialValues.guests,
+  );
+
+  // TODO API: Buat order terlebih dahulu, lalu redirect ke halaman pembayaran order tersebut.
   return (
-    <Page title="Konfirmasi Booking" description="Periksa detail acara sebelum membuat pesanan.">
-      <Stepper steps={["Detail Acara", "Ringkasan Paket", "Pembayaran"]} />
+    <Page title="Checkout" description="Lengkapi detail acara untuk membuat pesanan.">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
+        <span className="rounded-full bg-blush px-3 py-1.5 text-white">
+          1 · Detail & konfirmasi
+        </span>
+        <span aria-hidden="true">—</span>
+        <span className="rounded-full bg-stone-100 px-3 py-1.5">2 · Pembayaran</span>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <EntityForm fields={checkoutFields} submitLabel="Lanjutkan ke pembayaran" />
-        <aside className="h-fit rounded-3xl border bg-white p-5 shadow-soft lg:sticky lg:top-24">
+        <div className="grid gap-3">
+          {filledFromProfile ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <div>
+                <p className="font-semibold">Detail acara diisi dari Profil Wedding</p>
+                <p className="mt-0.5 text-xs text-emerald-700">
+                  Perubahan di sini hanya berlaku untuk pesanan ini.
+                </p>
+              </div>
+              <Link className="text-xs font-semibold underline" href={ROUTES.customer.profile}>
+                Edit profil
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Isi detail acara di bawah. Anda juga dapat melengkapinya sekali di{" "}
+              <Link className="font-semibold underline" href={ROUTES.customer.profile}>
+                Profil Wedding
+              </Link>{" "}
+              agar checkout berikutnya lebih cepat.
+            </div>
+          )}
+          {customer.error && (
+            <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+              Profil tidak berhasil dimuat. Anda tetap dapat mengisi detail acara secara manual.
+            </p>
+          )}
+          <EntityForm
+            fields={checkoutFields}
+            initialValues={initialValues}
+            note="Pastikan tanggal, lokasi, dan jumlah tamu sesuai kebutuhan vendor."
+            showDraft={false}
+            submitLabel="Buat pesanan & lanjut pembayaran"
+            onSave={(form) => {
+              const values = new FormData(form);
+              const draft: CheckoutDraft = {
+                date: String(values.get("date") ?? ""),
+                guests: String(values.get("guests") ?? ""),
+                location: String(values.get("location") ?? ""),
+                notes: String(values.get("notes") ?? ""),
+              };
+              sessionStorage.setItem(checkoutDraftKey(productId), JSON.stringify(draft));
+              router.push(ROUTES.customer.payment(productId));
+            }}
+          />
+          <p className="px-2 text-center text-xs leading-5 text-stone-500">
+            Anda belum dikenakan pembayaran pada tahap ini. Pesanan dibuat terlebih dahulu sebelum
+            instruksi pembayaran ditampilkan.
+          </p>
+        </div>
+        <aside className="order-first h-fit rounded-3xl border bg-white p-5 shadow-soft lg:order-none lg:sticky lg:top-24">
+          <p className="mb-4 text-sm font-semibold text-ink">Ringkasan pesanan</p>
           <div className="flex gap-3">
-            <div className="relative size-16 overflow-hidden rounded-xl">
-              <Image src={productRepository.list()[0].image} alt="" fill className="object-cover" />
-            </div>
+            <CustomerProductImage
+              attachmentId={product.imageAttachmentIds[0]}
+              className="size-16 shrink-0 rounded-xl"
+              name={product.name}
+            />
             <div>
-              <p className="text-xs text-stone-400">{marketplaceRepository.vendors()[0].name}</p>
-              <h3 className="text-sm font-semibold">{productRepository.list()[0].name}</h3>
+              <p className="text-xs text-stone-400">{product.vendor.businessName}</p>
+              <h3 className="mt-0.5 text-sm font-semibold">{product.name}</h3>
+              {product.category && (
+                <p className="mt-1 text-xs text-stone-500">{product.category}</p>
+              )}
             </div>
           </div>
-          <div className="mt-5">
-            <PriceBreakdown subtotal={productRepository.list()[0].price} fee={250000} />
+          <div className="mt-5 grid gap-3 border-y py-4 text-sm">
+            {product.guestCapacity && (
+              <div className="flex justify-between gap-3">
+                <span className="text-stone-500">Kapasitas</span>
+                <span>{product.guestCapacity} tamu</span>
+              </div>
+            )}
+            {product.duration && (
+              <div className="flex justify-between gap-3">
+                <span className="text-stone-500">Durasi</span>
+                <span>{product.duration}</span>
+              </div>
+            )}
+            {product.minimumDp != null && (
+              <div className="flex justify-between gap-3">
+                <span className="text-stone-500">Minimum DP</span>
+                <span>{formatCurrency(product.minimumDp)}</span>
+              </div>
+            )}
           </div>
+          <div className="mt-4 flex items-end justify-between gap-3">
+            <span className="text-sm text-stone-500">Harga paket</span>
+            <span className="text-xl font-semibold text-ink">{formatCurrency(product.price)}</span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-stone-500">
+            Biaya tambahan, jika ada, harus ditampilkan dan dikonfirmasi sebelum pembayaran.
+          </p>
         </aside>
       </div>
     </Page>
   );
 }
-export function PaymentPage() {
-  // TODO API: Ambil detail payment instruction dan update countdown berdasarkan expired_at dari backend
-  // TODO API: Upload bukti pembayaran ke backend/storage
+export function PaymentPage({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<VendorProduct | null>(null);
+  const [draft, setDraft] = useState<CheckoutDraft | null>(null);
+  const [paymentMode, setPaymentMode] = useState<"dp" | "full">("dp");
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    try {
+      const result = await getVendorProduct(productId);
+      setProduct(result);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Detail pembayaran gagal dimuat.");
+    }
+  }, [productId]);
+  useEffect(() => {
+    void load();
+    const saved = sessionStorage.getItem(checkoutDraftKey(productId));
+    if (saved) {
+      try {
+        setDraft(JSON.parse(saved) as CheckoutDraft);
+      } catch {
+        sessionStorage.removeItem(checkoutDraftKey(productId));
+      }
+    }
+  }, [load, productId]);
+
+  if (error) return <ErrorState retry={() => void load()} />;
+  if (!product) return <LoadingSkeleton />;
+  const dpAmount = product.minimumDp && product.minimumDp > 0 ? product.minimumDp : product.price;
+  const amount = paymentMode === "dp" ? dpAmount : product.price;
+
+  // TODO API: Ganti draft browser dengan order dari POST /orders dan instruksi pembayaran dari backend.
   return (
-    <Page title="Instruksi Pembayaran" description="Selesaikan pembayaran sebelum batas waktu.">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-        Selesaikan pembayaran dalam <strong>23:45:18</strong> agar pesanan tidak kedaluwarsa.
+    <Page
+      title="Pembayaran Pesanan"
+      description="Pilih nominal pembayaran dan unggah bukti transfer."
+    >
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
+        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-700">
+          ✓ Detail & konfirmasi
+        </span>
+        <span aria-hidden="true">—</span>
+        <span className="rounded-full bg-blush px-3 py-1.5 text-white">2 · Pembayaran</span>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-stone-500">Total pembayaran</span>
-            <StatusBadge status={orderRepository.list()[1].paymentStatus} />
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+        <strong>Prototype alur pembayaran.</strong> Pada integrasi final, backend membuat nomor
+        order, mengunci harga, menentukan rekening tujuan, dan mengirim batas waktu pembayaran.
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid gap-6">
+          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+            <SectionHeader
+              title="Pilih pembayaran"
+              description="Customer dapat membayar DP minimum atau langsung lunas."
+            />
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                className={`rounded-2xl border p-4 text-left ${paymentMode === "dp" ? "border-blush bg-rose-50 ring-2 ring-rose-100" : "bg-white"}`}
+                onClick={() => setPaymentMode("dp")}
+                type="button"
+              >
+                <span className="text-sm font-semibold">Bayar DP</span>
+                <strong className="mt-2 block text-lg">{formatCurrency(dpAmount)}</strong>
+                <span className="mt-1 block text-xs text-stone-500">
+                  Minimum untuk mengamankan pesanan
+                </span>
+              </button>
+              <button
+                className={`rounded-2xl border p-4 text-left ${paymentMode === "full" ? "border-blush bg-rose-50 ring-2 ring-rose-100" : "bg-white"}`}
+                onClick={() => setPaymentMode("full")}
+                type="button"
+              >
+                <span className="text-sm font-semibold">Bayar lunas</span>
+                <strong className="mt-2 block text-lg">{formatCurrency(product.price)}</strong>
+                <span className="mt-1 block text-xs text-stone-500">
+                  Selesaikan seluruh pembayaran
+                </span>
+              </button>
+            </div>
+          </section>
+          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-stone-400">Total yang harus ditransfer</p>
+                <p className="mt-1 text-3xl font-semibold">{formatCurrency(amount)}</p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                Menunggu pembayaran
+              </span>
+            </div>
+            <div className="mt-6 rounded-2xl bg-stone-50 p-5">
+              <p className="text-xs text-stone-400">Transfer ke Bank BCA · Rekening prototype</p>
+              <p className="mt-2 text-xl font-semibold">1234 5678 901</p>
+              <p className="text-sm text-stone-500">a.n. Plan Your Wedding</p>
+              <AppButton
+                className="mt-4"
+                onClick={() => void navigator.clipboard.writeText("12345678901")}
+                variant="secondary"
+              >
+                <Copy size={15} /> Salin nomor rekening
+              </AppButton>
+            </div>
+          </section>
+          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+            <SectionHeader
+              title="Upload bukti pembayaran"
+              description="Pastikan nominal, rekening tujuan, dan waktu transfer terlihat jelas."
+            />
+            <div className="mt-5">
+              <DragDropUpload />
+            </div>
+            <AppButton className="mt-5 w-full">Kirim bukti pembayaran</AppButton>
+          </section>
+        </div>
+        <aside className="order-first h-fit rounded-3xl border bg-white p-5 shadow-soft lg:order-none lg:sticky lg:top-24">
+          <p className="text-sm font-semibold">Detail pesanan</p>
+          <div className="mt-4 flex gap-3 border-b pb-4">
+            <CustomerProductImage
+              attachmentId={product.imageAttachmentIds[0]}
+              className="size-16 shrink-0 rounded-xl"
+              name={product.name}
+            />
+            <div>
+              <p className="text-xs text-stone-400">{product.vendor.businessName}</p>
+              <p className="mt-1 text-sm font-semibold">{product.name}</p>
+            </div>
           </div>
-          <p className="mt-2 text-3xl font-semibold">{formatCurrency(25000000)}</p>
-          <div className="mt-6 rounded-2xl bg-stone-50 p-5">
-            <p className="text-xs text-stone-400">Transfer ke Bank BCA</p>
-            <p className="mt-2 text-xl font-semibold">1234 5678 901</p>
-            <p className="text-sm text-stone-500">a.n. Plan Your Wedding</p>
-            <AppButton className="mt-4" variant="secondary">
-              <Copy size={15} /> Salin nomor rekening
-            </AppButton>
+          <dl className="mt-4 grid gap-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-stone-500">Nomor order</dt>
+              <dd className="font-medium">Dibuat backend</dd>
+            </div>
+            {draft?.date && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-stone-500">Tanggal acara</dt>
+                <dd className="text-right font-medium">{draft.date}</dd>
+              </div>
+            )}
+            {draft?.location && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-stone-500">Lokasi</dt>
+                <dd className="text-right font-medium">{draft.location}</dd>
+              </div>
+            )}
+            {draft?.guests && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-stone-500">Jumlah tamu</dt>
+                <dd className="font-medium">{draft.guests}</dd>
+              </div>
+            )}
+          </dl>
+          {!draft && (
+            <div className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+              Detail checkout tidak ditemukan. Mulai kembali dari produk ini.
+            </div>
+          )}
+          <div className="mt-5 border-t pt-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-stone-500">Harga paket</span>
+              <span>{formatCurrency(product.price)}</span>
+            </div>
+            <div className="mt-3 flex justify-between font-semibold">
+              <span>Dibayar sekarang</span>
+              <span>{formatCurrency(amount)}</span>
+            </div>
           </div>
-        </section>
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <SectionHeader
-            title="Upload bukti pembayaran"
-            description="Pastikan nominal dan informasi transfer terlihat jelas."
-          />
-          <div className="mt-5">
-            <DragDropUpload />
-          </div>
-          <AppButton className="mt-5 w-full">Kirim bukti pembayaran</AppButton>
-        </section>
+        </aside>
       </div>
     </Page>
   );

@@ -42,7 +42,7 @@ export function CustomerDashboard() {
           {[
             [Sparkles, "Cari Vendor", "/customer/marketplace"],
             [CheckCircle2, "Lihat Order", "/customer/orders"],
-            [UploadCloud, "Upload Pembayaran", "/customer/payment"],
+            [UploadCloud, "Upload Pembayaran", "/customer/orders"],
             [WalletCards, "Atur Budget", "/customer/budget"],
           ].map(([Icon, label, href]) => (
             <Link

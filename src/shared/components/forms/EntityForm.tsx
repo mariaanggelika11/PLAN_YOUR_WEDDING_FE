@@ -133,14 +133,18 @@ export function EntityForm({
         ))}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-5">
-        <AppButton
-          disabled={!steps || activeStep === 0}
-          onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
-          type="button"
-          variant="secondary"
-        >
-          Kembali
-        </AppButton>
+        {steps ? (
+          <AppButton
+            disabled={activeStep === 0}
+            onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
+            type="button"
+            variant="secondary"
+          >
+            Kembali
+          </AppButton>
+        ) : (
+          <span />
+        )}
         <div className="flex flex-wrap gap-2">
           {showDraft && (
             <AppButton
