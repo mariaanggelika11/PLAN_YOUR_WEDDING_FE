@@ -63,6 +63,13 @@ export const API_ROUTES = {
     byId: (id: string) => `/orders/${id}`,
     confirm: (id: string) => `/orders/${id}/confirm`,
     reject: (id: string) => `/orders/${id}/reject`,
+    start: (id: string) => `/orders/${id}/start`,
+    deliver: (id: string) => `/orders/${id}/deliver`,
+    complete: (id: string) => `/orders/${id}/complete`,
+  },
+  vendorProductReviews: {
+    root: "/vendor-product-reviews",
+    byId: (id: string) => `/vendor-product-reviews/${id}`,
   },
   orderPayments: {
     root: "/order-payments",

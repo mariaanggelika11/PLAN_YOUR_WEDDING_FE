@@ -21,6 +21,7 @@ export const ROUTES = {
     vendor: (id: string) => `/customer/vendors/${id}`,
     product: (id: string) => `/customer/products/${id}`,
     order: (id: string) => `/customer/orders/${id}`,
+    review: (orderId: string) => `/customer/review/${orderId}`,
   },
   vendor: {
     dashboard: "/vendor/dashboard",

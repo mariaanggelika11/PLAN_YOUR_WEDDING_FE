@@ -32,7 +32,7 @@ export function OrderTimeline({ items }: { items: Array<string | OrderTimelineIt
         return (
         <li className="flex gap-3 text-sm" key={`${entry.label}-${entry.date ?? index}`}>
           <CheckCircle2
-            className={index === items.length - 1 ? "text-stone-300" : "text-emerald-600"}
+            className="text-emerald-600"
             size={18}
           />
           <span>

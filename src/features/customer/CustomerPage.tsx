@@ -1,7 +1,6 @@
 import { MarketplaceExplorer } from "@/features/marketplace/MarketplaceExplorer";
 import { CustomerProfileForm } from "@/features/profile/components/customer/CustomerProfileForm";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
-import { EntityForm } from "@/shared/components/forms/EntityForm";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
 import type { ReactNode } from "react";
 
@@ -12,7 +11,7 @@ import {
   ProductDetail,
   VendorDetail,
 } from "@/features/customer/MarketplacePages";
-import { OrderDetail, Orders } from "@/features/customer/OrderPages";
+import { OrderDetail, Orders, ReviewPage } from "@/features/customer/OrderPages";
 import { BudgetPage, NotificationPage, ProgressPage } from "@/features/customer/PlanningPages";
 
 export function CustomerPage({ slug }: { slug: string[] }) {
@@ -44,26 +43,7 @@ export function CustomerPage({ slug }: { slug: string[] }) {
   if (page === "payment" && slug[1]) return <PaymentPage orderId={slug[1]} />;
   if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <Orders />;
-  if (page === "review")
-    return (
-      <Page title="Beri Ulasan" description="Bagikan pengalaman Anda setelah pesanan selesai.">
-        <EntityForm
-          fields={[
-            {
-              label: "Rating (1-5)",
-              name: "rating",
-              type: "number",
-              min: 1,
-              max: 5,
-              required: true,
-            },
-            { label: "Komentar ulasan", name: "comment", type: "textarea", required: true },
-            { label: "Foto ulasan (opsional)", name: "image", type: "file" },
-          ]}
-          submitLabel="Kirim ulasan"
-        />
-      </Page>
-    );
+  if (page === "review" && slug[1]) return <ReviewPage orderId={slug[1]} />;
   if (page === "progress") return <ProgressPage />;
   if (page === "budget") return <BudgetPage />;
   if (page === "notifications") return <NotificationPage />;

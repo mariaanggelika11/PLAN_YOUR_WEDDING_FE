@@ -40,6 +40,15 @@ export function confirmOrder(id: string) {
 export function rejectOrder(id: string, rejectReason: string) {
   return authenticatedDataRequest<Order>(API_ROUTES.orders.reject(id), { method: "PUT", body: JSON.stringify({ rejectReason: rejectReason.trim() }) });
 }
+export function startOrder(id: string) {
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.start(id), { method: "PUT" });
+}
+export function deliverOrder(id: string) {
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.deliver(id), { method: "PUT" });
+}
+export function completeOrder(id: string) {
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.complete(id), { method: "PUT" });
+}
 export function submitPaymentProof(paymentId: string, proof: File) {
   const body = new FormData();
   body.set("proof", proof);

@@ -2,17 +2,23 @@
 
 import {
   confirmOrder,
+  deliverOrder,
   getOrder,
   getOrdersWithPayments,
   rejectOrder,
   rejectPayment,
+  startOrder,
   verifyPayment,
 } from "@/features/orders/repository";
 import { canVendorDecide, canVendorVerifyPayment } from "@/features/orders/rules";
+import { buildOrderTimeline } from "@/features/orders/timeline";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
+import { PaymentSummary } from "@/features/orders/components/PaymentSummary";
 import type { Order, OrderPayment } from "@/features/orders/types";
+import { OrderTimeline } from "@/shared/components/data-display/Commerce";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
+import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { PopupConfirm, usePopup } from "@/shared/components/feedback/Popup";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
@@ -102,6 +108,27 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     if (result.success) await resource.reload();
   }
 
+  async function startCurrentOrder() {
+    const result = await action.run(() => startOrder(orderId), {
+      successMessage: "Pengerjaan pesanan dimulai.",
+    });
+    if (result.success) await resource.reload();
+  }
+
+  async function deliverCurrentOrder() {
+    const confirmation = await popup.confirm({
+      title: "Tandai layanan selesai?",
+      message: "Customer akan diminta memeriksa layanan dan mengonfirmasi penyelesaian pesanan.",
+      confirmLabel: "Kirim ke customer",
+      variant: "success",
+    });
+    if (!confirmation.confirmed) return;
+    const result = await action.run(() => deliverOrder(orderId), {
+      successMessage: "Layanan ditandai selesai dan menunggu konfirmasi customer.",
+    });
+    if (result.success) await resource.reload();
+  }
+
   async function verifyCurrentPayment(paymentId: string) {
     const confirmation = await popup.confirm({
       title: "Verifikasi pembayaran?",
@@ -158,6 +185,15 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         ]}
       />
 
+      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+        <SectionHeader title="Timeline pesanan" />
+        <div className="mt-5">
+          <OrderTimeline items={buildOrderTimeline(order)} />
+        </div>
+      </section>
+
+      <PaymentSummary order={order} />
+
       {payment && (
         <PaymentVerificationPanel
           actionLoading={action.loading}
@@ -169,9 +205,11 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
       <OrderDecision
         actionLoading={action.loading}
-        canDecide={canVendorDecide(order)}
         onAccept={() => void acceptOrder()}
+        onDeliver={() => void deliverCurrentOrder()}
         onReject={(reason) => void rejectCurrentOrder(reason)}
+        onStart={() => void startCurrentOrder()}
+        order={order}
         payment={payment}
       />
     </Page>
@@ -238,18 +276,22 @@ function PaymentVerificationPanel({
 
 function OrderDecision({
   actionLoading,
-  canDecide,
   onAccept,
+  onDeliver,
   onReject,
+  onStart,
+  order,
   payment,
 }: {
   actionLoading: boolean;
-  canDecide: boolean;
   onAccept: () => void;
+  onDeliver: () => void;
   onReject: (reason?: string) => void;
+  onStart: () => void;
+  order: Order;
   payment?: OrderPayment;
 }) {
-  if (canDecide) {
+  if (canVendorDecide(order)) {
     return (
       <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-ink">Keputusan pesanan</h2>
@@ -260,6 +302,34 @@ function OrderDecision({
         </div>
       </section>
     );
+  }
+
+  if (order.status === "CONFIRMED") {
+    return (
+      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
+        <p className="mt-1 text-sm text-stone-500">Mulai pengerjaan ketika layanan sudah memasuki tahap pelaksanaan.</p>
+        <AppButton className="mt-5" loading={actionLoading} onClick={onStart}>Mulai pengerjaan</AppButton>
+      </section>
+    );
+  }
+
+  if (order.status === "IN_PROGRESS") {
+    return (
+      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
+        <p className="mt-1 text-sm text-stone-500">Jika seluruh layanan telah diberikan, kirim penyelesaian untuk dikonfirmasi customer.</p>
+        <AppButton className="mt-5" loading={actionLoading} onClick={onDeliver}>Tandai layanan selesai</AppButton>
+      </section>
+    );
+  }
+
+  if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
+    return <p className="rounded-2xl bg-blue-50 p-4 text-sm text-blue-700">Layanan telah diserahkan. Menunggu customer mengonfirmasi pesanan selesai.</p>;
+  }
+
+  if (order.status === "COMPLETED") {
+    return <p className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">Pesanan telah selesai dan dikonfirmasi customer.</p>;
   }
 
   const message = payment?.status === "WAITING_VERIFICATION"

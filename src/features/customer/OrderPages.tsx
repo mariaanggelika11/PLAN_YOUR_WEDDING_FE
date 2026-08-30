@@ -1,10 +1,13 @@
 "use client";
 
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
-import { getOrder, getOrdersWithPayments, submitPaymentProof } from "@/features/orders/repository";
+import { getPaymentSummary, PaymentSummary } from "@/features/orders/components/PaymentSummary";
+import { completeOrder, getOrder, getOrdersWithPayments, submitPaymentProof } from "@/features/orders/repository";
 import { validatePaymentProof } from "@/features/orders/rules";
+import { buildOrderTimeline } from "@/features/orders/timeline";
 import type { Order, OrderPayment } from "@/features/orders/types";
 import { reviewRepository } from "@/features/reviews/repository";
+import { createVendorProductReview } from "@/features/reviews/api";
 import { OrderTimeline } from "@/shared/components/data-display/Commerce";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
@@ -13,14 +16,16 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/fee
 import { usePopup } from "@/shared/components/feedback/Popup";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
+import { EntityForm } from "@/shared/components/forms/EntityForm";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { useAsyncAction } from "@/shared/hooks/useAsyncAction";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { usePaginatedResource } from "@/shared/hooks/usePaginatedResource";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
-import { formatDate, formatDateTime } from "@/shared/utils/formatDate";
+import { formatDate } from "@/shared/utils/formatDate";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 
 function Page({ title, description, children }: { title: string; description: string; children: ReactNode }) {
@@ -52,6 +57,19 @@ export function Orders() {
 export function OrderDetail({ orderId }: { orderId: string }) {
   const action = useAsyncAction();
   const popup = usePopup();
+  async function completeCurrentOrder() {
+    const confirmation = await popup.confirm({
+      title: "Konfirmasi pesanan selesai?",
+      message: "Pastikan seluruh layanan telah diterima dengan baik. Tindakan ini menyelesaikan pesanan.",
+      confirmLabel: "Selesaikan pesanan",
+      variant: "success",
+    });
+    if (!confirmation.confirmed) return;
+    const result = await action.run(() => completeOrder(orderId), {
+      successMessage: "Pesanan berhasil diselesaikan.",
+    });
+    if (result.success) await resource.reload();
+  }
   const loader = useCallback(() => getOrder(orderId), [orderId]);
   const resource = useAsyncResource<Order | null>(loader, { initialData: null });
   if (resource.loading) return <LoadingSkeleton />;
@@ -59,6 +77,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const order = resource.data;
   if (!order) return <ErrorState retry={() => void resource.reload()} />;
   const payment = order.payments?.[0];
+  const paymentSummary = getPaymentSummary(order);
   async function uploadAgain(file: File) {
     if (!payment || payment.status !== "REJECTED") return;
     const validationError = validatePaymentProof(file);
@@ -81,8 +100,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           ["Total", formatCurrency(order.totalAmount)], ["Status pesanan", <StatusBadge key="order" status={order.status} />],
           ["Pembayaran", payment ? <StatusBadge key="payment" status={payment.status} /> : "-"],
         ]} />
-        <section className="rounded-3xl border bg-white p-6"><SectionHeader title="Timeline pesanan" /><div className="mt-5"><OrderTimeline items={orderTimeline(order)} /></div></section>
+        <section className="rounded-3xl border bg-white p-6"><SectionHeader title="Timeline pesanan" /><div className="mt-5"><OrderTimeline items={buildOrderTimeline(order)} /></div></section>
       </div>
+      <PaymentSummary order={order} />
       {payment && (
         <CustomerPaymentPanel
           loading={action.loading}
@@ -90,7 +110,65 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           payment={payment}
         />
       )}
+      {order.status === "WAITING_CUSTOMER_CONFIRMATION" && (
+        <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-semibold text-ink">Konfirmasi layanan</h2>
+          <p className="mt-1 text-sm text-stone-500">Vendor telah menandai layanan selesai. Periksa hasilnya sebelum menyelesaikan pesanan.</p>
+          {!paymentSummary.isFullyPaid && (
+            <p className="mt-4 text-sm font-medium text-amber-700">
+              Lunasi sisa tagihan {formatCurrency(paymentSummary.remainingAmount)} sebelum menyelesaikan pesanan.
+            </p>
+          )}
+          <AppButton className="mt-5" disabled={!paymentSummary.isFullyPaid} loading={action.loading} onClick={() => void completeCurrentOrder()}>
+            Konfirmasi pesanan selesai
+          </AppButton>
+        </section>
+      )}
+      {order.status === "COMPLETED" && (
+        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+          <h2 className="font-semibold text-emerald-900">Pesanan telah selesai</h2>
+          <p className="mt-1 text-sm text-emerald-700">Bagikan pengalaman Anda untuk membantu customer lain memilih vendor.</p>
+          <AppButton asChild className="mt-4"><Link href={ROUTES.customer.review(order.id)}>Beri ulasan</Link></AppButton>
+        </section>
+      )}
       {order.status === "PENDING_PAYMENT" && payment?.status === "WAITING_PAYMENT" && <Link className="font-semibold text-blush" href={ROUTES.customer.payment(order.id)}>Lanjutkan pembayaran →</Link>}
+    </Page>
+  );
+}
+
+export function ReviewPage({ orderId }: { orderId: string }) {
+  const router = useRouter();
+  const action = useAsyncAction();
+  const loader = useCallback(() => getOrder(orderId), [orderId]);
+  const resource = useAsyncResource<Order | null>(loader, { initialData: null });
+
+  if (resource.loading) return <LoadingSkeleton />;
+  if (resource.error) return <OrderAccessError error={resource.error} retry={resource.reload} />;
+  const order = resource.data;
+  if (!order) return <ErrorState retry={() => void resource.reload()} />;
+  if (order.status !== "COMPLETED") {
+    return <EmptyState title="Ulasan belum tersedia" description="Ulasan baru dapat dibuat setelah pesanan selesai." />;
+  }
+
+  return (
+    <Page title={`Ulas ${order.productName}`} description={`Bagikan pengalaman Anda bersama ${order.vendor.businessName}.`}>
+      <EntityForm
+        fields={[
+          { label: "Rating (1-5)", name: "rating", type: "number", min: 1, max: 5, required: true },
+          { label: "Komentar ulasan", name: "comment", type: "textarea", required: true },
+          { label: "Foto ulasan (opsional)", name: "images", type: "images", multiple: true },
+        ]}
+        loading={action.loading}
+        note="Ulasan hanya dapat dikirim satu kali untuk pesanan ini."
+        onSave={async (form) => {
+          const result = await action.run(() => createVendorProductReview(orderId, form), {
+            successMessage: "Ulasan berhasil dikirim.",
+          });
+          if (result.success) router.replace(ROUTES.customer.order(orderId));
+        }}
+        showDraft={false}
+        submitLabel="Kirim ulasan"
+      />
     </Page>
   );
 }
@@ -171,41 +249,6 @@ function OrderAccessError({ error, retry }: { error: string; retry: () => Promis
   const missing = /not found|tidak ditemukan/i.test(error);
   if (forbidden || missing) return <EmptyState title={forbidden ? "Anda tidak memiliki akses" : "Order tidak ditemukan"} description={forbidden ? "Order ini bukan milik akun Anda." : "Order mungkin sudah tidak tersedia."} />;
   return <ErrorState retry={() => void retry()} />;
-}
-
-function orderTimeline(order: Order) {
-  const items: Array<{ label: string; date?: string | null }> = [
-    { label: "Pesanan dibuat", date: timelineDate(order.createdAt) },
-  ];
-  const payment = order.payments?.[0];
-  if (payment?.paidAt) {
-    items.push({
-      label: payment.status === "WAITING_VERIFICATION"
-        ? "Bukti pembayaran menunggu verifikasi"
-        : "Bukti pembayaran diunggah",
-      date: timelineDate(payment.paidAt),
-    });
-  }
-  if (payment?.status === "REJECTED") {
-    items.push({ label: "Bukti pembayaran ditolak", date: timelineDate(payment.modifiedAt) });
-  }
-  if (payment?.status === "PAID") {
-    items.push({ label: "Pembayaran diterima", date: timelineDate(payment.verifiedAt) });
-  }
-  if (["CONFIRMED", "IN_PROGRESS", "WAITING_CUSTOMER_CONFIRMATION", "COMPLETED"].includes(order.status)) {
-    items.push({ label: "Vendor mengonfirmasi", date: timelineDate(order.confirmedAt) });
-  }
-  if (order.status === "REJECTED_BY_VENDOR") {
-    items.push({ label: "Pesanan ditolak vendor", date: timelineDate(order.modifiedAt) });
-  }
-  if (order.status === "COMPLETED") {
-    items.push({ label: "Acara selesai", date: timelineDate(order.completedAt) });
-  }
-  return items;
-}
-
-function timelineDate(value?: string | null) {
-  return value ? formatDateTime(value) : null;
 }
 
 export function ReviewList() {
