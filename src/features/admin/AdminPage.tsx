@@ -1,4 +1,4 @@
-import { orderRepository } from "@/features/orders/repository";
+import { mockOrders } from "@/mocks/mockData";
 import { reviewRepository } from "@/features/reviews/repository";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { EmptyState } from "@/shared/components/feedback/AsyncStates";
@@ -75,8 +75,7 @@ export function AdminPage({ slug }: { slug: string[] }) {
       >
         <DataTable
           columns={["Produk", "Vendor", "Kategori", "Harga", "Status"]}
-          rows={orderRepository
-            .list()
+          rows={mockOrders
             .map((o) => [
               o.productName,
               o.vendorName,
@@ -92,8 +91,7 @@ export function AdminPage({ slug }: { slug: string[] }) {
       <Page title="Monitoring Pesanan" description="Pantau seluruh transaksi marketplace.">
         <DataTable
           columns={["Nomor", "Customer", "Vendor", "Total", "Status"]}
-          rows={orderRepository
-            .list()
+          rows={mockOrders
             .map((o) => [
               o.number,
               o.customerName,

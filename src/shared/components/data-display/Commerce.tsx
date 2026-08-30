@@ -19,18 +19,30 @@ export function PriceBreakdown({ subtotal, fee = 0 }: { subtotal: number; fee?: 
     </div>
   );
 }
-export function OrderTimeline({ items }: { items: string[] }) {
+export interface OrderTimelineItem {
+  label: string;
+  date?: string | null;
+}
+
+export function OrderTimeline({ items }: { items: Array<string | OrderTimelineItem> }) {
   return (
     <ol className="grid gap-4">
-      {items.map((item, index) => (
-        <li className="flex gap-3 text-sm" key={item}>
+      {items.map((item, index) => {
+        const entry = typeof item === "string" ? { label: item, date: undefined } : item;
+        return (
+        <li className="flex gap-3 text-sm" key={`${entry.label}-${entry.date ?? index}`}>
           <CheckCircle2
             className={index === items.length - 1 ? "text-stone-300" : "text-emerald-600"}
             size={18}
           />
-          <span>{item}</span>
+          <span>
+            <span className="block font-medium text-ink">{entry.label}</span>
+            <span className="mt-0.5 block text-xs text-stone-400">
+              {entry.date ?? "Waktu belum tersedia"}
+            </span>
+          </span>
         </li>
-      ))}
+      )})}
     </ol>
   );
 }

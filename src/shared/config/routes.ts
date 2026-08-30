@@ -17,7 +17,7 @@ export const ROUTES = {
     budget: "/customer/budget",
     notifications: "/customer/notifications",
     checkout: (productId: string) => `/customer/checkout/${productId}`,
-    payment: (productId: string) => `/customer/payment/${productId}`,
+    payment: (orderId: string) => `/customer/payment/${orderId}`,
     vendor: (id: string) => `/customer/vendors/${id}`,
     product: (id: string) => `/customer/products/${id}`,
     order: (id: string) => `/customer/orders/${id}`,

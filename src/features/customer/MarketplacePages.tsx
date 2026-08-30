@@ -1,6 +1,9 @@
 "use client";
 
 import { ReviewList } from "@/features/customer/OrderPages";
+import { createOrder, getOrder, submitPaymentProof } from "@/features/orders/repository";
+import { canSubmitPaymentProof, validatePaymentProof } from "@/features/orders/rules";
+import type { Order } from "@/features/orders/types";
 import { marketplaceRepository } from "@/features/marketplace/repository";
 import { productRepository } from "@/features/products/repository";
 import { getVendorProduct } from "@/features/products/api";
@@ -13,12 +16,16 @@ import { PriceBreakdown } from "@/shared/components/data-display/Commerce";
 import { DetailGrid, PlaceholderPanel } from "@/shared/components/data-display/DetailBlocks";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
+import { usePopup } from "@/shared/components/feedback/Popup";
+import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { EntityForm, type FormField } from "@/shared/components/forms/EntityForm";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
-import { Accordion, DragDropUpload, Tabs } from "@/shared/components/navigation/Interactive";
+import { Accordion, Tabs } from "@/shared/components/navigation/Interactive";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
+import { useAsyncAction } from "@/shared/hooks/useAsyncAction";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
+import { formatDate } from "@/shared/utils/formatDate";
 import { ChevronLeft, ChevronRight, Copy, Heart, MessageCircle, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,17 +52,8 @@ const checkoutFields: FormField[] = [
   { label: "Tanggal acara", name: "date", type: "date", required: true },
   { label: "Lokasi acara", name: "location", required: true },
   { label: "Jumlah tamu", name: "guests", type: "number", required: true },
-  { label: "Catatan untuk vendor", name: "notes", type: "textarea" },
+  { label: "Catatan untuk vendor", name: "notes", type: "textarea", required: true },
 ];
-
-type CheckoutDraft = {
-  date: string;
-  guests: string;
-  location: string;
-  notes: string;
-};
-
-const checkoutDraftKey = (productId: string) => `pyw-checkout:${productId}`;
 
 export function VendorDetail() {
   const vendor = marketplaceRepository.vendors()[0];
@@ -346,11 +344,76 @@ function CustomerProductImage({
     </div>
   );
 }
+
+function PaymentTypeCards({
+  minimumDp,
+  onChange,
+  price,
+  value,
+}: {
+  minimumDp: number;
+  onChange: (value: "DP" | "FULL") => void;
+  price: number;
+  value: "DP" | "FULL" | "";
+}) {
+  const choices = [
+    {
+      description: "Minimum untuk mengamankan pesanan",
+      label: "Bayar DP",
+      type: "DP" as const,
+      amount: minimumDp,
+    },
+    {
+      description: "Selesaikan seluruh pembayaran",
+      label: "Bayar lunas",
+      type: "FULL" as const,
+      amount: price,
+    },
+  ];
+
+  return (
+    <fieldset className="rounded-3xl border bg-white p-5 shadow-sm sm:p-7">
+      <legend className="sr-only">Pilih pembayaran</legend>
+      <h2 className="text-xl font-semibold text-ink">Pilih pembayaran</h2>
+      <p className="mt-1 text-sm text-stone-500">
+        Pilih pembayaran DP minimum atau langsung lunas untuk melanjutkan.
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {choices.map((choice) => {
+          const selected = value === choice.type;
+          return (
+            <label
+              className={`relative cursor-pointer rounded-2xl border p-5 transition focus-within:ring-4 focus-within:ring-rose-100 ${selected ? "border-blush bg-rose-50 ring-2 ring-rose-100" : "bg-white hover:border-rose-300"}`}
+              key={choice.type}
+            >
+              <input
+                checked={selected}
+                className="sr-only"
+                name="paymentType"
+                onChange={() => onChange(choice.type)}
+                required
+                type="radio"
+                value={choice.type}
+              />
+              <span className="block text-sm font-semibold text-ink">{choice.label}</span>
+              <strong className="mt-3 block text-xl text-ink">{formatCurrency(choice.amount)}</strong>
+              <span className="mt-1 block text-xs text-stone-500">{choice.description}</span>
+            </label>
+          );
+        })}
+      </div>
+      {!value && <p className="mt-3 text-xs font-medium text-amber-700">Pilih salah satu metode pembayaran.</p>}
+    </fieldset>
+  );
+}
+
 export function CheckoutPage({ productId }: { productId: string }) {
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [error, setError] = useState("");
   const customer = useProfileData("customer");
   const router = useRouter();
+  const action = useAsyncAction();
+  const [paymentType, setPaymentType] = useState<"DP" | "FULL" | "">("");
   const loadProduct = useCallback(async () => {
     try {
       const result = await getVendorProduct(productId);
@@ -381,7 +444,6 @@ export function CheckoutPage({ productId }: { productId: string }) {
     initialValues.date || initialValues.location || initialValues.guests,
   );
 
-  // TODO API: Buat order terlebih dahulu, lalu redirect ke halaman pembayaran order tersebut.
   return (
     <Page title="Checkout" description="Lengkapi detail acara untuk membuat pesanan.">
       <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
@@ -424,19 +486,29 @@ export function CheckoutPage({ productId }: { productId: string }) {
             initialValues={initialValues}
             note="Pastikan tanggal, lokasi, dan jumlah tamu sesuai kebutuhan vendor."
             showDraft={false}
+            loading={action.loading}
             submitLabel="Buat pesanan & lanjut pembayaran"
-            onSave={(form) => {
+            onSave={async (form) => {
               const values = new FormData(form);
-              const draft: CheckoutDraft = {
-                date: String(values.get("date") ?? ""),
-                guests: String(values.get("guests") ?? ""),
-                location: String(values.get("location") ?? ""),
-                notes: String(values.get("notes") ?? ""),
-              };
-              sessionStorage.setItem(checkoutDraftKey(productId), JSON.stringify(draft));
-              router.push(ROUTES.customer.payment(productId));
+              const guestCount = Number(values.get("guests"));
+              const result = await action.run(() => createOrder({
+                vendorProductId: Number(productId),
+                eventDate: String(values.get("date") ?? ""),
+                eventLocation: String(values.get("location") ?? "").trim(),
+                ...(Number.isInteger(guestCount) && guestCount > 0 ? { guestCount } : {}),
+                notes: String(values.get("notes") ?? "").trim(),
+                paymentType: values.get("paymentType") === "FULL" ? "FULL" : "DP",
+              }), { successMessage: "Pesanan berhasil dibuat." });
+              if (result.success) router.push(ROUTES.customer.payment(result.data.id));
             }}
-          />
+          >
+            <PaymentTypeCards
+              minimumDp={product.minimumDp && product.minimumDp > 0 ? product.minimumDp : product.price}
+              onChange={setPaymentType}
+              price={product.price}
+              value={paymentType}
+            />
+          </EntityForm>
           <p className="px-2 text-center text-xs leading-5 text-stone-500">
             Anda belum dikenakan pembayaran pada tahap ini. Pesanan dibuat terlebih dahulu sebelum
             instruksi pembayaran ditampilkan.
@@ -490,174 +562,48 @@ export function CheckoutPage({ productId }: { productId: string }) {
     </Page>
   );
 }
-export function PaymentPage({ productId }: { productId: string }) {
-  const [product, setProduct] = useState<VendorProduct | null>(null);
-  const [draft, setDraft] = useState<CheckoutDraft | null>(null);
-  const [paymentMode, setPaymentMode] = useState<"dp" | "full">("dp");
+export function PaymentPage({ orderId }: { orderId: string }) {
+  const router = useRouter();
+  const popup = usePopup();
+  const action = useAsyncAction();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
+    setOrder(null);
+    setError("");
     try {
-      const result = await getVendorProduct(productId);
-      setProduct(result);
-      setError("");
+      setOrder(await getOrder(orderId));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Detail pembayaran gagal dimuat.");
     }
-  }, [productId]);
-  useEffect(() => {
-    void load();
-    const saved = sessionStorage.getItem(checkoutDraftKey(productId));
-    if (saved) {
-      try {
-        setDraft(JSON.parse(saved) as CheckoutDraft);
-      } catch {
-        sessionStorage.removeItem(checkoutDraftKey(productId));
-      }
-    }
-  }, [load, productId]);
-
-  if (error) return <ErrorState retry={() => void load()} />;
-  if (!product) return <LoadingSkeleton />;
-  const dpAmount = product.minimumDp && product.minimumDp > 0 ? product.minimumDp : product.price;
-  const amount = paymentMode === "dp" ? dpAmount : product.price;
-
-  // TODO API: Ganti draft browser dengan order dari POST /orders dan instruksi pembayaran dari backend.
-  return (
-    <Page
-      title="Pembayaran Pesanan"
-      description="Pilih nominal pembayaran dan unggah bukti transfer."
-    >
-      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
-        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-700">
-          ✓ Detail & konfirmasi
-        </span>
-        <span aria-hidden="true">—</span>
-        <span className="rounded-full bg-blush px-3 py-1.5 text-white">2 · Pembayaran</span>
-      </div>
-      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-        <strong>Prototype alur pembayaran.</strong> Pada integrasi final, backend membuat nomor
-        order, mengunci harga, menentukan rekening tujuan, dan mengirim batas waktu pembayaran.
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="grid gap-6">
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <SectionHeader
-              title="Pilih pembayaran"
-              description="Customer dapat membayar DP minimum atau langsung lunas."
-            />
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <button
-                className={`rounded-2xl border p-4 text-left ${paymentMode === "dp" ? "border-blush bg-rose-50 ring-2 ring-rose-100" : "bg-white"}`}
-                onClick={() => setPaymentMode("dp")}
-                type="button"
-              >
-                <span className="text-sm font-semibold">Bayar DP</span>
-                <strong className="mt-2 block text-lg">{formatCurrency(dpAmount)}</strong>
-                <span className="mt-1 block text-xs text-stone-500">
-                  Minimum untuk mengamankan pesanan
-                </span>
-              </button>
-              <button
-                className={`rounded-2xl border p-4 text-left ${paymentMode === "full" ? "border-blush bg-rose-50 ring-2 ring-rose-100" : "bg-white"}`}
-                onClick={() => setPaymentMode("full")}
-                type="button"
-              >
-                <span className="text-sm font-semibold">Bayar lunas</span>
-                <strong className="mt-2 block text-lg">{formatCurrency(product.price)}</strong>
-                <span className="mt-1 block text-xs text-stone-500">
-                  Selesaikan seluruh pembayaran
-                </span>
-              </button>
-            </div>
-          </section>
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-stone-400">Total yang harus ditransfer</p>
-                <p className="mt-1 text-3xl font-semibold">{formatCurrency(amount)}</p>
-              </div>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                Menunggu pembayaran
-              </span>
-            </div>
-            <div className="mt-6 rounded-2xl bg-stone-50 p-5">
-              <p className="text-xs text-stone-400">Transfer ke Bank BCA · Rekening prototype</p>
-              <p className="mt-2 text-xl font-semibold">1234 5678 901</p>
-              <p className="text-sm text-stone-500">a.n. Plan Your Wedding</p>
-              <AppButton
-                className="mt-4"
-                onClick={() => void navigator.clipboard.writeText("12345678901")}
-                variant="secondary"
-              >
-                <Copy size={15} /> Salin nomor rekening
-              </AppButton>
-            </div>
-          </section>
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <SectionHeader
-              title="Upload bukti pembayaran"
-              description="Pastikan nominal, rekening tujuan, dan waktu transfer terlihat jelas."
-            />
-            <div className="mt-5">
-              <DragDropUpload />
-            </div>
-            <AppButton className="mt-5 w-full">Kirim bukti pembayaran</AppButton>
-          </section>
-        </div>
-        <aside className="order-first h-fit rounded-3xl border bg-white p-5 shadow-soft lg:order-none lg:sticky lg:top-24">
-          <p className="text-sm font-semibold">Detail pesanan</p>
-          <div className="mt-4 flex gap-3 border-b pb-4">
-            <CustomerProductImage
-              attachmentId={product.imageAttachmentIds[0]}
-              className="size-16 shrink-0 rounded-xl"
-              name={product.name}
-            />
-            <div>
-              <p className="text-xs text-stone-400">{product.vendor.businessName}</p>
-              <p className="mt-1 text-sm font-semibold">{product.name}</p>
-            </div>
-          </div>
-          <dl className="mt-4 grid gap-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-stone-500">Nomor order</dt>
-              <dd className="font-medium">Dibuat backend</dd>
-            </div>
-            {draft?.date && (
-              <div className="flex justify-between gap-4">
-                <dt className="text-stone-500">Tanggal acara</dt>
-                <dd className="text-right font-medium">{draft.date}</dd>
-              </div>
-            )}
-            {draft?.location && (
-              <div className="flex justify-between gap-4">
-                <dt className="text-stone-500">Lokasi</dt>
-                <dd className="text-right font-medium">{draft.location}</dd>
-              </div>
-            )}
-            {draft?.guests && (
-              <div className="flex justify-between gap-4">
-                <dt className="text-stone-500">Jumlah tamu</dt>
-                <dd className="font-medium">{draft.guests}</dd>
-              </div>
-            )}
-          </dl>
-          {!draft && (
-            <div className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-              Detail checkout tidak ditemukan. Mulai kembali dari produk ini.
-            </div>
-          )}
-          <div className="mt-5 border-t pt-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-stone-500">Harga paket</span>
-              <span>{formatCurrency(product.price)}</span>
-            </div>
-            <div className="mt-3 flex justify-between font-semibold">
-              <span>Dibayar sekarang</span>
-              <span>{formatCurrency(amount)}</span>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </Page>
-  );
+  }, [orderId]);
+  useEffect(() => void load(), [load]);
+  if (error) {
+    const forbidden = /tidak berhak|akses|forbidden/i.test(error);
+    return forbidden ? <Page title="Akses ditolak" description="Order ini bukan milik akun Anda."><p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">Anda tidak memiliki akses ke pembayaran order ini.</p></Page> : <ErrorState retry={() => void load()} />;
+  }
+  if (!order) return <LoadingSkeleton />;
+  const payment = order.payments?.[0];
+  if (!payment) return <Page title="Pembayaran" description="Instruksi pembayaran belum tersedia."><p className="rounded-2xl bg-amber-50 p-5 text-amber-800">Backend belum membuat installment pembayaran untuk order ini.</p></Page>;
+  const canUpload = canSubmitPaymentProof(payment);
+  async function uploadProof() {
+    if (!file) { popup.warning("Pilih file bukti pembayaran terlebih dahulu."); return; }
+    const validationError = validatePaymentProof(file);
+    if (validationError) { popup.error(validationError); return; }
+    const result = await action.run(() => submitPaymentProof(payment!.id, file), { successMessage: "Bukti pembayaran berhasil dikirim." });
+    if (result.success) router.replace(ROUTES.customer.order(orderId));
+  }
+  return <Page title={`Pembayaran ${order.orderNumber}`} description="Transfer sesuai instruksi rekening yang dikunci saat order dibuat.">
+    {payment.rejectReason && <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><strong>Bukti sebelumnya ditolak:</strong> {payment.rejectReason}</p>}
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <section className="rounded-3xl border bg-white p-6 shadow-sm">
+        <SectionHeader title="Instruksi pembayaran" description={`${payment.installment === "DP" ? "Uang muka" : "Pembayaran penuh"} untuk order ini.`} />
+        <div className="mt-5 rounded-2xl bg-stone-50 p-5"><p className="text-xs text-stone-500">Transfer ke {payment.bankName}</p><p className="mt-2 text-xl font-semibold">{payment.accountNumber}</p><p className="text-sm text-stone-500">a.n. {payment.accountHolderName}</p><AppButton className="mt-4" onClick={() => void navigator.clipboard.writeText(payment.accountNumber)} variant="secondary"><Copy size={15} /> Salin nomor rekening</AppButton></div>
+        <div className="mt-5 flex items-end justify-between"><span className="text-stone-500">Nominal transfer</span><strong className="text-2xl">{formatCurrency(payment.amount)}</strong></div>
+        <div className="mt-6 border-t pt-6"><label className="grid cursor-pointer place-items-center rounded-3xl border-2 border-dashed bg-stone-50 p-8 text-center"><input className="sr-only" type="file" accept=".jpg,.jpeg,.png,.pdf" disabled={!canUpload} onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="text-sm font-semibold">{file?.name ?? "Klik untuk memilih bukti pembayaran"}</span><span className="mt-1 text-xs text-stone-500">JPG, PNG, atau PDF maksimal 5 MB</span></label><AppButton className="mt-5 w-full" disabled={!canUpload} loading={action.loading} onClick={() => void uploadProof()}>{payment.status === "REJECTED" ? "Upload ulang bukti" : "Kirim bukti pembayaran"}</AppButton></div>
+      </section>
+      <aside className="h-fit rounded-3xl border bg-white p-5 shadow-soft"><p className="text-sm font-semibold">Detail order</p><DetailGrid items={[["Nomor", order.orderNumber], ["Vendor", order.vendor.businessName], ["Paket", order.productName], ["Tanggal", formatDate(order.eventDate)], ["Lokasi", order.eventLocation], ["Status pembayaran", <StatusBadge key="payment" status={payment.status} />]]} /></aside>
+    </div>
+  </Page>;
 }

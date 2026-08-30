@@ -1,100 +1,213 @@
-import { orderRepository } from "@/features/orders/repository";
+"use client";
+
+import { PaymentProof } from "@/features/orders/components/PaymentProof";
+import { getOrder, getOrdersWithPayments, submitPaymentProof } from "@/features/orders/repository";
+import { validatePaymentProof } from "@/features/orders/rules";
+import type { Order, OrderPayment } from "@/features/orders/types";
 import { reviewRepository } from "@/features/reviews/repository";
 import { OrderTimeline } from "@/shared/components/data-display/Commerce";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
+import { usePopup } from "@/shared/components/feedback/Popup";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
+import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
+import { useAsyncAction } from "@/shared/hooks/useAsyncAction";
+import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
+import { usePaginatedResource } from "@/shared/hooks/usePaginatedResource";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
-import { formatDate } from "@/shared/utils/formatDate";
+import { formatDate, formatDateTime } from "@/shared/utils/formatDate";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
-function Page({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <FeaturePage title={title} description={description} showHeader={false}>
-      {children}
-    </FeaturePage>
-  );
+function Page({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return <FeaturePage title={title} description={description} showHeader={false}>{children}</FeaturePage>;
 }
 
 export function Orders() {
+  const loader = useCallback((query: { filter?: string; pageNumber?: number; pageSize?: number }) => getOrdersWithPayments(query), []);
+  const orders = usePaginatedResource(loader, { pageSize: 10 });
+  if (orders.loading && !orders.data.length) return <LoadingSkeleton />;
+  if (orders.error) return <ErrorState retry={() => void orders.reload()} />;
+  if (!orders.data.length) return <EmptyState title="Belum ada pesanan" description="Pesanan yang Anda buat dari marketplace akan muncul di sini." />;
   return (
     <Page title="Pesanan Saya" description="Pantau status booking dan pembayaran vendor.">
       <DataTable
-        title="Pesanan terbaru"
-        columns={["Nomor", "Vendor", "Paket", "Tanggal acara", "Total", "Status", "Aksi"]}
-        rows={orderRepository.list().map((o) => [
-          o.number,
-          o.vendorName,
-          o.productName,
-          formatDate(o.eventDate),
-          formatCurrency(o.total),
-          <StatusBadge status={o.status} />,
-          <Link className="font-semibold text-blush" href={ROUTES.customer.order(o.id)}>
-            Detail
-          </Link>,
+        title="Pesanan terbaru" itemLabel="pesanan" total={orders.total} page={orders.page} pageSize={10}
+        searchValue={orders.search} onSearchChange={orders.changeSearch} onPageChange={orders.setPage} showPagination
+        columns={["Nomor", "Vendor", "Paket", "Tanggal acara", "Total", "Pembayaran", "Status", "Aksi"]}
+        rows={orders.data.map((order) => [
+          order.orderNumber, order.vendor.businessName, order.productName, formatDate(order.eventDate),
+          formatCurrency(order.totalAmount), order.payments?.[0] ? <StatusBadge key="payment" status={order.payments[0].status} /> : "Belum tersedia", <StatusBadge key="status" status={order.status} />,
+          <Link className="font-semibold text-blush" href={ROUTES.customer.order(order.id)} key="detail">Detail</Link>,
         ])}
       />
     </Page>
   );
 }
-export function OrderDetail() {
-  const o = orderRepository.list()[0];
+
+export function OrderDetail({ orderId }: { orderId: string }) {
+  const action = useAsyncAction();
+  const popup = usePopup();
+  const loader = useCallback(() => getOrder(orderId), [orderId]);
+  const resource = useAsyncResource<Order | null>(loader, { initialData: null });
+  if (resource.loading) return <LoadingSkeleton />;
+  if (resource.error) return <OrderAccessError error={resource.error} retry={resource.reload} />;
+  const order = resource.data;
+  if (!order) return <ErrorState retry={() => void resource.reload()} />;
+  const payment = order.payments?.[0];
+  async function uploadAgain(file: File) {
+    if (!payment || payment.status !== "REJECTED") return;
+    const validationError = validatePaymentProof(file);
+    if (validationError) {
+      popup.error(validationError);
+      return;
+    }
+    const result = await action.run(() => submitPaymentProof(payment.id, file), {
+      successMessage: "Bukti pembayaran berhasil diunggah ulang.",
+    });
+    if (result.success) await resource.reload();
+  }
   return (
-    <Page
-      title={`Pesanan ${o.number}`}
-      description="Detail acara, pembayaran, dan perkembangan pesanan."
-    >
+    <Page title={`Pesanan ${order.orderNumber}`} description="Detail acara, pembayaran, dan perkembangan pesanan.">
+      {order.rejectReason && <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><strong>Pesanan ditolak:</strong> {order.rejectReason}</p>}
       <div className="grid gap-6 lg:grid-cols-2">
-        <DetailGrid
-          items={[
-            ["Vendor", o.vendorName],
-            ["Paket", o.productName],
-            ["Tanggal acara", formatDate(o.eventDate)],
-            ["Lokasi", o.location],
-            ["Total", formatCurrency(o.total)],
-            ["Pembayaran", <StatusBadge status={o.paymentStatus} />],
-          ]}
-        />
-        <section className="rounded-3xl border bg-white p-6">
-          <SectionHeader title="Timeline pesanan" />
-          <div className="mt-5">
-            <OrderTimeline
-              items={[
-                "Pesanan dibuat",
-                "Pembayaran diterima",
-                "Vendor mengonfirmasi",
-                "Acara selesai",
-              ]}
-            />
-          </div>
-        </section>
+        <DetailGrid items={[
+          ["Vendor", order.vendor.businessName], ["Paket", order.productName], ["Tanggal acara", formatDate(order.eventDate)],
+          ["Lokasi", order.eventLocation], ["Jumlah tamu", order.guestCount ? `${order.guestCount} tamu` : "-"],
+          ["Total", formatCurrency(order.totalAmount)], ["Status pesanan", <StatusBadge key="order" status={order.status} />],
+          ["Pembayaran", payment ? <StatusBadge key="payment" status={payment.status} /> : "-"],
+        ]} />
+        <section className="rounded-3xl border bg-white p-6"><SectionHeader title="Timeline pesanan" /><div className="mt-5"><OrderTimeline items={orderTimeline(order)} /></div></section>
       </div>
+      {payment && (
+        <CustomerPaymentPanel
+          loading={action.loading}
+          onUpload={(file) => void uploadAgain(file)}
+          payment={payment}
+        />
+      )}
+      {order.status === "PENDING_PAYMENT" && payment?.status === "WAITING_PAYMENT" && <Link className="font-semibold text-blush" href={ROUTES.customer.payment(order.id)}>Lanjutkan pembayaran →</Link>}
     </Page>
   );
 }
-export function ReviewList() {
+
+function CustomerPaymentPanel({
+  loading,
+  onUpload,
+  payment,
+}: {
+  loading: boolean;
+  onUpload: (file: File) => void;
+  payment: OrderPayment;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const canUploadAgain = payment.status === "REJECTED";
+
   return (
-    <section>
-      <SectionHeader title="Ulasan customer" />
-      {reviewRepository.list().map((r) => (
-        <p className="mt-3 rounded-2xl border bg-white p-4 text-sm" key={r.id}>
-          <span className="font-semibold text-amber-500">★ {r.rating}</span>
-          <span className="mx-2 text-stone-300">·</span>
-          {r.comment}
+    <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">Bukti pembayaran Anda</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            {payment.installment === "DP" ? "Pembayaran DP" : "Pembayaran penuh"} sebesar {formatCurrency(payment.amount)}
+          </p>
+        </div>
+        <StatusBadge status={payment.status} />
+      </div>
+
+      {payment.rejectReason && (
+        <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <strong>Bukti ditolak:</strong> {payment.rejectReason}
         </p>
-      ))}
+      )}
+
+      <div className="mt-5">
+        {payment.proofAttachmentId ? (
+          <PaymentProof attachmentId={payment.proofAttachmentId} />
+        ) : (
+          <p className="rounded-2xl bg-stone-50 p-5 text-sm text-stone-500">
+            Bukti pembayaran belum diunggah.
+          </p>
+        )}
+      </div>
+
+      {canUploadAgain && (
+        <div className="mt-5 border-t pt-5">
+          <h3 className="font-semibold text-ink">Upload ulang bukti</h3>
+          <p className="mt-1 text-sm text-stone-500">
+            Perbaiki bukti sesuai alasan penolakan vendor. File sebelumnya akan diganti.
+          </p>
+          <label className="mt-4 grid cursor-pointer place-items-center rounded-2xl border-2 border-dashed bg-stone-50 p-6 text-center hover:border-blush hover:bg-rose-50">
+            <input
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="sr-only"
+              disabled={loading}
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+            <span className="text-sm font-semibold">{file?.name ?? "Pilih bukti pembayaran baru"}</span>
+            <span className="mt-1 text-xs text-stone-500">JPG, PNG, atau PDF maksimal 5 MB</span>
+          </label>
+          <AppButton
+            className="mt-4"
+            disabled={!file}
+            loading={loading}
+            onClick={() => file && onUpload(file)}
+          >
+            Upload ulang bukti
+          </AppButton>
+        </div>
+      )}
     </section>
   );
+}
+
+function OrderAccessError({ error, retry }: { error: string; retry: () => Promise<unknown> }) {
+  const forbidden = /tidak berhak|akses|forbidden/i.test(error);
+  const missing = /not found|tidak ditemukan/i.test(error);
+  if (forbidden || missing) return <EmptyState title={forbidden ? "Anda tidak memiliki akses" : "Order tidak ditemukan"} description={forbidden ? "Order ini bukan milik akun Anda." : "Order mungkin sudah tidak tersedia."} />;
+  return <ErrorState retry={() => void retry()} />;
+}
+
+function orderTimeline(order: Order) {
+  const items: Array<{ label: string; date?: string | null }> = [
+    { label: "Pesanan dibuat", date: timelineDate(order.createdAt) },
+  ];
+  const payment = order.payments?.[0];
+  if (payment?.paidAt) {
+    items.push({
+      label: payment.status === "WAITING_VERIFICATION"
+        ? "Bukti pembayaran menunggu verifikasi"
+        : "Bukti pembayaran diunggah",
+      date: timelineDate(payment.paidAt),
+    });
+  }
+  if (payment?.status === "REJECTED") {
+    items.push({ label: "Bukti pembayaran ditolak", date: timelineDate(payment.modifiedAt) });
+  }
+  if (payment?.status === "PAID") {
+    items.push({ label: "Pembayaran diterima", date: timelineDate(payment.verifiedAt) });
+  }
+  if (["CONFIRMED", "IN_PROGRESS", "WAITING_CUSTOMER_CONFIRMATION", "COMPLETED"].includes(order.status)) {
+    items.push({ label: "Vendor mengonfirmasi", date: timelineDate(order.confirmedAt) });
+  }
+  if (order.status === "REJECTED_BY_VENDOR") {
+    items.push({ label: "Pesanan ditolak vendor", date: timelineDate(order.modifiedAt) });
+  }
+  if (order.status === "COMPLETED") {
+    items.push({ label: "Acara selesai", date: timelineDate(order.completedAt) });
+  }
+  return items;
+}
+
+function timelineDate(value?: string | null) {
+  return value ? formatDateTime(value) : null;
+}
+
+export function ReviewList() {
+  return <section><SectionHeader title="Ulasan customer" />{reviewRepository.list().map((review) => <p className="mt-3 rounded-2xl border bg-white p-4 text-sm" key={review.id}><span className="font-semibold text-amber-500">★ {review.rating}</span><span className="mx-2 text-stone-300">·</span>{review.comment}</p>)}</section>;
 }

@@ -65,7 +65,7 @@ export function VendorPage({ slug }: { slug: string[] }) {
         <ProductsPage />
       </ProductAccessGate>
     );
-  if (page === "orders" && slug[1]) return <OrderDetail />;
+  if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <OrdersPage />;
   if (page === "reviews")
     return (

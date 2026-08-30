@@ -1,6 +1,6 @@
 "use client";
 
-import { orderRepository } from "@/features/orders/repository";
+import { mockOrders } from "@/mocks/mockData";
 import { useVendorProfile } from "@/features/profile/hooks/useVendorProfile";
 import { canVendorSell, vendorDisplayStatus } from "@/features/profile/rules";
 import type { VendorApiProfile } from "@/features/profile/types";
@@ -75,8 +75,7 @@ export function VendorDashboard() {
         <DataTable
           title="Pesanan terbaru"
           columns={["Nomor", "Customer", "Status", "Total"]}
-          rows={orderRepository
-            .list()
+          rows={mockOrders
             .map((o) => [
               o.number,
               o.customerName,

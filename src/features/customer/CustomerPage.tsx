@@ -41,8 +41,8 @@ export function CustomerPage({ slug }: { slug: string[] }) {
   if (page === "vendors") return <VendorDetail />;
   if (page === "products" && slug[1]) return <ProductDetail productId={slug[1]} />;
   if (page === "checkout" && slug[1]) return <CheckoutPage productId={slug[1]} />;
-  if (page === "payment" && slug[1]) return <PaymentPage productId={slug[1]} />;
-  if (page === "orders" && slug[1]) return <OrderDetail />;
+  if (page === "payment" && slug[1]) return <PaymentPage orderId={slug[1]} />;
+  if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <Orders />;
   if (page === "review")
     return (

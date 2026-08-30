@@ -13,7 +13,7 @@ import {
 } from "@/shared/components/ui/FormFields";
 import { cn } from "@/shared/utils/cn";
 import { useTranslation } from "@/shared/i18n/useTranslation";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 
 export type FormField = {
   label: string;
@@ -40,6 +40,7 @@ export function EntityForm({
   submitLabel = "Simpan perubahan",
   note,
   steps,
+  children,
 }: {
   fields: FormField[];
   initialValues?: Record<string, string | number | null | undefined>;
@@ -49,6 +50,7 @@ export function EntityForm({
   submitLabel?: string;
   note?: string;
   steps?: string[];
+  children?: ReactNode;
 }) {
   const { locale, translateText } = useTranslation();
   const [activeStep, setActiveStep] = useState(0);
@@ -132,6 +134,7 @@ export function EntityForm({
           </div>
         ))}
       </div>
+      {children}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-5">
         {steps ? (
           <AppButton

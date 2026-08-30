@@ -58,4 +58,17 @@ export const API_ROUTES = {
     root: "/vendor-products",
     byId: (id: string) => `/vendor-products/${id}`,
   },
+  orders: {
+    root: "/orders",
+    byId: (id: string) => `/orders/${id}`,
+    confirm: (id: string) => `/orders/${id}/confirm`,
+    reject: (id: string) => `/orders/${id}/reject`,
+  },
+  orderPayments: {
+    root: "/order-payments",
+    byId: (id: string) => `/order-payments/${id}`,
+    proof: (id: string) => `/order-payments/${id}/proof`,
+    verify: (id: string) => `/order-payments/${id}/verify`,
+    reject: (id: string) => `/order-payments/${id}/reject`,
+  },
 } as const;
