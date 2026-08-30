@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/features/auth/useAuth";
+import { OrderAssistant } from "@/features/assistant/OrderAssistant";
 import { notificationRepository } from "@/features/notifications/repository";
 import { getAttachmentBlob, getVendorLogo } from "@/features/profile/api/attachmentApi";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
@@ -88,6 +89,7 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
             </div>
           </header>
           <main className="mx-auto max-w-[1500px] p-4 pb-24 sm:p-6">{children}</main>
+          {role !== "admin" && <OrderAssistant role={role} />}
           {role === "customer" && <BottomNav nav={nav.slice(0, 4)} pathname={pathname} />}
         </div>
       </div>

@@ -9,6 +9,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: APP_BRAND.name,
   description: "Wedding marketplace untuk merencanakan hari istimewa.",
+  icons: {
+    icon: APP_BRAND.logo,
+    apple: APP_BRAND.logo,
+  },
 };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
