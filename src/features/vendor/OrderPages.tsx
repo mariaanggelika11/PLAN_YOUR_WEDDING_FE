@@ -10,10 +10,10 @@ import {
   startOrder,
   verifyPayment,
 } from "@/features/orders/repository";
-import { canVendorDecide, canVendorVerifyPayment } from "@/features/orders/rules";
+import { canVendorDecide, getCurrentPayment, paymentInstallmentLabel, sortPaymentsByInstallment } from "@/features/orders/rules";
 import { buildOrderTimeline } from "@/features/orders/timeline";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
-import { PaymentSummary } from "@/features/orders/components/PaymentSummary";
+import { PaymentStagesCompact, PaymentSummary } from "@/features/orders/components/PaymentSummary";
 import type { Order, OrderPayment } from "@/features/orders/types";
 import { OrderTimeline } from "@/shared/components/data-display/Commerce";
 import { DataTable } from "@/shared/components/data-display/DataTable";
@@ -66,7 +66,7 @@ export function OrdersPage() {
           order.productName,
           formatDate(order.eventDate),
           order.eventLocation,
-          order.payments?.[0] ? <StatusBadge key="payment" status={order.payments[0].status} /> : "Belum tersedia",
+          <PaymentStagesCompact key="payment" payments={order.payments} />,
           <StatusBadge key="order" status={order.status} />,
           <Link className="font-semibold text-blush" href={ROUTES.vendor.order(order.id)} key="detail">
             Detail
@@ -132,7 +132,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   async function verifyCurrentPayment(paymentId: string) {
     const confirmation = await popup.confirm({
       title: "Verifikasi pembayaran?",
-      message: "Pastikan bukti, rekening tujuan, dan nominal pembayaran sudah sesuai.",
+      message: "Pastikan bukti transfer, rekening tujuan, dan nominal pembayaran sudah sesuai.",
       confirmLabel: "Verifikasi",
       variant: "success",
     });
@@ -162,7 +162,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
   const order = resource.data;
   if (!order) return <ErrorState retry={() => void resource.reload()} />;
-  const payment = order.payments?.[0];
+  const payment = getCurrentPayment(order.payments);
 
   return (
     <Page title={`Pesanan ${order.orderNumber}`} description="Verifikasi pembayaran dan tinjau kebutuhan customer.">
@@ -194,13 +194,19 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
       <PaymentSummary order={order} />
 
-      {payment && (
-        <PaymentVerificationPanel
-          actionLoading={action.loading}
-          onReject={(reason) => void rejectCurrentPayment(payment.id, reason)}
-          onVerify={() => void verifyCurrentPayment(payment.id)}
-          payment={payment}
-        />
+      {!!order.payments?.length && (
+        <section className="grid gap-4">
+          <SectionHeader title="Bukti pembayaran per tahap" description="Periksa dan verifikasi setiap pembayaran customer secara terpisah." />
+          {sortPaymentsByInstallment(order.payments).map((item) => (
+            <PaymentVerificationPanel
+              actionLoading={action.loading}
+              key={item.id}
+              onReject={(reason) => void rejectCurrentPayment(item.id, reason)}
+              onVerify={() => void verifyCurrentPayment(item.id)}
+              payment={item}
+            />
+          ))}
+        </section>
       )}
 
       <OrderDecision
@@ -227,14 +233,13 @@ function PaymentVerificationPanel({
   onVerify: () => void;
   payment: OrderPayment;
 }) {
-  const canVerify = canVendorVerifyPayment(payment);
   return (
     <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-ink">Bukti pembayaran</h2>
           <p className="mt-1 text-sm text-stone-500">
-            {payment.installment === "DP" ? "Pembayaran DP" : "Pembayaran penuh"} sebesar {formatCurrency(payment.amount)}
+            {paymentInstallmentLabel(payment.installment)} sebesar {formatCurrency(payment.amount)}
           </p>
         </div>
         <StatusBadge status={payment.status} />
@@ -256,17 +261,17 @@ function PaymentVerificationPanel({
         )}
       </div>
 
-      {canVerify && payment.proofAttachmentId && (
+      {payment.status === "WAITING_VERIFICATION" && (
         <div className="mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <AppButton disabled={actionLoading} loading={actionLoading} onClick={onVerify}>
-            Verifikasi pembayaran
+          <AppButton disabled={actionLoading || !payment.proofAttachmentId} loading={actionLoading} onClick={onVerify}>
+            Verifikasi {paymentInstallmentLabel(payment.installment)}
           </AppButton>
           <PopupConfirm
             description="Jelaskan alasan penolakan agar customer dapat memperbaiki bukti pembayaran."
             onConfirm={onReject}
             requireReason
-            title="Tolak bukti pembayaran?"
-            trigger={<AppButton disabled={actionLoading} variant="danger">Tolak bukti</AppButton>}
+            title={`Tolak bukti ${paymentInstallmentLabel(payment.installment)}?`}
+            trigger={<AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">Tolak bukti</AppButton>}
           />
         </div>
       )}
@@ -333,7 +338,7 @@ function OrderDecision({
   }
 
   const message = payment?.status === "WAITING_VERIFICATION"
-    ? "Verifikasi atau tolak bukti pembayaran terlebih dahulu."
+    ? `${paymentInstallmentLabel(payment.installment)} menunggu verifikasi Anda.`
     : payment?.status === "REJECTED"
       ? "Menunggu customer mengunggah ulang bukti pembayaran."
       : payment?.status === "WAITING_PAYMENT"

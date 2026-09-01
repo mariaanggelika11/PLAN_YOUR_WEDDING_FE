@@ -66,6 +66,7 @@ export const API_ROUTES = {
     start: (id: string) => `/orders/${id}/start`,
     deliver: (id: string) => `/orders/${id}/deliver`,
     complete: (id: string) => `/orders/${id}/complete`,
+    payments: (id: string) => `/orders/${id}/payments`,
   },
   vendorProductReviews: {
     root: "/vendor-product-reviews",

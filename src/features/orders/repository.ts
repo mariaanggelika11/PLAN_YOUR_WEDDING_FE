@@ -49,6 +49,9 @@ export function deliverOrder(id: string) {
 export function completeOrder(id: string) {
   return authenticatedDataRequest<Order>(API_ROUTES.orders.complete(id), { method: "PUT" });
 }
+export function createRemainingPayment(id: string) {
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.payments(id), { method: "POST" });
+}
 export function submitPaymentProof(paymentId: string, proof: File) {
   const body = new FormData();
   body.set("proof", proof);

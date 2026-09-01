@@ -2,13 +2,14 @@
 
 import { ReviewList } from "@/features/customer/OrderPages";
 import { createOrder, getOrder, submitPaymentProof } from "@/features/orders/repository";
-import { canSubmitPaymentProof, validatePaymentProof } from "@/features/orders/rules";
+import { canSubmitPaymentProof, getCurrentPayment, paymentInstallmentLabel, validatePaymentProof } from "@/features/orders/rules";
 import type { Order } from "@/features/orders/types";
 import { marketplaceRepository } from "@/features/marketplace/repository";
 import { productRepository } from "@/features/products/repository";
 import { getVendorProduct } from "@/features/products/api";
 import type { VendorProduct } from "@/features/products/types";
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
+import { ProductReviews } from "@/features/reviews/components/ProductReviews";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { ProductCard } from "@/shared/components/data-display/Cards";
@@ -148,7 +149,7 @@ export function VendorDetail() {
     </div>
   );
 }
-export function ProductDetail({ productId }: { productId: string }) {
+export function ProductDetail({ canBook = true, productId }: { canBook?: boolean; productId: string }) {
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -191,7 +192,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             ]}
           />
           {detailItems.length > 0 && <Accordion items={detailItems} />}
-          <ProductReviewEmptyState />
+          <ProductReviews productId={product.id} />
         </div>
         <aside className="h-fit rounded-3xl border bg-white p-5 shadow-soft lg:sticky lg:top-20">
           <p className="text-xs font-semibold uppercase tracking-wide text-blush">
@@ -207,9 +208,7 @@ export function ProductDetail({ productId }: { productId: string }) {
           <div className="mt-5 border-t pt-5">
             <PriceBreakdown subtotal={product.price} />
           </div>
-          <AppButton asChild className="mt-3 w-full">
-            <Link href={ROUTES.customer.checkout(product.id)}>Booking sekarang</Link>
-          </AppButton>
+          {canBook ? <AppButton asChild className="mt-3 w-full"><Link href={ROUTES.customer.checkout(product.id)}>Booking sekarang</Link></AppButton> : <p className="mt-3 rounded-xl bg-blue-50 p-3 text-center text-sm text-blue-700">Mode lihat marketplace vendor</p>}
         </aside>
       </div>
     </Page>
@@ -299,20 +298,6 @@ function GalleryNavigationButton({
     >
       <Icon size={20} />
     </button>
-  );
-}
-
-function ProductReviewEmptyState() {
-  return (
-    <section className="rounded-3xl border bg-white p-5 shadow-sm">
-      <h2 className="font-semibold text-ink">Ulasan customer</h2>
-      <div className="mt-4 rounded-2xl bg-stone-50 px-5 py-7 text-center">
-        <p className="text-sm font-medium text-stone-700">Belum ada ulasan</p>
-        <p className="mt-1 text-xs text-stone-500">
-          Ulasan akan tampil setelah customer menyelesaikan pesanan.
-        </p>
-      </div>
-    </section>
   );
 }
 
@@ -584,7 +569,7 @@ export function PaymentPage({ orderId }: { orderId: string }) {
     return forbidden ? <Page title="Akses ditolak" description="Order ini bukan milik akun Anda."><p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">Anda tidak memiliki akses ke pembayaran order ini.</p></Page> : <ErrorState retry={() => void load()} />;
   }
   if (!order) return <LoadingSkeleton />;
-  const payment = order.payments?.[0];
+  const payment = getCurrentPayment(order.payments);
   if (!payment) return <Page title="Pembayaran" description="Instruksi pembayaran belum tersedia."><p className="rounded-2xl bg-amber-50 p-5 text-amber-800">Backend belum membuat installment pembayaran untuk order ini.</p></Page>;
   const canUpload = canSubmitPaymentProof(payment);
   async function uploadProof() {
@@ -598,7 +583,7 @@ export function PaymentPage({ orderId }: { orderId: string }) {
     {payment.rejectReason && <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><strong>Bukti sebelumnya ditolak:</strong> {payment.rejectReason}</p>}
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <section className="rounded-3xl border bg-white p-6 shadow-sm">
-        <SectionHeader title="Instruksi pembayaran" description={`${payment.installment === "DP" ? "Uang muka" : "Pembayaran penuh"} untuk order ini.`} />
+        <SectionHeader title="Instruksi pembayaran" description={`${paymentInstallmentLabel(payment.installment)} untuk order ini.`} />
         <div className="mt-5 rounded-2xl bg-stone-50 p-5"><p className="text-xs text-stone-500">Transfer ke {payment.bankName}</p><p className="mt-2 text-xl font-semibold">{payment.accountNumber}</p><p className="text-sm text-stone-500">a.n. {payment.accountHolderName}</p><AppButton className="mt-4" onClick={() => void navigator.clipboard.writeText(payment.accountNumber)} variant="secondary"><Copy size={15} /> Salin nomor rekening</AppButton></div>
         <div className="mt-5 flex items-end justify-between"><span className="text-stone-500">Nominal transfer</span><strong className="text-2xl">{formatCurrency(payment.amount)}</strong></div>
         <div className="mt-6 border-t pt-6"><label className="grid cursor-pointer place-items-center rounded-3xl border-2 border-dashed bg-stone-50 p-8 text-center"><input className="sr-only" type="file" accept=".jpg,.jpeg,.png,.pdf" disabled={!canUpload} onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="text-sm font-semibold">{file?.name ?? "Klik untuk memilih bukti pembayaran"}</span><span className="mt-1 text-xs text-stone-500">JPG, PNG, atau PDF maksimal 5 MB</span></label><AppButton className="mt-5 w-full" disabled={!canUpload} loading={action.loading} onClick={() => void uploadProof()}>{payment.status === "REJECTED" ? "Upload ulang bukti" : "Kirim bukti pembayaran"}</AppButton></div>

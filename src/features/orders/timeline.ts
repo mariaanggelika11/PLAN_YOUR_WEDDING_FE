@@ -1,4 +1,5 @@
 import type { Order } from "@/features/orders/types";
+import { paymentInstallmentLabel } from "@/features/orders/rules";
 import type { OrderTimelineItem } from "@/shared/components/data-display/Commerce";
 import { formatDateTime } from "@/shared/utils/formatDate";
 
@@ -14,50 +15,57 @@ const CONFIRMED_STATUSES: Order["status"][] = [
 ];
 
 export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
-  const items: OrderTimelineItem[] = [
-    { label: "Pesanan dibuat", date: timelineDate(order.createdAt) },
+  const events: Array<OrderTimelineItem & { timestamp?: string | null }> = [
+    { label: "Pesanan dibuat", date: timelineDate(order.createdAt), timestamp: order.createdAt },
   ];
-  const payment = order.payments?.[0];
 
-  if (payment?.paidAt) {
-    items.push({
-      label:
-        payment.status === "WAITING_VERIFICATION"
-          ? "Bukti pembayaran menunggu verifikasi"
-          : "Bukti pembayaran diunggah",
-      date: timelineDate(payment.paidAt),
-    });
-  }
-  if (payment?.status === "REJECTED") {
-    items.push({ label: "Bukti pembayaran ditolak", date: timelineDate(payment.modifiedAt) });
-  }
-  if (payment?.status === "PAID") {
-    items.push({ label: "Pembayaran diterima", date: timelineDate(payment.verifiedAt) });
+  for (const payment of order.payments ?? []) {
+    const installment = paymentInstallmentLabel(payment.installment);
+    if (payment.paidAt) {
+      events.push({
+        label: `Bukti ${installment} diunggah${payment.status === "WAITING_VERIFICATION" ? " — menunggu verifikasi vendor" : ""}`,
+        date: timelineDate(payment.paidAt),
+        timestamp: payment.paidAt,
+      });
+    }
+    if (payment.status === "REJECTED") {
+      events.push({ label: `${installment} ditolak vendor`, date: timelineDate(payment.modifiedAt), timestamp: payment.modifiedAt });
+    }
+    if (payment.status === "PAID") {
+      events.push({ label: `${installment} diverifikasi vendor`, date: timelineDate(payment.verifiedAt), timestamp: payment.verifiedAt });
+    }
   }
 
   if (CONFIRMED_STATUSES.includes(order.status)) {
-    items.push({ label: "Vendor mengonfirmasi pesanan", date: timelineDate(order.confirmedAt) });
+    events.push({ label: "Vendor mengonfirmasi pesanan", date: timelineDate(order.confirmedAt), timestamp: order.confirmedAt });
   }
   if (ACTIVE_EXECUTION_STATUSES.includes(order.status)) {
-    items.push({
+    if (order.status === "IN_PROGRESS") events.push({
       label: "Vendor memulai pengerjaan",
-      date: order.status === "IN_PROGRESS" ? timelineDate(order.modifiedAt) : null,
+      date: timelineDate(order.modifiedAt),
+      timestamp: order.modifiedAt,
     });
   }
-  if (["WAITING_CUSTOMER_CONFIRMATION", "COMPLETED"].includes(order.status)) {
-    items.push({
+  if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
+    events.push({
       label: "Layanan selesai, menunggu konfirmasi customer",
-      date: order.status === "WAITING_CUSTOMER_CONFIRMATION" ? timelineDate(order.modifiedAt) : null,
+      date: timelineDate(order.modifiedAt),
+      timestamp: order.modifiedAt,
     });
   }
   if (order.status === "REJECTED_BY_VENDOR") {
-    items.push({ label: "Pesanan ditolak vendor", date: timelineDate(order.modifiedAt) });
+    events.push({ label: "Pesanan ditolak vendor", date: timelineDate(order.modifiedAt), timestamp: order.modifiedAt });
   }
   if (order.status === "COMPLETED") {
-    items.push({ label: "Pesanan diselesaikan oleh customer", date: timelineDate(order.completedAt) });
+    events.push({ label: "Pesanan diselesaikan oleh customer", date: timelineDate(order.completedAt), timestamp: order.completedAt });
   }
-
-  return items;
+  return events
+    .sort((left, right) => {
+      if (!left.timestamp) return 1;
+      if (!right.timestamp) return -1;
+      return new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime();
+    })
+    .map(({ label, date }) => ({ label, date }));
 }
 
 function timelineDate(value?: string | null) {

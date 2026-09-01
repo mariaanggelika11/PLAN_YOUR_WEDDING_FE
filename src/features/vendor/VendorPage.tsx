@@ -1,15 +1,13 @@
 "use client";
-import { reviewRepository } from "@/features/reviews/repository";
-
-import { DataTable } from "@/shared/components/data-display/DataTable";
 import { EmptyState } from "@/shared/components/feedback/AsyncStates";
-import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 
 import { notificationRepository } from "@/features/notifications/repository";
 import { VendorProfileForm } from "@/features/profile/components/vendor/VendorProfileForm";
 import { VendorDashboard } from "@/features/vendor/DashboardPage";
 import { OrderDetail, OrdersPage } from "@/features/vendor/OrderPages";
+import { MarketplaceExplorer } from "@/features/marketplace/MarketplaceExplorer";
+import { ProductDetail as MarketplaceProductDetail } from "@/features/customer/MarketplacePages";
 import {
   ProductAccessGate,
   ProductDetailPage,
@@ -21,6 +19,8 @@ export function VendorPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
   // TODO API: Tampilkan loading, error, empty, dan success state sesuai hasil request.
   if (page === "dashboard") return <VendorDashboard />;
+  if (page === "marketplace" && slug[1] === "products" && slug[2]) return <MarketplaceProductDetail canBook={false} productId={slug[2]} />;
+  if (page === "marketplace") return <Page title="Marketplace Vendor" description="Lihat produk aktif dan posisi layanan Anda di marketplace."><MarketplaceExplorer role="vendor" /></Page>;
   if (page === "profile")
     return (
       <Page title="Profil Bisnis" description="Informasi ini tampil di halaman toko vendor.">
@@ -67,22 +67,6 @@ export function VendorPage({ slug }: { slug: string[] }) {
     );
   if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <OrdersPage />;
-  if (page === "reviews")
-    return (
-      <Page title="Ulasan Customer" description="Masukan customer terhadap layanan Anda.">
-        <DataTable
-          columns={["Customer", "Rating", "Komentar", "Status"]}
-          rows={reviewRepository
-            .list()
-            .map((r) => [
-              r.customerName,
-              `★ ${r.rating}`,
-              r.comment,
-              <StatusBadge status={r.status} />,
-            ])}
-        />
-      </Page>
-    );
   if (page === "notifications")
     return (
       <Page title="Notifikasi" description="Pembaruan pesanan dan akun vendor.">

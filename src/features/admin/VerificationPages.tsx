@@ -2,7 +2,10 @@
 
 import { getAdminVendor, getAdminVendors, verifyVendor } from "@/features/admin/api/adminApi";
 import type { VendorAdminProfile } from "@/features/admin/types";
-import { paymentRepository } from "@/features/payments/repository";
+import { getPayment, getPayments } from "@/features/payments/repository";
+import { PaymentProof } from "@/features/orders/components/PaymentProof";
+import { rejectPayment, verifyPayment } from "@/features/orders/repository";
+import { paymentInstallmentLabel } from "@/features/orders/rules";
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { DetailGrid, PlaceholderPanel } from "@/shared/components/data-display/DetailBlocks";
@@ -13,6 +16,8 @@ import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { usePaginatedResource } from "@/shared/hooks/usePaginatedResource";
+import { useAsyncAction } from "@/shared/hooks/useAsyncAction";
+import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
 import { formatDate } from "@/shared/utils/formatDate";
 import Link from "next/link";
@@ -269,27 +274,31 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Permintaan gagal diproses.";
 }
 export function PaymentVerification() {
+  const loader = useCallback(
+    (query: { pageNumber?: number; pageSize?: number }) => getPayments({ pageNumber: query.pageNumber, pageSize: query.pageSize, status: "WAITING_VERIFICATION" }),
+    [],
+  );
+  const payments = usePaginatedResource(loader, { pageSize: PAGE_SIZE });
+
+  if (payments.loading && !payments.data.length) return <LoadingSkeleton />;
+  if (payments.error) return <ErrorState retry={() => void payments.reload()} />;
+
   return (
     <Page title="Verifikasi Pembayaran" description="Periksa bukti transfer manual dari customer.">
       <DataTable
-        columns={[
-          "Payment ID",
-          "Order",
-          "Customer",
-          "Vendor",
-          "Jumlah",
-          "Status",
-          "Tanggal",
-          "Aksi",
-        ]}
-        rows={paymentRepository.list().map((p) => [
+        columns={["Payment ID", "Order", "Tahap", "Jumlah", "Status", "Tanggal", "Aksi"]}
+        onPageChange={payments.setPage}
+        page={payments.page}
+        pageSize={PAGE_SIZE}
+        showPagination
+        total={payments.total}
+        rows={payments.data.map((p) => [
           p.id,
-          p.orderNumber,
-          p.customerName,
-          p.vendorName,
+          p.order?.orderNumber ?? "—",
+          paymentInstallmentLabel(p.installment),
           formatCurrency(p.amount),
           <StatusBadge status={p.status} />,
-          formatDate(p.uploadedAt),
+          p.paidAt ? formatDate(p.paidAt) : "—",
           <Link className="font-semibold text-blush" href={ROUTES.admin.paymentVerification(p.id)}>
             Detail
           </Link>,
@@ -298,39 +307,50 @@ export function PaymentVerification() {
     </Page>
   );
 }
-export function PaymentDetail() {
-  const p = paymentRepository.list()[0];
+export function PaymentDetail({ paymentId }: { paymentId: string }) {
+  const loader = useCallback(() => getPayment(paymentId), [paymentId]);
+  const payment = useAsyncResource(loader, { initialData: null });
+  const action = useAsyncAction();
+
+  if (payment.loading) return <LoadingSkeleton />;
+  if (payment.error) return <ErrorState retry={() => void payment.reload()} />;
+  const p = payment.data;
+  if (!p) return <ErrorState retry={() => void payment.reload()} />;
+
+  async function approve() {
+    const result = await action.run(() => verifyPayment(paymentId), { successMessage: "Pembayaran berhasil diverifikasi." });
+    if (result.success) await payment.reload();
+  }
+
+  async function reject(reason?: string) {
+    if (!reason?.trim()) return;
+    const result = await action.run(() => rejectPayment(paymentId, reason), { successMessage: "Bukti pembayaran berhasil ditolak." });
+    if (result.success) await payment.reload();
+  }
+
   return (
     <Page
       title={`Verifikasi ${p.id}`}
       description="Bandingkan bukti transfer dengan informasi pesanan."
     >
       <div className="grid gap-6 lg:grid-cols-2">
-        <PlaceholderPanel
-          title="Preview bukti pembayaran"
-          description="Gambar bukti transfer dari customer."
-        />
+        {p.proofAttachmentId ? <PaymentProof attachmentId={p.proofAttachmentId} /> : <PlaceholderPanel title="Bukti belum tersedia" description="Customer belum mengunggah bukti pembayaran." />}
         <DetailGrid
           items={[
-            ["Order", p.orderNumber],
-            ["Customer", p.customerName],
-            ["Vendor", p.vendorName],
+            ["Order", p.order?.orderNumber ?? "—"],
+            ["Tahap", paymentInstallmentLabel(p.installment)],
             ["Jumlah tagihan", formatCurrency(p.amount)],
-            ["Jumlah transfer", formatCurrency(p.amount)],
             ["Status", <StatusBadge status={p.status} />],
+            ["Diunggah", p.paidAt ? formatDate(p.paidAt) : "—"],
           ]}
         />
       </div>
-      <div className="flex gap-3">
-        <AppButton>Approve pembayaran</AppButton>
-        <PopupConfirm
-          requireReason
-          trigger={<AppButton variant="danger">Reject pembayaran</AppButton>}
-          title="Tolak pembayaran?"
-          description="Alasan penolakan wajib diisi."
-        />
-        <AppButton variant="secondary">Minta upload ulang</AppButton>
-      </div>
+      {p.status === "WAITING_VERIFICATION" && (
+        <div className="flex gap-3">
+          <AppButton loading={action.loading} onClick={() => void approve()}>Approve pembayaran</AppButton>
+          <PopupConfirm requireReason onConfirm={(reason) => void reject(reason)} trigger={<AppButton disabled={action.loading} variant="danger">Reject pembayaran</AppButton>} title="Tolak pembayaran?" description="Alasan penolakan wajib diisi. Customer dapat mengunggah ulang bukti." />
+        </div>
+      )}
     </Page>
   );
 }

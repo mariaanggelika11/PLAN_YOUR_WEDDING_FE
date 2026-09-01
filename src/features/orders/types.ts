@@ -1,11 +1,12 @@
 import type { OrderStatus, PaymentStatus } from "@/shared/types/models";
 
 export type OrderPaymentType = "DP" | "FULL";
+export type OrderPaymentInstallment = OrderPaymentType | "REMAINING";
 
 export interface OrderPayment {
   id: string;
   order?: { id: string; orderNumber: string };
-  installment: OrderPaymentType;
+  installment: OrderPaymentInstallment;
   amount: number;
   bankAccount?: { id: string } | null;
   bankName: string;

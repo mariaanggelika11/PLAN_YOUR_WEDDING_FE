@@ -35,7 +35,7 @@ export function AdminPage({ slug }: { slug: string[] }) {
   if (page === "vendor-verification" && slug[1])
     return <AdminVendorVerificationDetailPage vendorId={slug[1]} />;
   if (page === "vendor-verification") return <AdminVendorVerificationPage />;
-  if (page === "payment-verification" && slug[1]) return <PaymentDetail />;
+  if (page === "payment-verification" && slug[1]) return <PaymentDetail paymentId={slug[1]} />;
   if (page === "payment-verification") return <PaymentVerification />;
   if (page === "parameters")
     return (

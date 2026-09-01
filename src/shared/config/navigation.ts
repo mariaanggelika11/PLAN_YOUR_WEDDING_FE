@@ -17,7 +17,6 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBag,
-  Star,
   UserRound,
   Users,
   WalletCards,
@@ -99,6 +98,12 @@ export const VENDOR_NAVIGATION: NavigationItem[] = [
     icon: Gauge,
   },
   {
+    label: "Marketplace",
+    translationKey: "navigation.marketplace",
+    href: ROUTES.vendor.marketplace,
+    icon: ShoppingBag,
+  },
+  {
     label: "Profil Bisnis",
     translationKey: "navigation.businessProfile",
     href: ROUTES.vendor.profile,
@@ -115,12 +120,6 @@ export const VENDOR_NAVIGATION: NavigationItem[] = [
     translationKey: "navigation.orders",
     href: ROUTES.vendor.orders,
     icon: ClipboardCheck,
-  },
-  {
-    label: "Ulasan",
-    translationKey: "navigation.reviews",
-    href: ROUTES.vendor.reviews,
-    icon: Star,
   },
   {
     label: "Notifikasi",

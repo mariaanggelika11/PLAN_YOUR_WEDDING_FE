@@ -1,5 +1,7 @@
 import type { Order, OrderPayment } from "@/features/orders/types";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
+import { paymentInstallmentLabel, sortPaymentsByInstallment } from "@/features/orders/rules";
+import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 
 export function getPaymentSummary(order: Pick<Order, "totalAmount" | "payments">) {
   const payments = order.payments ?? [];
@@ -43,8 +45,44 @@ export function PaymentSummary({ order }: { order: Pick<Order, "totalAmount" | "
           Pesanan belum dapat diselesaikan karena masih ada sisa tagihan {formatCurrency(summary.remainingAmount)}.
         </p>
       )}
+      {!!order.payments?.length && (
+        <div className="mt-5 overflow-hidden rounded-2xl border">
+          {sortPaymentsByInstallment(order.payments).map((payment) => (
+            <div className="grid gap-2 border-b p-4 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center" key={payment.id}>
+              <div>
+                <p className="font-semibold text-ink">{paymentInstallmentLabel(payment.installment)}</p>
+                <p className="text-xs text-stone-500">Tagihan {formatCurrency(payment.amount)}</p>
+              </div>
+              <StatusBadge status={payment.status} />
+              <p className="text-xs text-stone-500 sm:text-right">{paymentStatusDescription(payment)}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
+}
+
+export function PaymentStagesCompact({ payments }: { payments?: OrderPayment[] }) {
+  if (!payments?.length) return <span className="text-stone-400">Belum tersedia</span>;
+  return (
+    <div className="grid min-w-36 gap-2">
+      {sortPaymentsByInstallment(payments).map((payment) => (
+        <div className="flex items-center justify-between gap-2" key={payment.id}>
+          <span className="whitespace-nowrap text-xs font-semibold text-stone-600">{paymentInstallmentLabel(payment.installment)}</span>
+          <StatusBadge status={payment.status} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function paymentStatusDescription(payment: OrderPayment) {
+  if (payment.status === "WAITING_VERIFICATION") return "Menunggu verifikasi vendor";
+  if (payment.status === "WAITING_PAYMENT") return "Menunggu bukti dari customer";
+  if (payment.status === "REJECTED") return "Ditolak vendor — upload ulang diperlukan";
+  if (payment.status === "PAID") return "Sudah diverifikasi vendor";
+  return payment.status;
 }
 
 function PaymentAmount({ emphasize, label, value }: { emphasize?: boolean; label: string; value: number }) {

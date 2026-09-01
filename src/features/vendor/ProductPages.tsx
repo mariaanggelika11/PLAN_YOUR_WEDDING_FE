@@ -13,6 +13,7 @@ import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import { deleteAttachment, getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
+import { ProductReviews } from "@/features/reviews/components/ProductReviews";
 import { useVendorProfile } from "@/features/profile/hooks/useVendorProfile";
 import {
   canVendorSell,
@@ -446,6 +447,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
           ]}
         />
       </div>
+      <ProductReviews productId={product.id} />
     </Page>
   );
 }
