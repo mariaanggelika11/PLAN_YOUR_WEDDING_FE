@@ -447,7 +447,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
           ]}
         />
       </div>
-      <ProductReviews productId={product.id} />
+      <ProductReviews key={product.id} product={product} />
     </Page>
   );
 }

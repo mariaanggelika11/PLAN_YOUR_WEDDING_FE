@@ -15,6 +15,9 @@ export interface VendorProduct {
   status: ProductStatus;
   active: boolean;
   imageAttachmentIds: string[];
+  averageRating: number;
+  reviewCount: number;
+  soldCount: number;
 }
 
 export interface VendorProductPage {

@@ -5,8 +5,7 @@ import type { VendorProduct } from "@/features/products/types";
 import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
-import { getVendorProductReviews, type VendorProductReview } from "@/features/reviews/api";
-import { calculateReviewMetrics, compactCount } from "@/features/reviews/metrics";
+import { compactCount } from "@/features/reviews/metrics";
 import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { AppButton } from "@/shared/components/ui/AppButton";
@@ -31,7 +30,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" | "vendor" }) {
   const [products, setProducts] = useState<VendorProduct[]>([]);
-  const [reviews, setReviews] = useState<VendorProductReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -49,12 +47,8 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [result, reviewPage] = await Promise.all([
-        getVendorProducts({ status: "ACTIVE", pageNumber: 1, pageSize: 100 }),
-        getVendorProductReviews({ pageNumber: 1, pageSize: 1000 }).catch(() => null),
-      ]);
+      const result = await getVendorProducts({ status: "ACTIVE", pageNumber: 1, pageSize: 100 });
       setProducts(result.data.filter((product) => product.active && product.status === "ACTIVE"));
-      setReviews(reviewPage?.data ?? []);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Produk marketplace gagal dimuat.");
@@ -113,16 +107,6 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
     products,
     sort,
   ]);
-  const reviewMetricsByProduct = useMemo(() => {
-    const grouped = new Map<string, VendorProductReview[]>();
-    reviews.forEach((review) => {
-      const productId = review.vendorProduct?.id;
-      if (!productId) return;
-      grouped.set(productId, [...(grouped.get(productId) ?? []), review]);
-    });
-    return new Map([...grouped].map(([productId, productReviews]) => [productId, calculateReviewMetrics(productReviews)]));
-  }, [reviews]);
-
   const hasFilters = Boolean(
     keyword || category || location || minimumPrice || maximumPrice || minimumCapacity,
   );
@@ -235,7 +219,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
       {results.length ? (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {results.map((product) => (
-          <MarketplaceProductCard key={product.id} metrics={reviewMetricsByProduct.get(product.id)} product={product} role={role} />
+            <MarketplaceProductCard key={product.id} product={product} role={role} />
           ))}
         </div>
       ) : (
@@ -526,7 +510,13 @@ function categoryMatches(category: string | null | undefined, option: CategoryOp
   );
 }
 
-function MarketplaceProductCard({ metrics, product, role }: { metrics?: ReturnType<typeof calculateReviewMetrics>; product: VendorProduct; role: "customer" | "vendor" }) {
+function MarketplaceProductCard({
+  product,
+  role,
+}: {
+  product: VendorProduct;
+  role: "customer" | "vendor";
+}) {
   const attachmentId = product.imageAttachmentIds[0];
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
@@ -557,11 +547,23 @@ function MarketplaceProductCard({ metrics, product, role }: { metrics?: ReturnTy
         <h3 className="mt-1 font-semibold text-ink">{product.name}</h3>
         <p className="mt-1 text-xs text-stone-500">oleh {product.vendor.businessName}</p>
         <div className="mt-2 flex items-center gap-1.5 text-xs">
-          <Star className={metrics?.count ? "fill-amber-400 text-amber-400" : "text-stone-300"} size={15} />
-          <strong className="text-amber-600">{metrics?.count ? metrics.average.toFixed(1) : "Baru"}</strong>
+          <Star
+            className={product.reviewCount ? "fill-amber-400 text-amber-400" : "text-stone-300"}
+            size={15}
+          />
+          <strong className="text-amber-600">
+            {product.reviewCount ? product.averageRating.toFixed(1) : "Baru"}
+          </strong>
           <span className="text-stone-400">·</span>
-          <span className="text-stone-500">{metrics?.count ? `${compactCount(metrics.count)} penilaian` : "Belum ada penilaian"}</span>
+          <span className="text-stone-500">
+            {product.reviewCount
+              ? `${compactCount(product.reviewCount)} penilaian`
+              : "Belum ada penilaian"}
+          </span>
         </div>
+        <p className="mt-1 text-xs text-stone-500">
+          {compactCount(product.soldCount ?? 0)} terjual
+        </p>
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">
           {product.description ?? "Detail layanan tersedia pada halaman produk."}
         </p>
@@ -581,7 +583,15 @@ function MarketplaceProductCard({ metrics, product, role }: { metrics?: ReturnTy
           )}
         </div>
         <AppButton asChild className="mt-5 w-full">
-          <Link href={role === "vendor" ? ROUTES.vendor.marketplaceProduct(product.id) : ROUTES.customer.product(product.id)}>Lihat paket</Link>
+          <Link
+            href={
+              role === "vendor"
+                ? ROUTES.vendor.marketplaceProduct(product.id)
+                : ROUTES.customer.product(product.id)
+            }
+          >
+            Lihat paket
+          </Link>
         </AppButton>
       </div>
     </article>

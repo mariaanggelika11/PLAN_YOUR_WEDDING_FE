@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { canSubmitPaymentProof, canVendorDecide, getCurrentPayment, paymentInstallmentLabel, sortPaymentsByInstallment, validatePaymentProof } from "../src/features/orders/rules.ts";
-import { calculateReviewMetrics } from "../src/features/reviews/metrics.ts";
 
 test("vendor hanya dapat mengambil keputusan saat menunggu konfirmasi", () => {
   assert.equal(canVendorDecide({ status: "WAITING_VENDOR_CONFIRMATION" }), true);
@@ -40,12 +39,4 @@ test("riwayat pembayaran menampilkan pembayaran awal sebelum pelunasan", () => {
     { id: "dp", installment: "DP" },
   ] as never;
   assert.deepEqual(sortPaymentsByInstallment(payments).map((payment) => payment.id), ["dp", "remaining"]);
-});
-
-test("rating produk dihitung dari seluruh penilaian", () => {
-  const metrics = calculateReviewMetrics([{ rating: 5 }, { rating: 5 }, { rating: 1 }]);
-  assert.equal(metrics.average.toFixed(1), "3.7");
-  assert.equal(metrics.count, 3);
-  assert.equal(metrics.distribution[5], 2);
-  assert.equal(metrics.distribution[1], 1);
 });

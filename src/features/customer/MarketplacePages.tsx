@@ -192,7 +192,7 @@ export function ProductDetail({ canBook = true, productId }: { canBook?: boolean
             ]}
           />
           {detailItems.length > 0 && <Accordion items={detailItems} />}
-          <ProductReviews productId={product.id} />
+          <ProductReviews key={product.id} product={product} />
         </div>
         <aside className="h-fit rounded-3xl border bg-white p-5 shadow-soft lg:sticky lg:top-20">
           <p className="text-xs font-semibold uppercase tracking-wide text-blush">
