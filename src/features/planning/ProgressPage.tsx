@@ -9,7 +9,6 @@ import {
   Check,
   ChevronRight,
   Download,
-  Flag,
   Heart,
   Plus,
   Search,
@@ -34,7 +33,6 @@ import {
   createPlan,
   dateOffset,
   daysUntil,
-  focusTasks,
   isPending,
   parsePlan,
   setTaskStatus,
@@ -79,7 +77,12 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [category, setCategory] = useState("");
+  const [sortOrder, setSortOrder] = useState("DUE_ASC");
+  const [page, setPage] = useState(1);
   const [today, setToday] = useState(todayDate);
+  useEffect(() => {
+    setPage(1);
+  }, [search, filter, category, sortOrder]);
   useEffect(() => {
     const timer = window.setInterval(() => setToday(todayDate()), 60000);
     return () => window.clearInterval(timer);
@@ -136,7 +139,6 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   const pending = plan?.tasks.filter(isPending) ?? [];
   const late = pending.filter((task) => task.due && task.due < today);
   const urgent = pending.filter((task) => task.important);
-  const focus = focusTasks(plan?.tasks ?? [], today);
   const days = plan?.settings.date ? daysUntil(plan.settings.date, today) : null;
   const selectedTask = plan?.tasks.find((task) => task.id === selected);
   const visible = (plan?.tasks ?? []).filter(
@@ -151,7 +153,16 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
           ? isPending(task) && task.due && task.due < today
           : task.status === filter)),
   );
-  const visibleCategories = [...new Set(visible.map((task) => task.category))];
+  visible.sort((a, b) => {
+    if (!a.due) return b.due ? 1 : 0;
+    if (!b.due) return -1;
+    return sortOrder === "DUE_ASC" ? a.due.localeCompare(b.due) : b.due.localeCompare(a.due);
+  });
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const paginatedTasks = visible.slice(pageStart, pageStart + pageSize);
   return (
     <FeaturePage
       title="Persiapan pernikahan"
@@ -274,44 +285,6 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
             </section>
             <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
               <div className="grid min-w-0 gap-6">
-                <section className="rounded-3xl border bg-white p-5 sm:p-6">
-                  <div className="flex items-center gap-2">
-                    <ClipboardCheck size={19} className="text-blush" />
-                    <h2 className="text-lg font-semibold text-ink">Fokus berikutnya</h2>
-                  </div>
-                  <p className="mt-1 text-sm text-stone-500">
-                    Dahulukan yang lewat tenggat dan jatuh tempo dalam 7 hari.
-                  </p>
-                  <div className="mt-4 divide-y">
-                    {focus.length ? (
-                      focus.map((task) => (
-                        <button
-                          key={task.id}
-                          onClick={() => setSelected(task.id)}
-                          className="flex w-full items-center gap-3 py-3 text-left hover:text-blush"
-                        >
-                          <span
-                            className={`grid size-9 shrink-0 place-items-center rounded-xl ${task.due && task.due < today ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-blush"}`}
-                          >
-                            <Flag size={16} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium">{task.title}</span>
-                            <span className="mt-1 block text-xs text-stone-500">
-                              {dueLabel(task, today)} · {task.assignee || "Belum ditugaskan"}
-                            </span>
-                          </span>
-                          <ChevronRight size={17} />
-                        </button>
-                      ))
-                    ) : (
-                      <p className="py-4 text-sm text-emerald-700">
-                        Semua tugas yang diperlukan sudah selesai. Kamu dapat menambah kebutuhan
-                        lain di bawah.
-                      </p>
-                    )}
-                  </div>
-                </section>
                 <section className="overflow-hidden rounded-3xl border bg-white">
                   <div className="grid gap-4 border-b p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -325,7 +298,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         <Plus size={16} /> Tambah tugas
                       </AppButton>
                     </div>
-                    <div className="grid items-start gap-3 sm:grid-cols-3 [&>label]:min-w-0">
+                    <div className="grid items-start gap-3 sm:grid-cols-2 [&>label]:min-w-0">
                       <AppInput
                         className="h-12 min-w-0 w-full"
                         label="Cari tugas"
@@ -358,89 +331,101 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                           </option>
                         ))}
                       </AppSelect>
+                      <AppSelect
+                        className="h-12 min-w-0 w-full"
+                        label="Urutkan"
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                      >
+                        <option value="DUE_ASC">Tenggat terdekat</option>
+                        <option value="DUE_DESC">Tenggat terjauh</option>
+                      </AppSelect>
                     </div>
                   </div>
-                  {visibleCategories.map((name) => (
-                    <details
-                      key={`${name}-${filter}-${search}`}
-                      open={
-                        name === visibleCategories[0] ||
-                        filter !== "ALL" ||
-                        Boolean(search) ||
-                        Boolean(category)
-                      }
-                      className="group border-b last:border-0"
-                    >
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-stone-50/80 px-5 py-4 text-sm font-semibold sm:px-6">
-                        <span>{name}</span>
-                        <span className="flex items-center gap-3 text-xs font-normal text-stone-500">
-                          {
-                            taskSummary(plan.tasks.filter((task) => task.category === name))
-                              .completed
+                  <div className="divide-y">
+                    {paginatedTasks.map((task) => (
+                      <div key={task.id} className="flex items-center gap-3 px-5 py-4 sm:px-6">
+                        <input
+                          type="checkbox"
+                          aria-label={`Tandai ${task.title} selesai`}
+                          checked={task.status === "COMPLETED"}
+                          onChange={(e) =>
+                            patch(setTaskStatus(task, e.target.checked ? "COMPLETED" : "TODO"))
                           }
-                          /{taskSummary(plan.tasks.filter((task) => task.category === name)).total}{" "}
-                          selesai
-                          <ChevronRight size={15} className="transition group-open:rotate-90" />
-                        </span>
-                      </summary>
-                      <div className="divide-y">
-                        {visible
-                          .filter((task) => task.category === name)
-                          .map((task) => (
-                            <div
-                              key={task.id}
-                              className="flex items-center gap-3 px-5 py-4 sm:px-6"
-                            >
-                              <input
-                                type="checkbox"
-                                aria-label={`Tandai ${task.title} selesai`}
-                                checked={task.status === "COMPLETED"}
-                                onChange={(e) =>
-                                  patch(
-                                    setTaskStatus(task, e.target.checked ? "COMPLETED" : "TODO"),
-                                  )
-                                }
-                                className="size-5 shrink-0 accent-blush"
-                              />
-                              <button
-                                onClick={() => setSelected(task.id)}
-                                className="min-w-0 flex-1 text-left"
-                              >
-                                <span
-                                  className={`block text-sm font-medium ${task.status === "COMPLETED" || task.status === "SKIPPED" ? "text-stone-400 line-through" : "text-ink"}`}
-                                >
-                                  {task.title}
-                                </span>
-                                <span
-                                  className={`mt-1 block text-xs ${isPending(task) && task.due && task.due < today ? "text-amber-700" : "text-stone-500"}`}
-                                >
-                                  {dueLabel(task, today)} · {task.assignee || "Belum ditugaskan"}
-                                  {task.subtasks.length > 0 &&
-                                    ` · ${task.subtasks.filter((item) => item.done).length}/${task.subtasks.length} langkah`}
-                                </span>
-                                <span className="mt-2 flex flex-wrap gap-2">
-                                  {task.important && (
-                                    <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] text-blush">
-                                      Penting
-                                    </span>
-                                  )}
-                                  <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
-                                    {statuses[task.status]}
-                                  </span>
-                                </span>
-                              </button>
-                              <button
-                                aria-label={`Buka detail ${task.title}`}
-                                onClick={() => setSelected(task.id)}
-                                className="p-2 text-stone-400 hover:text-blush"
-                              >
-                                <ChevronRight size={18} />
-                              </button>
-                            </div>
-                          ))}
+                          className="size-5 shrink-0 accent-blush"
+                        />
+                        <button
+                          onClick={() => setSelected(task.id)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <span
+                            className={`block text-sm font-medium ${task.status === "COMPLETED" || task.status === "SKIPPED" ? "text-stone-400 line-through" : "text-ink"}`}
+                          >
+                            {task.title}
+                          </span>
+                          <span
+                            className={`mt-1 block text-xs ${isPending(task) && task.due && task.due < today ? "text-amber-700" : "text-stone-500"}`}
+                          >
+                            {dueLabel(task, today)} · {task.assignee || "Belum ditugaskan"}
+                            {task.subtasks.length > 0 &&
+                              ` · ${task.subtasks.filter((item) => item.done).length}/${task.subtasks.length} langkah`}
+                          </span>
+                          <span className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
+                              {task.category}
+                            </span>
+                            {task.important && (
+                              <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] text-blush">
+                                Penting
+                              </span>
+                            )}
+                            <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
+                              {statuses[task.status]}
+                            </span>
+                          </span>
+                        </button>
+                        <button
+                          aria-label={`Buka detail ${task.title}`}
+                          onClick={() => setSelected(task.id)}
+                          className="p-2 text-stone-400 hover:text-blush"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
                       </div>
-                    </details>
-                  ))}
+                    ))}
+                  </div>
+                  {visible.length > 0 && (
+                    <nav
+                      aria-label="Halaman daftar tugas"
+                      className="flex flex-wrap items-center justify-between gap-3 border-t p-5 text-sm text-stone-500 sm:px-6"
+                    >
+                      <p>
+                        {pageStart + 1}–{Math.min(pageStart + pageSize, visible.length)} dari{" "}
+                        {visible.length} tugas
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <AppButton
+                          variant="secondary"
+                          disabled={currentPage === 1}
+                          onClick={() => setPage(currentPage - 1)}
+                          aria-label="Halaman sebelumnya"
+                        >
+                          Sebelumnya
+                        </AppButton>
+                        <span aria-live="polite">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <AppButton
+                          variant="secondary"
+                          disabled={currentPage === totalPages}
+                          onClick={() => setPage(currentPage + 1)}
+                          aria-label="Halaman berikutnya"
+                        >
+                          Berikutnya
+                        </AppButton>
+                      </div>
+                    </nav>
+                  )}
                   {!visible.length && (
                     <div className="p-8 text-center">
                       <Search className="mx-auto text-stone-300" />
