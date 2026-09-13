@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -14,38 +13,43 @@ import {
   Search,
   Settings2,
   ClipboardCheck,
-  X,
 } from "lucide-react";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile } from "@/features/profile/types";
-import { getOrders } from "@/features/orders/repository";
-import type { Order } from "@/features/orders/types";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { AppButton } from "@/shared/components/ui/AppButton";
-import { AppDatePicker, AppInput, AppSelect, AppTextarea } from "@/shared/components/ui/FormFields";
+import { AppInput, AppSelect } from "@/shared/components/ui/FormFields";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
-import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { ROUTES } from "@/shared/config/routes";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
 import {
   categories,
-  createPlan,
   dateOffset,
   daysUntil,
   isPending,
-  parsePlan,
   setTaskStatus,
   statuses,
-  taskSummary,
   todayDate,
-  toggleSubtask,
-  updateSettings,
   type PlanSettings,
   type TaskStatus,
-  type WeddingPlan,
   type WeddingTask,
 } from "./model";
+
+import { toTaskPayload } from "./adapters";
+import {
+  getWeddingTask,
+  createWeddingTask,
+  updateWeddingTask,
+  saveWeddingPlan,
+} from "./repository";
+import { planningService, useWeddingProgress } from "./useWeddingProgress";
+
+import { usePlanningMutation } from "./usePlanningMutation";
+import { PlanningModal as Modal } from "./components/PlanningModal";
+import { SettingsForm } from "./components/SettingsForm";
+import { TaskEditor } from "./components/TaskEditor";
+import { displayDate, dueLabel } from "./format";
 
 export function ProgressPage() {
   const profile = useProfileData("customer");
@@ -67,62 +71,44 @@ export function ProgressPage() {
 }
 
 function Planner({ profile }: { profile: CustomerApiProfile }) {
-  const storageKey = `pyw-wedding-plan:v1:${profile.user.id}`;
-  const [plan, setPlan] = useState<WeddingPlan | null>(null);
-  const [ready, setReady] = useState(false);
-  const [storageError, setStorageError] = useState("");
+  const progress = useWeddingProgress();
+  const mutation = usePlanningMutation();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showDeadlineGuide, setShowDeadlineGuide] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("ALL");
-  const [category, setCategory] = useState("");
-  const [sortOrder, setSortOrder] = useState("DUE_ASC");
-  const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const [today, setToday] = useState(todayDate);
-  useEffect(() => {
-    setPage(1);
-  }, [search, filter, category, sortOrder]);
   useEffect(() => {
     const timer = window.setInterval(() => setToday(todayDate()), 60000);
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setPlan(parsePlan(raw));
-    } catch {
-      setStorageError(
-        "Rencana tersimpan tidak dapat dibaca. Muat ulang untuk mencoba lagi. Membuat rencana baru akan mengganti salinan di browser ini.",
-      );
-    }
-    setReady(true);
-  }, [storageKey]);
-  function save(next: WeddingPlan) {
-    setPlan(next);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-      setStorageError("");
-    } catch {
-      setStorageError(
-        "Perubahan belum tersimpan. Penyimpanan browser tidak tersedia atau penuh. Unduh salinan sebelum meninggalkan halaman.",
-      );
-    }
+  const detailLoader = useCallback(
+    () => (selected ? getWeddingTask(selected) : Promise.resolve(null)),
+    [selected],
+  );
+  const detail = useAsyncResource(detailLoader, { initialData: null, autoLoad: Boolean(selected) });
+  const { query, search, setSearch, changeFilters, setPage } = progress;
+  const category = query.category ?? "";
+  const filter = query.overdue ? "LATE" : (query.status ?? "ALL");
+  const sortOrder = query.sortBy ?? "due_asc";
+  async function patch(task: WeddingTask) {
+    await mutation.run(async () => {
+      await updateWeddingTask(task.id, { status: task.status, subtasks: task.subtasks });
+      await progress.refresh();
+    });
   }
-  function patch(task: WeddingTask) {
-    if (plan)
-      save({ ...plan, tasks: plan.tasks.map((item) => (item.id === task.id ? task : item)) });
-  }
-  function download() {
-    if (!plan) return;
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `persiapan-pernikahan-${today}.json`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function download() {
+    await mutation.run(async () => {
+      setExporting(true);
+      try {
+        const tasks = await planningService.getAllTasks();
+        const { downloadPlanningPdf } = await import("./exportPdf");
+        await downloadPlanningPdf({ settings: defaultSettings, tasks, exportedOn: today });
+      } finally {
+        setExporting(false);
+      }
+    });
   }
   const defaultSettings: PlanSettings = {
     date: dateOffset(profile.weddingDate?.slice(0, 10) ?? "", 0),
@@ -130,39 +116,36 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
     guests: profile.estimatedGuests ?? 0,
     budget: profile.estimatedBudget ?? 0,
     location: profile.weddingLocation ?? "",
-    traditional: false,
-    outdoor: false,
-    useWo: false,
+    traditional: progress.plan.data?.traditional ?? false,
+    outdoor: progress.plan.data?.outdoor ?? false,
+    useWo: progress.plan.data?.useWo ?? false,
   };
-  if (!ready) return <LoadingSkeleton />;
-  const summary = taskSummary(plan?.tasks ?? []);
-  const pending = plan?.tasks.filter(isPending) ?? [];
-  const late = pending.filter((task) => task.due && task.due < today);
-  const urgent = pending.filter((task) => task.important);
-  const days = plan?.settings.date ? daysUntil(plan.settings.date, today) : null;
-  const selectedTask = plan?.tasks.find((task) => task.id === selected);
-  const visible = (plan?.tasks ?? []).filter(
-    (task) =>
-      (!category || task.category === category) &&
-      (!search ||
-        `${task.title} ${task.assignee} ${task.notes}`
-          .toLowerCase()
-          .includes(search.toLowerCase())) &&
-      (filter === "ALL" ||
-        (filter === "LATE"
-          ? isPending(task) && task.due && task.due < today
-          : task.status === filter)),
-  );
-  visible.sort((a, b) => {
-    if (!a.due) return b.due ? 1 : 0;
-    if (!b.due) return -1;
-    return sortOrder === "DUE_ASC" ? a.due.localeCompare(b.due) : b.due.localeCompare(a.due);
-  });
-  const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
+  if (
+    (!progress.plan.data && progress.plan.loading) ||
+    (!progress.summary.data && progress.summary.loading)
+  )
+    return <LoadingSkeleton />;
+  if (!progress.plan.data || !progress.summary.data)
+    return (
+      <ErrorState
+        retry={() => {
+          void progress.plan.reload();
+          void progress.summary.reload();
+        }}
+      />
+    );
+  const summary = progress.summary.data;
+  const hasTasks = summary.taskCount > 0;
+  const settings = defaultSettings;
+  const days = settings.date ? daysUntil(settings.date, today) : null;
+  const selectedTask = detail.data?.id === selected ? detail.data : null;
+  const visible = progress.tasks.data?.data ?? [];
+  const taskTotal = progress.tasks.data?.total ?? 0;
+  const pageSize = query.pageSize ?? 10;
+  const totalPages = Math.max(1, Math.ceil(taskTotal / pageSize));
+  const currentPage = query.pageNumber ?? 1;
   const pageStart = (currentPage - 1) * pageSize;
-  const paginatedTasks = visible.slice(pageStart, pageStart + pageSize);
+  const paginatedTasks = progress.tasks.loading || progress.tasks.error ? [] : visible;
   return (
     <FeaturePage
       title="Persiapan pernikahan"
@@ -170,15 +153,16 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       showHeader={false}
     >
       <div className="grid gap-6">
-        {storageError && (
+        {mutation.error && (
           <div
             role="alert"
             className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
-            {storageError}
+            {mutation.error}
           </div>
         )}
-        {!plan ? (
+        {progress.summary.error && <ErrorState retry={() => void progress.summary.reload()} />}
+        {!hasTasks ? (
           <section className="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 sm:p-10">
             <span className="inline-flex rounded-2xl bg-white p-3 text-blush shadow-sm">
               <Heart size={28} />
@@ -209,7 +193,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
               <ClipboardCheck size={17} /> Buat checklist pernikahanku
             </AppButton>
             <p className="mt-4 text-xs leading-5 text-stone-500">
-              Tersimpan di browser ini untuk akunmu. Belum tersinkron ke perangkat lain.
+              Checklist tersimpan di akunmu dan bisa dibuka dari perangkat lain.
             </p>
           </section>
         ) : (
@@ -231,8 +215,8 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                   </h2>
                   <p className="mt-3 flex items-center gap-2 text-sm text-stone-500">
                     <CalendarDays size={16} />
-                    {displayDate(plan.settings.date)}
-                    {plan.settings.event && ` · ${plan.settings.event.replaceAll("_", " ")}`}
+                    {displayDate(settings.date)}
+                    {settings.event && ` · ${settings.event.replaceAll("_", " ")}`}
                   </p>
                 </div>
                 <AppButton variant="secondary" onClick={() => setSettingsOpen(true)}>
@@ -267,21 +251,11 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 divide-x rounded-2xl border bg-white/80 py-4 text-center">
-                  <Count value={pending.length} label="Perlu dikerjakan" />
-                  <Count value={late.length} label="Lewat tenggat" />
-                  <Count value={urgent.length} label="Tugas penting" />
+                  <Count value={summary.pending} label="Perlu dikerjakan" />
+                  <Count value={summary.overdue} label="Lewat tenggat" />
+                  <Count value={summary.important} label="Tugas penting" />
                 </div>
               </div>
-              {urgent.length > 0 && (
-                <p className="mt-4 text-xs leading-5 text-stone-600">
-                  Masih perlu perhatian:{" "}
-                  {urgent
-                    .slice(0, 2)
-                    .map((task) => task.title.toLowerCase())
-                    .join(" dan ")}
-                  {urgent.length > 2 ? `, serta ${urgent.length - 2} tugas penting lainnya` : ""}.
-                </p>
-              )}
             </section>
             <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
               <div className="grid min-w-0 gap-6">
@@ -310,7 +284,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         className="h-12 min-w-0 w-full"
                         label="Kategori"
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={(e) => changeFilters({ category: e.target.value || undefined })}
                       >
                         <option value="">Semua kategori</option>
                         {categories.map((item) => (
@@ -321,7 +295,15 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         className="h-12 min-w-0 w-full"
                         label="Status"
                         value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
+                        onChange={(e) =>
+                          changeFilters({
+                            status:
+                              e.target.value === "ALL" || e.target.value === "LATE"
+                                ? undefined
+                                : (e.target.value as TaskStatus),
+                            overdue: e.target.value === "LATE" ? true : undefined,
+                          })
+                        }
                       >
                         <option value="ALL">Semua status</option>
                         <option value="LATE">Lewat tenggat</option>
@@ -335,19 +317,30 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         className="h-12 min-w-0 w-full"
                         label="Urutkan"
                         value={sortOrder}
-                        onChange={(e) => setSortOrder(e.target.value)}
+                        onChange={(e) =>
+                          changeFilters({ sortBy: e.target.value as "due_asc" | "due_desc" })
+                        }
                       >
-                        <option value="DUE_ASC">Tenggat terdekat</option>
-                        <option value="DUE_DESC">Tenggat terjauh</option>
+                        <option value="due_asc">Tenggat terdekat</option>
+                        <option value="due_desc">Tenggat terjauh</option>
                       </AppSelect>
                     </div>
                   </div>
-                  <div className="divide-y">
+                  {progress.tasks.loading && (
+                    <div className="p-5" role="status">
+                      Memuat tugas…
+                    </div>
+                  )}
+                  {progress.tasks.error && (
+                    <ErrorState retry={() => void progress.tasks.reload()} />
+                  )}
+                  <div className="divide-y" aria-busy={progress.tasks.loading}>
                     {paginatedTasks.map((task) => (
                       <div key={task.id} className="flex items-center gap-3 px-5 py-4 sm:px-6">
                         <input
                           type="checkbox"
                           aria-label={`Tandai ${task.title} selesai`}
+                          disabled={mutation.busy}
                           checked={task.status === "COMPLETED"}
                           onChange={(e) =>
                             patch(setTaskStatus(task, e.target.checked ? "COMPLETED" : "TODO"))
@@ -394,14 +387,14 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                       </div>
                     ))}
                   </div>
-                  {visible.length > 0 && (
+                  {!progress.tasks.loading && !progress.tasks.error && taskTotal > 0 && (
                     <nav
                       aria-label="Halaman daftar tugas"
                       className="flex flex-wrap items-center justify-between gap-3 border-t p-5 text-sm text-stone-500 sm:px-6"
                     >
                       <p>
-                        {pageStart + 1}–{Math.min(pageStart + pageSize, visible.length)} dari{" "}
-                        {visible.length} tugas
+                        {pageStart + 1}–{Math.min(pageStart + visible.length, taskTotal)} dari{" "}
+                        {taskTotal} tugas
                       </p>
                       <div className="flex items-center gap-3">
                         <AppButton
@@ -426,20 +419,13 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                       </div>
                     </nav>
                   )}
-                  {!visible.length && (
+                  {!progress.tasks.loading && !progress.tasks.error && !visible.length && (
                     <div className="p-8 text-center">
                       <Search className="mx-auto text-stone-300" />
                       <p className="mt-3 text-sm text-stone-500">
                         Tidak ada tugas yang cocok dengan filter.
                       </p>
-                      <AppButton
-                        variant="ghost"
-                        onClick={() => {
-                          setSearch("");
-                          setCategory("");
-                          setFilter("ALL");
-                        }}
-                      >
+                      <AppButton variant="ghost" onClick={progress.resetFilters}>
                         Tampilkan semua tugas
                       </AppButton>
                     </div>
@@ -450,29 +436,23 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                 <section className="rounded-3xl border bg-white p-5">
                   <h2 className="font-semibold text-ink">Rencana acaramu</h2>
                   <dl className="mt-4 grid gap-4 text-sm">
-                    <Info label="Lokasi" value={plan.settings.location || "Belum ditentukan"} />
+                    <Info label="Lokasi" value={settings.location || "Belum ditentukan"} />
                     <Info
                       label="Perkiraan tamu"
                       value={
-                        plan.settings.guests
-                          ? `${plan.settings.guests.toLocaleString("id-ID")} orang`
+                        settings.guests
+                          ? `${settings.guests.toLocaleString("id-ID")} orang`
                           : "Belum ditentukan"
                       }
                     />
                     <Info
                       label="Target anggaran"
-                      value={
-                        plan.settings.budget
-                          ? formatCurrency(plan.settings.budget)
-                          : "Belum ditentukan"
-                      }
+                      value={settings.budget ? formatCurrency(settings.budget) : "Belum ditentukan"}
                     />
                     <Info
                       label="Koordinasi"
                       value={
-                        plan.settings.useWo
-                          ? "Dibantu wedding organizer"
-                          : "Mandiri / bersama keluarga"
+                        settings.useWo ? "Dibantu wedding organizer" : "Mandiri / bersama keluarga"
                       }
                     />
                   </dl>
@@ -501,12 +481,16 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                 </section>
                 <section className="rounded-2xl border border-dashed p-5">
                   <p className="text-xs leading-5 text-stone-500">
-                    Checklist tersimpan di browser ini untuk akunmu, belum tersinkron
-                    antarperangkat. Simpan salinan agar catatanmu tetap tersedia jika data browser
-                    dihapus.
+                    Unduh ringkasan acara, seluruh tugas, dan catatan dalam PDF yang bisa dibaca,
+                    dibagikan, atau dicetak.
                   </p>
-                  <AppButton variant="ghost" className="mt-2 px-0" onClick={download}>
-                    <Download size={16} /> Unduh salinan
+                  <AppButton
+                    variant="ghost"
+                    className="mt-2 px-0"
+                    disabled={mutation.busy}
+                    onClick={() => void download()}
+                  >
+                    <Download size={16} /> {exporting ? "Menyiapkan unduhan…" : "Unduh PDF"}
                   </AppButton>
                 </section>
               </aside>
@@ -516,44 +500,90 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       </div>
       {settingsOpen && (
         <Modal
-          title={plan ? "Atur rencana pernikahan" : "Buat rencana pernikahanmu"}
+          title={hasTasks ? "Atur rencana pernikahan" : "Buat rencana pernikahanmu"}
           description="Sesuaikan template dengan acara dan kebutuhanmu."
           onClose={() => setSettingsOpen(false)}
         >
           <SettingsForm
-            initial={plan?.settings ?? defaultSettings}
-            existing={Boolean(plan)}
-            onSave={(settings, shift) => {
-              save(plan ? updateSettings(plan, settings, shift) : createPlan(settings));
+            initial={defaultSettings}
+            autoReschedule={progress.plan.data.autoReschedule}
+            existing={hasTasks}
+            onSave={async (settings, autoReschedule) => {
+              const saved = await saveWeddingPlan({
+                traditional: settings.traditional,
+                outdoor: settings.outdoor,
+                useWo: settings.useWo,
+                autoReschedule,
+              });
+              progress.plan.setData(saved);
+              await planningService.addTemplateTasks(settings);
+              await progress.refresh();
               setSettingsOpen(false);
+              if (!hasTasks) setShowDeadlineGuide(true);
             }}
           />
         </Modal>
       )}
-      {selectedTask && (
+      {showDeadlineGuide && (
+        <Modal
+          title="Checklist berhasil dibuat"
+          description="Tentang tenggat tugas"
+          dismissible={false}
+          onClose={() => setShowDeadlineGuide(false)}
+        >
+          <div className="grid gap-4 text-sm leading-6 text-stone-600">
+            <p>
+              Tenggat awal tugas template dihitung otomatis dari tanggal pernikahanmu berdasarkan
+              panduan persiapan. Kamu bisa mengubahnya sesuai kebutuhan atau kesepakatan vendor
+              dengan membuka detail tugas.
+            </p>
+            <p>
+              Kalau tanggal panduan sudah terlewati, sesuaikan tenggat dengan waktu persiapanmu.
+              Jika tanggal pernikahan belum diisi, lengkapi dulu di profil.
+            </p>
+            <AppButton className="w-full" onClick={() => setShowDeadlineGuide(false)}>
+              Oke, mengerti
+            </AppButton>
+          </div>
+        </Modal>
+      )}
+      {selected && (
         <Modal
           title="Detail persiapan"
           description="Atur langkah, penanggung jawab, dan kebutuhan tugas ini."
           onClose={() => setSelected(null)}
         >
-          <TaskEditor
-            key={selectedTask.id}
-            task={selectedTask}
-            onSave={(task) => {
-              patch(task);
-              setSelected(null);
-            }}
-            onCancel={() => setSelected(null)}
-          />
+          {detail.loading ? (
+            <LoadingSkeleton />
+          ) : detail.error ? (
+            <ErrorState retry={() => void detail.reload()} />
+          ) : (
+            selectedTask && (
+              <TaskEditor
+                key={selectedTask.id}
+                task={selectedTask}
+                weddingDate={settings.date}
+                today={today}
+                onSave={async (task) => {
+                  await updateWeddingTask(task.id, toTaskPayload(task));
+                  await progress.refresh();
+                  setSelected(null);
+                }}
+                onCancel={() => setSelected(null)}
+              />
+            )
+          )}
         </Modal>
       )}
-      {adding && plan && (
+      {adding && (
         <Modal
           title="Tambah tugas persiapan"
           description="Tambahkan kebutuhan yang belum ada di template."
           onClose={() => setAdding(false)}
         >
           <TaskEditor
+            weddingDate={settings.date}
+            today={today}
             task={{
               id: "",
               title: "",
@@ -570,8 +600,9 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
               orderId: "",
               subtasks: [],
             }}
-            onSave={(task) => {
-              save({ ...plan, tasks: [...plan.tasks, { ...task, id: crypto.randomUUID() }] });
+            onSave={async (task) => {
+              await createWeddingTask(task);
+              await progress.refresh();
               setAdding(false);
             }}
             onCancel={() => setAdding(false)}
@@ -582,362 +613,6 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   );
 }
 
-function SettingsForm({
-  initial,
-  existing,
-  onSave,
-}: {
-  initial: PlanSettings;
-  existing: boolean;
-  onSave: (settings: PlanSettings, shift: boolean) => void;
-}) {
-  const [settings, setSettings] = useState(initial);
-  const [shift, setShift] = useState(true);
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    onSave(settings, shift);
-  }
-  return (
-    <form onSubmit={submit} className="grid gap-5">
-      <div className="grid items-start gap-4 sm:grid-cols-2 [&>label]:min-w-0">
-        <AppDatePicker
-          className="h-12 min-w-0 w-full"
-          label="Tanggal pernikahan"
-          helper="Boleh dikosongkan jika belum ditentukan."
-          value={settings.date}
-          onChange={(e) => setSettings({ ...settings, date: e.target.value })}
-        />
-        <AppInput
-          className="h-12 min-w-0 w-full"
-          label="Rangkaian acara"
-          placeholder="Contoh: akad dan resepsi"
-          value={settings.event}
-          maxLength={150}
-          onChange={(e) => setSettings({ ...settings, event: e.target.value })}
-        />
-        <AppInput
-          className="h-12 min-w-0 w-full"
-          label="Perkiraan tamu"
-          type="number"
-          min={0}
-          step={1}
-          value={settings.guests || ""}
-          onChange={(e) => setSettings({ ...settings, guests: Number(e.target.value) })}
-        />
-        <AppInput
-          className="h-12 min-w-0 w-full"
-          label="Target anggaran (Rp)"
-          type="number"
-          min={0}
-          step={1}
-          value={settings.budget || ""}
-          onChange={(e) => setSettings({ ...settings, budget: Number(e.target.value) })}
-        />
-        <div className="sm:col-span-2">
-          <AppInput
-            className="h-12 min-w-0 w-full"
-            label="Lokasi acara"
-            value={settings.location}
-            maxLength={200}
-            onChange={(e) => setSettings({ ...settings, location: e.target.value })}
-          />
-        </div>
-      </div>
-      <fieldset className="grid gap-3 rounded-2xl bg-stone-50 p-4">
-        <legend className="text-sm font-semibold">Kebutuhan tambahan</legend>
-        {(
-          [
-            ["traditional", "Ada rangkaian acara adat"],
-            ["outdoor", "Acara di luar ruangan"],
-            ["useWo", "Menggunakan wedding organizer"],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="flex items-center gap-3 text-sm">
-            <input
-              className="size-4 accent-blush"
-              type="checkbox"
-              checked={settings[key]}
-              onChange={(e) => setSettings({ ...settings, [key]: e.target.checked })}
-            />
-            {label}
-          </label>
-        ))}
-      </fieldset>
-      {existing && (
-        <>
-          <label className="flex items-start gap-3 text-sm leading-6">
-            <input
-              type="checkbox"
-              className="mt-1 size-4 shrink-0 accent-blush"
-              checked={shift}
-              onChange={(e) => setShift(e.target.checked)}
-            />
-            Sesuaikan tenggat otomatis saat tanggal acara berubah. Tenggat yang diedit sendiri dan
-            tugas selesai tetap dipertahankan.
-          </label>
-          <p className="text-xs leading-5 text-stone-500">
-            Kebutuhan tambahan akan menambahkan tugas yang belum ada. Tugas lama tetap disimpan;
-            pilih “Tidak diperlukan” pada tugas yang tidak lagi relevan. Pengaturan ini hanya
-            berlaku untuk checklist.
-          </p>
-        </>
-      )}
-      <AppButton type="submit">{existing ? "Simpan pengaturan" : "Buat checklist"}</AppButton>
-    </form>
-  );
-}
-
-const orderLoader = () => getOrders({ pageNumber: 1, pageSize: 100 });
-function TaskEditor({
-  task,
-  onSave,
-  onCancel,
-}: {
-  task: WeddingTask;
-  onSave: (task: WeddingTask) => void;
-  onCancel: () => void;
-}) {
-  const [draft, setDraft] = useState(task);
-  const [subtask, setSubtask] = useState("");
-  const orders = useAsyncResource(orderLoader, { initialData: null });
-  const linked = orders.data?.data.find((order) => order.id === draft.orderId);
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    if (draft.title.trim()) onSave({ ...draft, title: draft.title.trim() });
-  }
-  return (
-    <form onSubmit={submit} className="grid gap-5">
-      <AppInput
-        className="h-12 min-w-0 w-full"
-        label="Nama tugas"
-        required
-        maxLength={200}
-        value={draft.title}
-        onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-      />
-      {draft.guide && (
-        <p className="rounded-2xl bg-rose-50 p-4 text-sm leading-6 text-stone-700">{draft.guide}</p>
-      )}
-      <div className="grid items-start gap-4 sm:grid-cols-2 [&>label]:min-w-0">
-        <AppSelect
-          className="h-12 min-w-0 w-full"
-          label="Kategori"
-          value={draft.category}
-          onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-        >
-          {categories.map((item) => (
-            <option key={item}>{item}</option>
-          ))}
-        </AppSelect>
-        <AppSelect
-          className="h-12 min-w-0 w-full"
-          label="Status"
-          value={draft.status}
-          onChange={(e) => setDraft(setTaskStatus(draft, e.target.value as TaskStatus))}
-        >
-          {Object.entries(statuses).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </AppSelect>
-        <AppDatePicker
-          className="h-12 min-w-0 w-full"
-          label="Tenggat"
-          value={draft.due}
-          onChange={(e) => setDraft({ ...draft, due: e.target.value, customDue: true })}
-          helper={draft.customDue ? "Tanggal diatur sendiri." : "Mengikuti tanggal pernikahan."}
-        />
-        <AppInput
-          className="h-12 min-w-0 w-full"
-          label="Penanggung jawab"
-          value={draft.assignee}
-          maxLength={100}
-          placeholder="Saya, pasangan, keluarga, atau WO"
-          onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
-        />
-      </div>
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          className="size-4 accent-blush"
-          checked={draft.important}
-          onChange={(e) => setDraft({ ...draft, important: e.target.checked })}
-        />
-        Tandai sebagai tugas penting
-      </label>
-      <section className="rounded-2xl border p-4">
-        <h3 className="text-sm font-semibold">Langkah yang perlu disiapkan</h3>
-        <div className="mt-3 grid gap-3">
-          {draft.subtasks.map((item, index) => (
-            <label key={index} className="flex items-start gap-3 text-sm leading-6">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-blush"
-                checked={item.done}
-                onChange={() => setDraft(toggleSubtask(draft, index))}
-              />
-              <span className={item.done ? "text-stone-400 line-through" : ""}>{item.title}</span>
-            </label>
-          ))}
-        </div>
-        <div className="mt-4 flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <AppInput
-              className="h-12 min-w-0 w-full"
-              label="Langkah tambahan"
-              value={subtask}
-              maxLength={200}
-              onChange={(e) => setSubtask(e.target.value)}
-            />
-          </div>
-          <AppButton
-            type="button"
-            variant="secondary"
-            disabled={!subtask.trim()}
-            aria-label="Tambahkan langkah"
-            onClick={() => {
-              setDraft({
-                ...draft,
-                status: draft.status === "COMPLETED" ? "IN_PROGRESS" : draft.status,
-                subtasks: [...draft.subtasks, { title: subtask.trim(), done: false }],
-              });
-              setSubtask("");
-            }}
-          >
-            <Plus size={18} />
-          </AppButton>
-        </div>
-      </section>
-      <AppTextarea
-        label="Catatan dan kesepakatan"
-        value={draft.notes}
-        maxLength={5000}
-        onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-      />
-      <AppInput
-        className="h-12 min-w-0 w-full"
-        label="Vendor / kontak di luar aplikasi"
-        value={draft.vendor}
-        maxLength={300}
-        onChange={(e) => setDraft({ ...draft, vendor: e.target.value })}
-      />
-      <AppSelect
-        className="h-12 min-w-0 w-full"
-        label="Pesanan terkait"
-        value={draft.orderId}
-        onChange={(e) => setDraft({ ...draft, orderId: e.target.value })}
-      >
-        <option value="">Tidak ditautkan</option>
-        {draft.orderId && !linked && (
-          <option value={draft.orderId}>Pesanan tersimpan · {draft.orderId}</option>
-        )}
-        {orders.data?.data.map((order) => (
-          <option key={order.id} value={order.id}>
-            {order.orderNumber} · {order.productName || order.vendorProduct.name}
-          </option>
-        ))}
-      </AppSelect>
-      {orders.loading && <p className="text-xs text-stone-500">Memuat pesanan…</p>}
-      {orders.error && (
-        <div role="status" className="text-sm text-amber-700">
-          Pesanan belum dapat dimuat. Catatan tugas tetap bisa disimpan.{" "}
-          <button type="button" className="underline" onClick={() => void orders.reload()}>
-            Coba lagi
-          </button>
-        </div>
-      )}
-      {orders.data && orders.data.total > orders.data.data.length && (
-        <p className="text-xs text-stone-500">
-          Menampilkan 100 pesanan pertama.{" "}
-          <Link className="underline" href={ROUTES.customer.orders}>
-            Lihat semua pesanan
-          </Link>
-          .
-        </p>
-      )}
-      {linked && <OrderReference order={linked} />}
-      {draft.orderId && !linked && (
-        <Link className="text-sm text-blush underline" href={ROUTES.customer.order(draft.orderId)}>
-          Buka pesanan terkait
-        </Link>
-      )}
-      <p className="text-xs leading-5 text-stone-500">
-        Penanggung jawab dicatat untuk koordinasi; belum mengirim undangan atau notifikasi.
-        Menautkan pesanan tidak otomatis menyelesaikan tugas.
-      </p>
-      <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white py-4">
-        <AppButton type="button" variant="secondary" onClick={onCancel}>
-          Batal
-        </AppButton>
-        <AppButton type="submit">Simpan tugas</AppButton>
-      </div>
-    </form>
-  );
-}
-function OrderReference({ order }: { order: Order }) {
-  return (
-    <div className="rounded-xl border bg-stone-50 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">{order.vendor.businessName}</p>
-        <StatusBadge status={order.status} />
-      </div>
-      <p className="mt-2 text-sm text-stone-600">
-        Nilai pesanan: {formatCurrency(order.totalAmount)}
-      </p>
-      {["CANCELLED", "REJECTED_BY_VENDOR"].includes(order.status) && (
-        <p className="mt-2 text-sm text-amber-700">
-          Periksa kembali kebutuhan vendor pengganti untuk tugas ini.
-        </p>
-      )}
-      <Link
-        className="mt-3 inline-block text-sm font-medium text-blush"
-        href={ROUTES.customer.order(order.id)}
-      >
-        Lihat detail dan pembayaran →
-      </Link>
-    </div>
-  );
-}
-function Modal({
-  title,
-  description,
-  onClose,
-  children,
-}: {
-  title: string;
-  description: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Dialog.Root
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-7">
-          <div className="mb-6 pr-9">
-            <Dialog.Title className="text-xl font-semibold text-ink">{title}</Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm leading-6 text-stone-500">
-              {description}
-            </Dialog.Description>
-          </div>
-          <Dialog.Close
-            aria-label="Tutup"
-            className="absolute right-4 top-4 rounded-full p-2 text-stone-500 hover:bg-stone-100"
-          >
-            <X size={20} />
-          </Dialog.Close>
-          {children}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
 function Count({ value, label }: { value: number; label: string }) {
   return (
     <div className="px-2">
@@ -953,19 +628,4 @@ function Info({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 break-words font-medium text-ink">{value}</dd>
     </div>
   );
-}
-function displayDate(date: string) {
-  return date
-    ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(
-        new Date(`${date}T00:00:00`),
-      )
-    : "Tanggal belum ditentukan";
-}
-function dueLabel(task: WeddingTask, today: string) {
-  if (!task.due) return "Belum ada tenggat";
-  if (!isPending(task)) return displayDate(task.due);
-  if (task.due < today) return `Lewat tenggat · ${displayDate(task.due)}`;
-  if (task.due === today) return "Jatuh tempo hari ini";
-  if (task.due <= dateOffset(today, 7)) return `${daysUntil(task.due, today)} hari lagi`;
-  return displayDate(task.due);
 }

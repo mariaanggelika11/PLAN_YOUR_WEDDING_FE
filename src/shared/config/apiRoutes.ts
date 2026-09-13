@@ -58,6 +58,13 @@ export const API_ROUTES = {
     root: "/vendor-products",
     byId: (id: string) => `/vendor-products/${id}`,
   },
+  weddingPlans: {
+    root: "/wedding-plans",
+  },
+  weddingTasks: {
+    root: "/wedding-tasks",
+    byId: (id: string) => `/wedding-tasks/${encodeURIComponent(id)}`,
+  },
   orders: {
     root: "/orders",
     byId: (id: string) => `/orders/${id}`,
