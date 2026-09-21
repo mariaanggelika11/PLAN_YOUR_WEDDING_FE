@@ -1,6 +1,21 @@
 import type { TranslationKey } from "@/shared/i18n/dictionaries/id";
 
 export const enDictionary = {
+  "notification.description": "Important updates about orders, payments, and wedding preparations.",
+  "notification.filter": "Notification status",
+  "notification.all": "All",
+  "notification.read": "Read",
+  "notification.unread": "Unread",
+  "notification.markRead": "Mark as read",
+  "notification.viewDetail": "View details",
+  "notification.viewAll": "View all",
+  "notification.empty": "No notifications",
+  "notification.emptyDescription": "Updates for your account will appear here.",
+  "notification.loadError": "Unable to load notifications.",
+  "notification.saveError": "Unable to save read status. Please try again.",
+  "notification.previous": "Previous",
+  "notification.next": "Next",
+  "notification.pagination": "Page {page} of {pages} · {total} notifications",
   "language.current": "English",
   "language.switchTo": "Switch to Indonesian",
   "common.save": "Save",

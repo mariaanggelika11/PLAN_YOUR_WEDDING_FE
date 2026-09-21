@@ -2,7 +2,7 @@
 import { EmptyState } from "@/shared/components/feedback/AsyncStates";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 
-import { notificationRepository } from "@/features/notifications/repository";
+import { NotificationPage } from "@/features/notifications/NotificationPage";
 import { VendorProfileForm } from "@/features/profile/components/vendor/VendorProfileForm";
 import { VendorDashboard } from "@/features/vendor/DashboardPage";
 import { OrderDetail, OrdersPage } from "@/features/vendor/OrderPages";
@@ -19,8 +19,17 @@ export function VendorPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
   // TODO API: Tampilkan loading, error, empty, dan success state sesuai hasil request.
   if (page === "dashboard") return <VendorDashboard />;
-  if (page === "marketplace" && slug[1] === "products" && slug[2]) return <MarketplaceProductDetail canBook={false} productId={slug[2]} />;
-  if (page === "marketplace") return <Page title="Marketplace Vendor" description="Lihat produk aktif dan posisi layanan Anda di marketplace."><MarketplaceExplorer role="vendor" /></Page>;
+  if (page === "marketplace" && slug[1] === "products" && slug[2])
+    return <MarketplaceProductDetail canBook={false} productId={slug[2]} />;
+  if (page === "marketplace")
+    return (
+      <Page
+        title="Marketplace Vendor"
+        description="Lihat produk aktif dan posisi layanan Anda di marketplace."
+      >
+        <MarketplaceExplorer role="vendor" />
+      </Page>
+    );
   if (page === "profile")
     return (
       <Page title="Profil Bisnis" description="Informasi ini tampil di halaman toko vendor.">
@@ -67,18 +76,6 @@ export function VendorPage({ slug }: { slug: string[] }) {
     );
   if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <OrdersPage />;
-  if (page === "notifications")
-    return (
-      <Page title="Notifikasi" description="Pembaruan pesanan dan akun vendor.">
-        <div className="grid gap-3">
-          {notificationRepository.list().map((n) => (
-            <article className="rounded-2xl border bg-white p-5" key={n.id}>
-              <h3 className="font-semibold">{n.title}</h3>
-              <p className="text-sm text-stone-500">{n.message}</p>
-            </article>
-          ))}
-        </div>
-      </Page>
-    );
+  if (page === "notifications") return <NotificationPage />;
   return <EmptyState title="Halaman tidak ditemukan" />;
 }

@@ -34,7 +34,7 @@ export const APP_BRAND = {
   name: "Plan Your Wedding",
   shortName: "PYW",
   tagline: "Celebrate with confidence",
-  logo: "/brand/pyw-logo.png",
+  logo: "/brand/pyw-logo-gold.png",
 } as const;
 
 export const PUBLIC_NAVIGATION = [

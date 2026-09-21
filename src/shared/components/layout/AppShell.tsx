@@ -2,7 +2,8 @@
 
 import { useAuth } from "@/features/auth/useAuth";
 import { OrderAssistant } from "@/features/assistant/OrderAssistant";
-import { notificationRepository } from "@/features/notifications/repository";
+import { NotificationProvider } from "@/features/notifications/NotificationProvider";
+import { NotificationMenu } from "@/features/notifications/NotificationMenu";
 import { getAttachmentBlob, getVendorLogo } from "@/features/profile/api/attachmentApi";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
@@ -19,7 +20,7 @@ import { LanguageSwitcher } from "@/shared/i18n/LanguageSwitcher";
 import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -31,7 +32,14 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-export function AppShell({ role, label, nav, children }: AppShellProps) {
+export function AppShell(props: AppShellProps) {
+  return (
+    <NotificationProvider>
+      <AppShellContent {...props} />
+    </NotificationProvider>
+  );
+}
+function AppShellContent({ role, label, nav, children }: AppShellProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -46,7 +54,6 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
   );
 
   // TODO API: Ambil data user login dari backend
-  // TODO API: Ambil jumlah notifikasi belum dibaca dari backend
   // TODO API: Tampilkan menu mobile berdasarkan role user login
   return (
     <PageHeaderContext.Provider value={setPageHeader}>
@@ -84,7 +91,7 @@ export function AppShell({ role, label, nav, children }: AppShellProps) {
             )}
             <div className="ml-auto flex items-center gap-2">
               <LanguageSwitcher className="min-h-10 px-3 py-2" />
-              <NotificationMenu />
+              <NotificationMenu role={role} />
               <UserMenu role={role} />
             </div>
           </header>
@@ -311,48 +318,6 @@ function MobileSidebar(props: {
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function NotificationMenu() {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const containerRef = useDismissibleLayer<HTMLDivElement>(open, () => setOpen(false));
-  const unreadCount = notificationRepository
-    .list()
-    .filter((notification) => !notification.read).length;
-  return (
-    <div className="relative" ref={containerRef}>
-      <button
-        aria-expanded={open}
-        aria-label={t("notification.open")}
-        onClick={() => setOpen((current) => !current)}
-        className="relative grid size-10 place-items-center rounded-xl border bg-white text-stone-500 hover:text-blush"
-      >
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white">
-            {unreadCount}
-          </span>
-        )}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(88vw,390px)] rounded-3xl border bg-white p-5 shadow-2xl">
-          <h3 className="font-semibold">{t("notification.latest")}</h3>
-          <div className="mt-4 grid gap-2">
-            {notificationRepository.list().map((notification) => (
-              <article className="rounded-2xl bg-rose-50 p-4" key={notification.id}>
-                <p className="text-sm font-semibold">{notification.title}</p>
-                <p className="mt-1 text-xs text-stone-500">{notification.message}</p>
-              </article>
-            ))}
-          </div>
-          <button className="mt-4 text-sm font-semibold text-blush">
-            {t("notification.markAllRead")}
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 

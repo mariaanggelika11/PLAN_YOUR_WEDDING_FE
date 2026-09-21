@@ -1,11 +1,9 @@
 "use client";
 
-import { notificationRepository } from "@/features/notifications/repository";
 import { DashboardCard } from "@/shared/components/data-display/Cards";
 import { DataTable } from "@/shared/components/data-display/DataTable";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
-import { Sparkles } from "lucide-react";
 import { type ReactNode } from "react";
 
 function Page({
@@ -45,23 +43,4 @@ export function BudgetPage() {
     </Page>
   );
 }
-export function NotificationPage() {
-  /* TODO API: Ambil daftar notifikasi user dan tandai notifikasi sebagai read */ return (
-    <Page title="Notifikasi" description="Pembaruan penting mengenai booking dan pembayaran.">
-      <div className="grid gap-3">
-        {notificationRepository.list().map((n) => (
-          <article className="flex gap-4 rounded-3xl border bg-white p-5 shadow-sm" key={n.id}>
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-rose-50 text-blush">
-              <Sparkles size={18} />
-            </span>
-            <div>
-              <h3 className="font-semibold">{n.title}</h3>
-              <p className="mt-1 text-sm text-stone-500">{n.message}</p>
-              <button className="mt-2 text-xs font-semibold text-blush">Tandai sudah dibaca</button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </Page>
-  );
-}
+export { NotificationPage } from "@/features/notifications/NotificationPage";

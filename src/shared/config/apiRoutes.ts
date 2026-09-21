@@ -1,4 +1,9 @@
 export const API_ROUTES = {
+  notifications: {
+    root: "/notifications",
+    readAll: "/notifications/read-all",
+    read: (id: string) => `/notifications/${encodeURIComponent(id)}/read`,
+  },
   cryptography: {
     encrypt: "/cryptography/encrypt",
   },
