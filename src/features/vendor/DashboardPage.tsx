@@ -44,8 +44,8 @@ export function VendorDashboard() {
     <Page title="Seller Center" description="Pantau performa bisnis dan pesanan terbaru.">
       <section
         className={cn(
-          "rounded-[2rem] border bg-gradient-to-r to-white p-6",
-          canSell ? "border-emerald-200 from-emerald-50" : "border-amber-200 from-amber-50",
+          "rounded-xl border p-5 sm:p-6",
+          canSell ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50",
         )}
       >
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -75,13 +75,12 @@ export function VendorDashboard() {
         <DataTable
           title="Pesanan terbaru"
           columns={["Nomor", "Customer", "Status", "Total"]}
-          rows={mockOrders
-            .map((o) => [
-              o.number,
-              o.customerName,
-              <StatusBadge status={o.status} />,
-              formatCurrency(o.total),
-            ])}
+          rows={mockOrders.map((o) => [
+            o.number,
+            o.customerName,
+            <StatusBadge status={o.status} />,
+            formatCurrency(o.total),
+          ])}
         />
       </div>
     </Page>

@@ -168,11 +168,11 @@ export function LocationPicker({
         </ul>
       )}
 
-      <div className="relative overflow-hidden rounded-2xl border bg-stone-50 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl border bg-stone-50 shadow-sm">
         <LocationMap editable={editing} onChange={chooseLocation} value={safeLocation} />
         {!editing && (
           <div className="absolute inset-0 z-[500] grid place-items-center bg-white/10 backdrop-blur-[1px]">
-            <span className="rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-stone-700 shadow-md">
+            <span className="rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-stone-700 shadow-sm">
               Tekan Edit lokasi untuk memilih titik
             </span>
           </div>

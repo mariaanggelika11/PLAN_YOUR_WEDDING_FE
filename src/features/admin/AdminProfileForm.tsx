@@ -44,9 +44,9 @@ export function AdminProfileForm() {
   if (profile.error || !profile.data) return <ErrorState retry={() => void profile.reload()} />;
 
   return (
-    <form className="grid gap-6 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
-      <section className="flex items-center gap-4 rounded-2xl bg-stone-50 p-5">
-        <span className="grid size-14 place-items-center rounded-2xl bg-rose-50 text-blush">
+    <form className="grid gap-6 rounded-xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
+      <section className="flex items-center gap-4 rounded-xl bg-stone-50 p-5">
+        <span className="grid size-14 place-items-center rounded-xl bg-rose-50 text-blush">
           <ShieldCheck />
         </span>
         <div>

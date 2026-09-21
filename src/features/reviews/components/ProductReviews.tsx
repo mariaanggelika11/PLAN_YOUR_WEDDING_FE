@@ -7,7 +7,7 @@ import { compactCount } from "@/features/reviews/metrics";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { formatDate } from "@/shared/utils/formatDate";
-import { Star } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function ProductReviews({ product }: { product: VendorProduct }) {
@@ -33,7 +33,7 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
     distribution: reviews.data.ratingBreakdown,
   };
   return (
-    <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-5">
         <div>
           <h2 className="text-lg font-semibold text-ink">Penilaian produk</h2>
@@ -43,7 +43,7 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
             {compactCount(metrics.count)} penilaian produk
           </p>
         </div>
-        <div className="rounded-2xl bg-amber-50 px-5 py-3 text-center">
+        <div className="rounded-xl bg-amber-50 px-5 py-3 text-center">
           <strong className="text-2xl text-amber-600">{metrics.average.toFixed(1)}</strong>
           <RatingStars rating={Math.round(metrics.average)} />
           <p className="text-xs text-stone-500">{compactCount(metrics.count)} penilaian</p>
@@ -108,26 +108,28 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 text-sm">
         <button
-          className="rounded-lg border px-3 py-2 disabled:opacity-40"
+          aria-label="Halaman sebelumnya"
+          className="pagination-button"
           disabled={pageNumber === 1}
           onClick={() => setPageNumber((page) => page - 1)}
         >
-          Sebelumnya
+          <ChevronLeft size={16} aria-hidden="true" />
         </button>
         <span>Halaman {pageNumber}</span>
         <button
-          className="rounded-lg border px-3 py-2 disabled:opacity-40"
+          aria-label="Halaman berikutnya"
+          className="pagination-button"
           disabled={pageNumber * reviews.data.pageSize >= reviews.data.total}
           onClick={() => setPageNumber((page) => page + 1)}
         >
-          Selanjutnya
+          <ChevronRight size={16} aria-hidden="true" />
         </button>
       </div>
     </section>
   );
 }
 
-function RatingStars({ rating }: { rating: number }) {
+export function RatingStars({ rating }: { rating: number }) {
   return (
     <div aria-label={`${rating} dari 5 bintang`} className="flex justify-end gap-0.5">
       {[1, 2, 3, 4, 5].map((value) => (
@@ -141,7 +143,7 @@ function RatingStars({ rating }: { rating: number }) {
   );
 }
 
-function ReviewImage({ attachmentId }: { attachmentId: string }) {
+export function ReviewImage({ attachmentId }: { attachmentId: string }) {
   const [url, setUrl] = useState("");
   useEffect(() => {
     let active = true;

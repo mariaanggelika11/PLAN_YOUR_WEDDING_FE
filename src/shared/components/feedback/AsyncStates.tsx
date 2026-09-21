@@ -21,12 +21,12 @@ export function EmptyState({
   const Icon = type === "search" ? SearchX : Inbox;
   // TODO API: Tampilkan empty state jika response API kosong
   return (
-    <div className="grid place-items-center rounded-3xl border border-dashed bg-white p-12 text-center shadow-sm">
-      <span className="grid size-14 place-items-center rounded-2xl bg-rose-50 text-blush">
+    <div className="grid place-items-center rounded-xl border border-dashed bg-white px-5 py-12 text-center">
+      <span className="grid size-14 place-items-center rounded-xl bg-rose-50 text-blush">
         <Icon />
       </span>
       <h3 className="mt-4 text-lg font-semibold">{title ?? t("empty.title")}</h3>
-      <p className="mt-1 max-w-md text-sm text-stone-500">
+      <p className="mt-2 max-w-md text-sm leading-6 text-stone-500">
         {description ?? t("empty.description")}
       </p>
       {actionLabel && (
@@ -40,7 +40,7 @@ export function EmptyState({
 export function ErrorState({ retry }: { retry?: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+    <div className="rounded-xl border border-red-200 bg-red-50 p-6">
       <AlertCircle className="mb-2 text-red-600" />
       <h3 className="font-semibold text-red-800">{t("error.loadTitle")}</h3>
       <p className="mt-1 text-sm text-red-700">{t("error.loadDescription")}</p>
@@ -54,10 +54,10 @@ export function ErrorState({ retry }: { retry?: () => void }) {
 }
 export function LoadingSkeleton() {
   /* TODO API: Tampilkan skeleton saat request API berjalan */ return (
-    <div className="grid animate-pulse gap-4 md:grid-cols-3">
+    <div role="status" aria-label="Memuat data" className="grid animate-pulse gap-4 md:grid-cols-3">
       {[1, 2, 3].map((item) => (
-        <div key={item} className="overflow-hidden rounded-3xl border bg-white p-4">
-          <div className="h-32 rounded-2xl bg-stone-200" />
+        <div key={item} className="overflow-hidden rounded-xl border bg-white p-4">
+          <div className="h-32 rounded-xl bg-stone-200" />
           <div className="mt-4 h-4 w-2/3 rounded bg-stone-200" />
           <div className="mt-3 h-3 rounded bg-stone-100" />
         </div>

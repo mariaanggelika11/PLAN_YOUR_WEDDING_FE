@@ -55,7 +55,7 @@ export function VendorBankAccountSection({
           title="Rekening pencairan"
         />
         {hasAccount ? (
-          <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b bg-rose-50/70 px-4 py-3">
               <div className="flex items-center gap-3">
                 <span className="grid size-10 place-items-center rounded-xl bg-white text-blush shadow-sm">

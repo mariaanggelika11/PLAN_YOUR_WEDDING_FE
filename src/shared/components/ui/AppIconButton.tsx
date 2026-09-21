@@ -16,7 +16,7 @@ export function AppIconButton({
   variant?: "neutral" | "danger";
 }) {
   const styles = cn(
-    "grid size-10 shrink-0 place-items-center rounded-xl border bg-white transition disabled:cursor-not-allowed disabled:opacity-50",
+    "grid size-10 shrink-0 place-items-center rounded-lg border bg-white transition disabled:cursor-not-allowed disabled:opacity-50",
     variant === "danger"
       ? "border-red-200 text-red-600 hover:bg-red-50"
       : "border-stone-200 text-stone-600 hover:border-rose-200 hover:bg-rose-50 hover:text-blush",

@@ -1,4 +1,5 @@
 "use client";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
 import { AppButton } from "@/shared/components/ui/AppButton";
@@ -33,7 +34,7 @@ export function NotificationPage() {
   }, [page, pages, resource.loading, resource.error, resource.data]);
   return (
     <FeaturePage title={t("navigation.notifications")} description={t("notification.description")}>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border bg-white p-4">
         <AppSelect
           label={t("notification.filter")}
           value={filter}
@@ -83,17 +84,21 @@ export function NotificationPage() {
             <div className="flex gap-2">
               <AppButton
                 variant="secondary"
+                aria-label={t("notification.previous")}
+                className="min-h-9 w-9 px-0"
                 disabled={page <= 1}
                 onClick={() => setPage((value) => value - 1)}
               >
-                {t("notification.previous")}
+                <ChevronLeft size={16} aria-hidden="true" />
               </AppButton>
               <AppButton
                 variant="secondary"
+                aria-label={t("notification.next")}
+                className="min-h-9 w-9 px-0"
                 disabled={page >= pages}
                 onClick={() => setPage((value) => value + 1)}
               >
-                {t("notification.next")}
+                <ChevronRight size={16} aria-hidden="true" />
               </AppButton>
             </div>
           </div>

@@ -37,7 +37,7 @@ export function DataTable({
   const { t, translateText } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-xl border bg-white">
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-semibold">
@@ -48,12 +48,12 @@ export function DataTable({
           </p>
         </div>
         {showToolbar && (
-          <div className="flex gap-2">
-            <label className="flex flex-1 items-center gap-2 rounded-xl border bg-stone-50 px-3 py-2 text-stone-400">
+          <div className="flex min-w-0 gap-2">
+            <label className="flex flex-1 items-center gap-2 min-w-0 rounded-lg border bg-white px-3 py-2.5 text-stone-500 focus-within:border-blush">
               <Search size={15} />
               <input
                 aria-label={t("table.search")}
-                className="w-full bg-transparent text-xs outline-none"
+                className="w-full min-w-0 bg-transparent text-sm text-ink outline-none"
                 placeholder={t("table.searchPlaceholder")}
                 value={searchValue}
                 onChange={(event) => onSearchChange?.(event.target.value)}
@@ -65,15 +65,12 @@ export function DataTable({
           </div>
         )}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="sticky top-0 bg-stone-50/95 text-stone-500 backdrop-blur">
+      <div className="overflow-x-auto overscroll-x-contain">
+        <table className="w-full min-w-[720px] text-left text-sm tabular-nums">
+          <thead className="bg-stone-50 text-stone-600">
             <tr>
               {columns.map((column) => (
-                <th
-                  className="px-4 py-3 text-xs font-semibold uppercase tracking-wide"
-                  key={column}
-                >
+                <th className="px-4 py-3 text-xs font-medium" key={column}>
                   {translateText(column)}
                 </th>
               ))}
@@ -82,9 +79,12 @@ export function DataTable({
           <tbody>
             {rows.length ? (
               rows.map((row, rowIndex) => (
-                <tr className="border-t transition hover:bg-rose-50/40" key={rowIndex}>
+                <tr
+                  className="border-t border-stone-100 transition-colors hover:bg-stone-50/70"
+                  key={rowIndex}
+                >
                   {row.map((cell, cellIndex) => (
-                    <td className="px-4 py-4" key={cellIndex}>
+                    <td className="px-4 py-4 align-middle text-stone-700" key={cellIndex}>
                       {cell}
                     </td>
                   ))}
@@ -101,11 +101,13 @@ export function DataTable({
         </table>
       </div>
       {(showPagination || totalPages > 1) && (
-        <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-stone-500">
-          <span>{t("pagination.summary", { page, totalPages })}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-xs text-stone-500">
+          <span aria-live="polite" className="tabular-nums">
+            {t("pagination.summary", { page, totalPages })}
+          </span>
           <div className="flex gap-1">
             <AppIconButton
-              className="size-8 rounded-lg"
+              className="size-9 rounded-lg"
               disabled={page <= 1}
               label={t("pagination.previous")}
               onClick={() => onPageChange?.(page - 1)}
@@ -113,7 +115,7 @@ export function DataTable({
               <ChevronLeft size={15} />
             </AppIconButton>
             <AppIconButton
-              className="size-8 rounded-lg"
+              className="size-9 rounded-lg"
               disabled={page >= totalPages}
               label={t("pagination.next")}
               onClick={() => onPageChange?.(page + 1)}

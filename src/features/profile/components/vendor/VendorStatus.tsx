@@ -32,7 +32,7 @@ export function VendorProfileStatus({ profile }: { profile: VendorApiProfile | n
   if (!profile?.status) return null;
   const status = vendorStatusDetails(profile.status);
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border bg-stone-50 p-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-2 rounded-xl border bg-stone-50 p-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <p className="font-semibold text-ink">Status profile: {status.label}</p>
         <p className="mt-1 text-sm text-stone-600">{status.description}</p>

@@ -23,11 +23,11 @@ export function NotificationMenu({ role }: { role: AppRole }) {
           setOpen((value) => !value);
           if (!open) void state.refresh();
         }}
-        className="relative grid size-10 place-items-center rounded-xl border bg-white text-stone-500 hover:text-blush"
+        className="relative grid size-10 place-items-center rounded-lg text-stone-600 hover:bg-stone-100 hover:text-ink"
       >
-        <Bell size={18} />
+        <Bell size={20} />
         {!state.error && count > 0 && (
-          <span className="absolute right-1 top-1 rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute right-1 top-1 rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
             {count > 99 ? "99+" : count}
           </span>
         )}
@@ -35,7 +35,7 @@ export function NotificationMenu({ role }: { role: AppRole }) {
       {open && (
         <section
           aria-label={t("notification.latest")}
-          className="absolute -right-24 top-full z-50 mt-2 w-[min(90vw,390px)] rounded-3xl border bg-white p-5 shadow-xl sm:right-0"
+          className="fixed inset-x-4 top-16 z-50 rounded-xl border bg-white p-4 shadow-overlay sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[390px]"
         >
           <h2 className="font-semibold">{t("notification.latest")}</h2>
           <div className="mt-4 max-h-[55dvh] space-y-3 overflow-y-auto">

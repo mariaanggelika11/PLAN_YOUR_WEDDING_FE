@@ -26,6 +26,7 @@ export const ROUTES = {
   vendor: {
     dashboard: "/vendor/dashboard",
     marketplace: "/vendor/marketplace",
+    marketplaceStore: (id: string) => `/vendor/marketplace/stores/${id}`,
     marketplaceProduct: (id: string) => `/vendor/marketplace/products/${id}`,
     products: "/vendor/products",
     orders: "/vendor/orders",

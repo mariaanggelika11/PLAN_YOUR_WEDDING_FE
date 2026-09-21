@@ -157,7 +157,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
 
   return (
     <form
-      className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7"
+      className="grid min-w-0 gap-5 rounded-xl border bg-white p-5 shadow-sm sm:p-7"
       onSubmit={(event: FormEvent<HTMLFormElement>) => event.preventDefault()}
     >
       {type === "vendor" && <VendorProfileStatus profile={vendorProfile} />}

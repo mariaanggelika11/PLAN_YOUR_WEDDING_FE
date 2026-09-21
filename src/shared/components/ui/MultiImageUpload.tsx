@@ -157,7 +157,7 @@ export function MultiImageUpload({
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </legend>
-      <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-stone-50 px-5 py-6 text-center transition hover:border-rose-300 hover:bg-rose-50">
+      <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-stone-50 px-5 py-6 text-center transition hover:border-rose-300 hover:bg-rose-50">
         <ImagePlus className="mb-2 text-blush" size={28} />
         <span className="text-sm font-semibold">
           {images.length || existingImages.length ? "Tambah foto lainnya" : "Pilih beberapa foto"}
@@ -185,7 +185,7 @@ export function MultiImageUpload({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {existingImages.map((image, index) => (
             <div
-              className="group relative aspect-square overflow-hidden rounded-2xl border bg-stone-100"
+              className="group relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
               key={image.id}
             >
               <img
@@ -202,7 +202,7 @@ export function MultiImageUpload({
                 </span>
               )}
               <AppIconButton
-                className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-md"
+                className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-sm"
                 label={`Hapus foto tersimpan ${index + 1}`}
                 onClick={() => removeExistingImage(image.id)}
                 title="Hapus saat perubahan disimpan"
@@ -215,7 +215,7 @@ export function MultiImageUpload({
           ))}
           {images.map((image, index) => (
             <div
-              className="group relative aspect-square overflow-hidden rounded-2xl border bg-stone-100"
+              className="group relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
               key={image.id}
             >
               <img
@@ -229,7 +229,7 @@ export function MultiImageUpload({
                 </span>
               )}
               <AppIconButton
-                className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-md"
+                className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-sm"
                 label={`Hapus foto ${index + 1}`}
                 onClick={() => removeImage(image.id)}
                 type="button"

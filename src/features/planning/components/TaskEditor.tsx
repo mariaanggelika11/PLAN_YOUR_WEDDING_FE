@@ -64,7 +64,7 @@ export function TaskEditor({
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
         {draft.guide && (
-          <p className="rounded-2xl bg-rose-50 p-4 text-sm leading-6 text-stone-700">
+          <p className="rounded-xl bg-rose-50 p-4 text-sm leading-6 text-stone-700">
             {draft.guide}
           </p>
         )}
@@ -116,7 +116,7 @@ export function TaskEditor({
           />
           Tandai sebagai tugas penting
         </label>
-        <section className="rounded-2xl border p-4">
+        <section className="rounded-xl border p-4">
           <h3 className="text-sm font-semibold">Langkah yang perlu disiapkan</h3>
           <div className="mt-3 grid gap-3">
             {draft.subtasks.map((item, index) => (

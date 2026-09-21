@@ -20,7 +20,7 @@ export function StatusToggle({
   return (
     <label
       className={cn(
-        "inline-flex items-center gap-2",
+        "relative inline-flex items-center gap-2",
         disabled ? "cursor-wait opacity-60" : "cursor-pointer",
       )}
       title={active ? t("status.inactive") : t("status.active")}

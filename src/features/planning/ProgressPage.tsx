@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CalendarDays,
   Check,
+  ChevronLeft,
   ChevronRight,
   Download,
   Heart,
@@ -156,15 +157,15 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
         {mutation.error && (
           <div
             role="alert"
-            className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
             {mutation.error}
           </div>
         )}
         {progress.summary.error && <ErrorState retry={() => void progress.summary.reload()} />}
         {!hasTasks ? (
-          <section className="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 sm:p-10">
-            <span className="inline-flex rounded-2xl bg-white p-3 text-blush shadow-sm">
+          <section className="rounded-xl border border-rose-100 bg-white p-6 sm:p-10">
+            <span className="inline-flex rounded-xl bg-white p-3 text-blush shadow-sm">
               <Heart size={28} />
             </span>
             <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-blush">
@@ -198,7 +199,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
           </section>
         ) : (
           <>
-            <section className="overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 sm:p-8">
+            <section className="overflow-hidden rounded-xl border border-rose-100 bg-white p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-5">
                 <div>
                   <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-blush">
@@ -245,12 +246,12 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     className="mt-3 h-2.5 overflow-hidden rounded-full bg-rose-100"
                   >
                     <div
-                      className="h-full rounded-full bg-blush transition-all"
+                      className="h-full rounded-full bg-blush transition-colors"
                       style={{ width: `${summary.percent}%` }}
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 divide-x rounded-2xl border bg-white/80 py-4 text-center">
+                <div className="grid grid-cols-3 divide-x rounded-xl border bg-white/80 py-4 text-center">
                   <Count value={summary.pending} label="Perlu dikerjakan" />
                   <Count value={summary.overdue} label="Lewat tenggat" />
                   <Count value={summary.important} label="Tugas penting" />
@@ -259,7 +260,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
             </section>
             <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
               <div className="grid min-w-0 gap-6">
-                <section className="overflow-hidden rounded-3xl border bg-white">
+                <section className="overflow-hidden rounded-xl border bg-white">
                   <div className="grid gap-4 border-b p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -401,9 +402,10 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                           variant="secondary"
                           disabled={currentPage === 1}
                           onClick={() => setPage(currentPage - 1)}
+                          className="min-h-9 w-9 px-0"
                           aria-label="Halaman sebelumnya"
                         >
-                          Sebelumnya
+                          <ChevronLeft size={16} aria-hidden="true" />
                         </AppButton>
                         <span aria-live="polite">
                           {currentPage} / {totalPages}
@@ -412,9 +414,10 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                           variant="secondary"
                           disabled={currentPage === totalPages}
                           onClick={() => setPage(currentPage + 1)}
+                          className="min-h-9 w-9 px-0"
                           aria-label="Halaman berikutnya"
                         >
-                          Berikutnya
+                          <ChevronRight size={16} aria-hidden="true" />
                         </AppButton>
                       </div>
                     </nav>
@@ -433,7 +436,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                 </section>
               </div>
               <aside className="grid gap-5">
-                <section className="rounded-3xl border bg-white p-5">
+                <section className="rounded-xl border bg-white p-5">
                   <h2 className="font-semibold text-ink">Rencana acaramu</h2>
                   <dl className="mt-4 grid gap-4 text-sm">
                     <Info label="Lokasi" value={settings.location || "Belum ditentukan"} />
@@ -461,7 +464,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     vendormu.
                   </p>
                 </section>
-                <section className="rounded-3xl bg-rose-50 p-5">
+                <section className="rounded-xl bg-rose-50 p-5">
                   <h2 className="font-semibold text-ink">Lengkapi tim pernikahanmu</h2>
                   <p className="mt-2 text-sm leading-6 text-stone-600">
                     Temukan vendor, lalu tautkan pesanan ke tugas yang ditangani. Vendor di luar
@@ -479,7 +482,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     Lihat pesanan & pembayaran
                   </Link>
                 </section>
-                <section className="rounded-2xl border border-dashed p-5">
+                <section className="rounded-xl border border-dashed p-5">
                   <p className="text-xs leading-5 text-stone-500">
                     Unduh ringkasan acara, seluruh tugas, dan catatan dalam PDF yang bisa dibaca,
                     dibagikan, atau dicetak.

@@ -22,7 +22,7 @@ export function SectionHeading({
 
 export function EmptyCollection({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-dashed bg-stone-50 px-5 py-8 text-center text-sm text-stone-500">
+    <div className="rounded-xl border border-dashed bg-stone-50 px-5 py-8 text-center text-sm text-stone-500">
       {message}
     </div>
   );

@@ -43,9 +43,9 @@ export function PlanningModal({
             onInteractOutside={(event) => {
               if (busy || !dismissible) event.preventDefault();
             }}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-7"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-overlay sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-7"
           >
-            <div className="mb-6 pr-9">
+            <div className="mb-6 border-b pb-5 pr-9">
               <Dialog.Title className="text-xl font-semibold text-ink">{title}</Dialog.Title>
               <Dialog.Description className="mt-2 text-sm leading-6 text-stone-500">
                 {description}

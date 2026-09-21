@@ -203,7 +203,7 @@ export function ParameterManager() {
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
         <form className="flex flex-1 items-end gap-2" onSubmit={search}>
           <div className="max-w-md flex-1">
             <AppInput
@@ -237,14 +237,14 @@ export function ParameterManager() {
         />
       )}
 
-      <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border bg-white shadow-sm">
         <div className="border-b px-5 py-4">
           <h2 className="font-semibold">Daftar Parameter</h2>
           <p className="mt-1 text-xs text-stone-500">{total} parameter ditemukan</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
+            <thead className="bg-stone-50 text-xs font-medium text-stone-600 [&_th]:font-medium">
               <tr>
                 <th className="w-12 p-4" />
                 <th className="p-4">Kode</th>
@@ -290,12 +290,14 @@ export function ParameterManager() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t px-5 py-4 text-sm text-stone-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 text-sm text-stone-500">
           <span>
             Halaman {page} dari {totalPages}
           </span>
           <div className="flex gap-2">
             <AppButton
+              aria-label="Halaman sebelumnya"
+              className="min-h-9 w-9 px-0"
               disabled={page <= 1 || isLoading}
               onClick={() => setPage((current) => current - 1)}
               type="button"
@@ -304,6 +306,8 @@ export function ParameterManager() {
               <ChevronLeft size={16} />
             </AppButton>
             <AppButton
+              aria-label="Halaman berikutnya"
+              className="min-h-9 w-9 px-0"
               disabled={page >= totalPages || isLoading}
               onClick={() => setPage((current) => current + 1)}
               type="button"

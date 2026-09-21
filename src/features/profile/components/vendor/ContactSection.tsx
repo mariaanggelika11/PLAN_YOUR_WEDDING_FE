@@ -77,7 +77,7 @@ export function VendorContactSection({
               const option = VENDOR_CONTACT_OPTIONS.find((item) => item.field === field)!;
               return (
                 <div
-                  className="grid gap-3 rounded-2xl border bg-stone-50/60 p-4 sm:grid-cols-[150px_1fr_auto] sm:items-end"
+                  className="grid gap-3 rounded-xl border bg-stone-50/60 p-4 sm:grid-cols-[150px_1fr_auto] sm:items-end"
                   key={field}
                 >
                   <AppSelect

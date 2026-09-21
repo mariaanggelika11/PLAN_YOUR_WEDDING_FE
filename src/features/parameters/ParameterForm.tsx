@@ -38,7 +38,7 @@ export function ParameterForm({
     );
   }
   return (
-    <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm" onSubmit={onSubmit}>
+    <form className="grid gap-5 rounded-xl border bg-white p-5 shadow-sm" onSubmit={onSubmit}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-semibold">{editing ? "Edit Parameter" : "Tambah Parameter"}</h2>
@@ -94,7 +94,7 @@ export function ParameterForm({
         )}
         {details.map((detail, index) => (
           <div
-            className="grid gap-3 rounded-2xl border bg-stone-50 p-3 md:grid-cols-[44px_1fr_1fr_auto_auto] md:items-end"
+            className="grid gap-3 rounded-xl border bg-stone-50 p-3 md:grid-cols-[44px_1fr_1fr_auto_auto] md:items-end"
             key={detail.id ?? index}
           >
             <span className="pb-3 text-center text-sm font-semibold text-stone-400">

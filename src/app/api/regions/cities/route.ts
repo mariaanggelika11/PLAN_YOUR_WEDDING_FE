@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getRegions } from "@/shared/server/regionProvider";
 
 export async function GET(request: NextRequest) {
   const provinceCode = request.nextUrl.searchParams.get("provinceCode") ?? "";
@@ -7,14 +8,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`https://wilayah.id/api/regencies/${provinceCode}.json`, {
-      next: { revalidate: 86400 },
-    });
-    if (!response.ok) throw new Error("Region provider failed");
-    const payload = (await response.json()) as { data: Array<{ code: string; name: string }> };
-    return NextResponse.json({
-      data: payload.data.map((region) => ({ code: region.code, name: region.name.trim() })),
-    });
+    return NextResponse.json({ data: await getRegions(provinceCode) });
   } catch {
     return NextResponse.json({ message: "Daftar kota gagal dimuat." }, { status: 502 });
   }

@@ -86,7 +86,7 @@ function VendorDocumentSummary({ document }: { document: VendorVerificationDocum
     }
   }
   return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 md:col-span-2">
+    <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 md:col-span-2">
       <div className="flex flex-wrap items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-rose-500 shadow-sm">
           <FileCheck2 aria-hidden="true" size={20} />

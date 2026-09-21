@@ -46,7 +46,7 @@ export function CustomerDashboard() {
             [WalletCards, "Atur Budget", "/customer/budget"],
           ].map(([Icon, label, href]) => (
             <Link
-              className="rounded-2xl border bg-white p-4 text-sm font-semibold shadow-sm hover:-translate-y-1 hover:border-rose-200 hover:text-blush"
+              className="rounded-xl border bg-white p-4 text-sm font-semibold shadow-sm hover:border-rose-200 hover:text-blush"
               href={String(href)}
               key={String(label)}
             >

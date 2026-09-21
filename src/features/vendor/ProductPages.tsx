@@ -174,7 +174,7 @@ export function ProductAccessGate({ children }: { children: ReactNode }) {
         title="Produk belum tersedia"
         description="Selesaikan verifikasi bisnis untuk mulai berjualan."
       >
-        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-7">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-7">
           <StatusBadge status={vendorProfileStatus(vendor.profile?.status)} />
           <h2 className="mt-4 text-xl font-semibold text-ink">
             {vendor.profile?.isVerified
@@ -311,7 +311,7 @@ export function ProductsPage() {
           value={`${products.filter((p) => p.status === "INACTIVE").length} produk`}
         />
       </div>
-      <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <AppInput
             label="Cari produk"
@@ -424,7 +424,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
       title={product.name}
       description="Detail produk atau paket layanan yang ditampilkan kepada customer."
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
         <StatusBadge status={product.status} />
         <AppButton asChild variant="secondary">
           <Link href={ROUTES.vendor.editProduct(product.id)}>Edit produk</Link>
@@ -463,7 +463,7 @@ function ProductImage({ attachmentId, name }: { attachmentId?: string; name: str
     loadErrorMessage: "Gambar produk gagal dimuat.",
   });
   return (
-    <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-3xl border bg-stone-50">
+    <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border bg-stone-50">
       {image.previewUrl ? (
         <img alt={name} className="size-full object-cover" src={image.previewUrl} />
       ) : (

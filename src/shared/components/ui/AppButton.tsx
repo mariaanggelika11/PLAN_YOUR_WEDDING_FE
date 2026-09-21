@@ -24,18 +24,16 @@ export function AppButton({
   const { translateText } = useTranslation();
   const translatedChildren = typeof children === "string" ? translateText(children) : children;
   const styles = cn(
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition duration-200 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-medium transition-colors duration-150 [&>svg]:shrink-0 disabled:cursor-not-allowed disabled:opacity-50",
     {
-      "bg-blush text-white shadow-rose-200 hover:-translate-y-0.5 hover:bg-rose-700 hover:shadow-lg":
-        variant === "primary",
-      "border border-stone-200 bg-white text-ink hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50":
+      "bg-blush text-white hover:bg-rose-700": variant === "primary",
+      "border border-stone-200 bg-white text-ink hover:border-rose-200 hover:bg-rose-50":
         variant === "secondary",
       "border border-stone-300 bg-transparent text-ink hover:border-blush hover:text-blush":
         variant === "outline",
       "text-stone-600 hover:bg-stone-100": variant === "ghost",
-      "bg-emerald-600 text-white shadow-emerald-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg":
-        variant === "success",
-      "bg-red-600 text-white hover:bg-red-700": variant === "danger",
+      "bg-emerald-700 text-white hover:bg-emerald-800": variant === "success",
+      "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100": variant === "danger",
     },
     className,
   );

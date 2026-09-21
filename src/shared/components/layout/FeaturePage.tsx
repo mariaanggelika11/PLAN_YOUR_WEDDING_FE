@@ -21,5 +21,15 @@ export function FeaturePage({ title, description, children, showHeader = true }:
     setPageHeader({ description: translatedDescription, title: translatedTitle });
     return () => setPageHeader(null);
   }, [setPageHeader, showHeader, translatedDescription, translatedTitle]);
-  return <div className="grid gap-5">{children}</div>;
+  return (
+    <div className="page-stack">
+      {!showHeader && (
+        <header>
+          <h1 className="page-heading break-words">{translatedTitle}</h1>
+          <p className="page-description">{translatedDescription}</p>
+        </header>
+      )}
+      {children}
+    </div>
+  );
 }

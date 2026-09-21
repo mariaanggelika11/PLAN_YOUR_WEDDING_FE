@@ -130,8 +130,9 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blush" size={19} />
         <input
-          className="h-12 w-full rounded-2xl border bg-white pl-11 pr-11 text-sm shadow-sm outline-none transition focus:border-blush focus:ring-4 focus:ring-rose-100"
+          className="h-11 w-full rounded-lg border bg-white pl-11 pr-11 text-sm outline-none transition focus:border-blush focus:ring-2 focus:ring-rose-100"
           onChange={(event) => setKeyword(event.target.value)}
+          aria-label="Cari paket atau nama vendor"
           placeholder="Cari paket atau nama vendor..."
           value={keyword}
         />
@@ -147,14 +148,14 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
       </div>
       <div className="flex flex-wrap gap-2">
         <button
-          className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${!category ? "border-blush bg-blush text-white" : "bg-white"}`}
+          className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold ${!category ? "border-blush bg-blush text-white" : "bg-white"}`}
           onClick={() => setCategory("")}
         >
           Semua kategori
         </button>
         {featuredCategories.map((item) => (
           <button
-            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold ${category === item.value ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
+            className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold ${category === item.value ? "border-blush bg-blush text-white" : "bg-white hover:border-rose-300"}`}
             key={item.value}
             onClick={() => setCategory(item.value)}
           >
@@ -163,7 +164,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
         ))}
         {categories.length > featuredCategories.length && (
           <button
-            className="flex items-center gap-1 rounded-full border bg-white px-4 py-2 text-xs font-semibold hover:border-rose-300"
+            className="flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-semibold hover:border-rose-300"
             onClick={() => setCategoryDialogOpen(true)}
           >
             Kategori lainnya <ChevronDown size={14} />
@@ -175,7 +176,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
           <strong className="text-ink">{results.length} paket</strong>
           {products.length > 0 && hasFilters ? ` dari ${products.length} tersedia` : " tersedia"}
         </p>
-        <div className="flex items-end gap-2">
+        <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
           <AppButton onClick={() => setFilterDialogOpen(true)} variant="secondary">
             <SlidersHorizontal size={16} /> Filter
             {advancedFilterCount > 0 && (
@@ -185,7 +186,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
             )}
           </AppButton>
           {results.length > 0 && (
-            <div className="min-w-44">
+            <div className="min-w-0 flex-1 sm:w-44">
               <AppSelect
                 aria-label="Urutkan produk"
                 label="Urutkan"
@@ -289,7 +290,7 @@ function MarketplaceFilters(props: MarketplaceFiltersProps) {
           <option key={item}>{item}</option>
         ))}
       </AppSelect>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <FormattedNumberInput
           label="Harga minimum"
           name="minimumPriceFilter"
@@ -320,7 +321,7 @@ function DialogFrame({ children }: { children: React.ReactNode }) {
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[100] bg-ink/40 backdrop-blur-sm" />
-      <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] max-h-[85vh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border bg-white p-6 shadow-2xl">
+      <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] max-h-[85vh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-white p-6 shadow-overlay">
         {children}
         <Dialog.Close className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-ink">
           <X size={18} />
@@ -351,7 +352,7 @@ function CategoryDialog({
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
       <DialogFrame>
-        <Dialog.Title className="text-lg font-semibold">Pilih kategori</Dialog.Title>
+        <Dialog.Title className="pr-8 text-lg font-semibold">Pilih kategori</Dialog.Title>
         <Dialog.Description className="mt-1 text-sm text-stone-500">
           Cari dan pilih kategori layanan yang Anda butuhkan.
         </Dialog.Description>
@@ -361,6 +362,7 @@ function CategoryDialog({
             autoFocus
             className="h-11 w-full rounded-xl border bg-stone-50 pl-10 pr-3 text-sm outline-none focus:border-blush"
             onChange={(event) => onSearchChange(event.target.value)}
+            aria-label="Cari kategori"
             placeholder="Cari kategori..."
             value={search}
           />
@@ -402,7 +404,7 @@ function FilterDialog(
   return (
     <Dialog.Root onOpenChange={props.onOpenChange} open={props.open}>
       <DialogFrame>
-        <Dialog.Title className="text-lg font-semibold">Filter produk</Dialog.Title>
+        <Dialog.Title className="pr-8 text-lg font-semibold">Filter produk</Dialog.Title>
         <Dialog.Description className="mt-1 text-sm text-stone-500">
           Sesuaikan lokasi, rentang harga, dan kapasitas layanan.
         </Dialog.Description>
@@ -481,7 +483,7 @@ function CompactMarketplaceEmptyState({
   onReset: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed bg-white px-5 py-8 text-center shadow-sm">
+    <div className="rounded-xl border border-dashed bg-white px-5 py-8 text-center shadow-sm">
       <h3 className="font-semibold text-ink">
         {hasProducts ? "Tidak ada produk yang sesuai filter" : "Produk belum tersedia"}
       </h3>
@@ -510,7 +512,7 @@ function categoryMatches(category: string | null | undefined, option: CategoryOp
   );
 }
 
-function MarketplaceProductCard({
+export function MarketplaceProductCard({
   product,
   role,
 }: {
@@ -528,12 +530,12 @@ function MarketplaceProductCard({
     loadErrorMessage: "Gambar gagal dimuat.",
   });
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-xl">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-white transition-colors hover:border-stone-300">
       <div className="grid h-48 place-items-center overflow-hidden bg-stone-100">
         {image.previewUrl ? (
           <img
             alt={product.name}
-            className="size-full object-cover transition duration-500 group-hover:scale-105"
+            className="size-full object-cover transition duration-500 "
             src={image.previewUrl}
           />
         ) : (

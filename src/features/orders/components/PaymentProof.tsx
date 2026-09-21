@@ -23,7 +23,9 @@ export function PaymentProof({ attachmentId }: { attachmentId: string }) {
       })
       .catch((loadError) => {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : "Bukti pembayaran gagal dimuat.");
+          setError(
+            loadError instanceof Error ? loadError.message : "Bukti pembayaran gagal dimuat.",
+          );
         }
       });
     return () => {
@@ -32,20 +34,29 @@ export function PaymentProof({ attachmentId }: { attachmentId: string }) {
     };
   }, [attachmentId]);
 
-  if (error) return <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</p>;
-  if (!url) return <div className="h-48 animate-pulse rounded-2xl bg-stone-100" />;
+  if (error) return <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>;
+  if (!url) return <div className="h-48 animate-pulse rounded-xl bg-stone-100" />;
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-stone-50">
+    <div className="overflow-hidden rounded-xl border bg-stone-50">
       {mimeType.startsWith("image/") ? (
-        <img alt="Bukti pembayaran customer" className="max-h-[520px] w-full object-contain" src={url} />
+        <img
+          alt="Bukti pembayaran customer"
+          className="max-h-[520px] w-full object-contain"
+          src={url}
+        />
       ) : (
         <div className="grid min-h-48 place-items-center p-6 text-center text-sm text-stone-600">
           Bukti pembayaran tersedia dalam format dokumen.
         </div>
       )}
       <div className="border-t bg-white p-3">
-        <a className="inline-flex items-center gap-2 text-sm font-semibold text-blush" href={url} rel="noreferrer" target="_blank">
+        <a
+          className="inline-flex items-center gap-2 text-sm font-semibold text-blush"
+          href={url}
+          rel="noreferrer"
+          target="_blank"
+        >
           <ExternalLink size={16} /> Buka bukti ukuran penuh
         </a>
       </div>

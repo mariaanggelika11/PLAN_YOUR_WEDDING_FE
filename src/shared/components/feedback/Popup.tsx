@@ -216,7 +216,7 @@ function PopupView({
       className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
       role={isConfirm ? "alertdialog" : "dialog"}
     >
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white px-6 pb-6 pt-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:px-8">
+      <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border bg-white p-5 text-left shadow-overlay sm:p-6">
         <button
           aria-label={translateText("Tutup popup")}
           className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
@@ -228,21 +228,21 @@ function PopupView({
 
         <div
           className={cn(
-            "mx-auto grid size-20 place-items-center rounded-full ring-8",
+            "grid size-12 place-items-center rounded-xl ring-1",
             style.iconBackground,
             style.ring,
           )}
         >
-          <Icon className={style.icon} size={38} strokeWidth={2} />
+          <Icon className={style.icon} size={24} strokeWidth={2} />
         </div>
         <h2
-          className="mt-6 text-xl font-bold tracking-tight text-slate-900"
+          className="mt-5 text-xl font-semibold tracking-tight text-slate-900"
           id={`popup-title-${popup.id}`}
         >
           {translateText(popup.title || style.defaultTitle)}
         </h2>
         <p
-          className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600"
+          className="mt-2 max-w-sm text-sm leading-6 text-slate-600"
           id={`popup-message-${popup.id}`}
         >
           {translateText(popup.message)}
@@ -258,7 +258,7 @@ function PopupView({
             </label>
             <textarea
               autoFocus
-              className="min-h-28 w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100"
+              className="min-h-28 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100"
               id={`popup-reason-${popup.id}`}
               onChange={(event) => onReasonChange(event.target.value)}
               placeholder={translateText("Tuliskan alasan secara singkat...")}
@@ -267,14 +267,19 @@ function PopupView({
           </div>
         )}
 
-        <div className={cn("mt-7 flex gap-3", isConfirm ? "justify-center" : "justify-end")}>
+        <div
+          className={cn(
+            "mt-6 flex flex-wrap gap-3 border-t pt-5",
+            isConfirm ? "justify-end" : "justify-end",
+          )}
+        >
           {isConfirm && (
-            <AppButton className="min-w-28" onClick={onCancel} variant="secondary">
+            <AppButton className="min-w-24" onClick={onCancel} variant="secondary">
               {translateText(popup.cancelLabel ?? "Batal")}
             </AppButton>
           )}
           <AppButton
-            className="min-w-28"
+            className="min-w-24"
             disabled={isConfirm && popup.requireReason && !reason.trim()}
             onClick={onConfirm}
             variant={isDestructive ? "danger" : variant === "success" ? "success" : "primary"}

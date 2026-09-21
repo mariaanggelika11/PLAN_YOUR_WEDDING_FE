@@ -20,7 +20,7 @@ export function OrderAssistant({ role }: { role: AppRole }) {
       <Dialog.Trigger asChild>
         <button
           aria-label="Buka asisten alur pesanan"
-          className="fixed bottom-24 right-4 z-40 flex min-h-12 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 hover:bg-slate-800 sm:right-6 lg:bottom-6"
+          className="fixed bottom-24 right-4 z-40 flex min-h-12 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white shadow-overlay transition hover:bg-slate-800 sm:right-6 lg:bottom-6"
           type="button"
         >
           <Sparkles size={17} />
@@ -29,9 +29,9 @@ export function OrderAssistant({ role }: { role: AppRole }) {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[100] bg-slate-950/35 backdrop-blur-[2px]" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-[101] flex w-full max-w-md flex-col bg-[#faf8f5] shadow-2xl outline-none">
+        <Dialog.Content className="fixed inset-y-0 right-0 z-[101] flex w-full max-w-md flex-col bg-canvas shadow-overlay outline-none">
           <header className="flex items-start gap-3 border-b bg-white p-5">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-blush">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-rose-50 text-blush">
               <Bot size={22} />
             </span>
             <div className="min-w-0">
@@ -40,26 +40,35 @@ export function OrderAssistant({ role }: { role: AppRole }) {
                 Pelajari status, pembayaran, dan langkah berikutnya dalam pesanan.
               </Dialog.Description>
             </div>
-            <Dialog.Close className="ml-auto grid size-9 shrink-0 place-items-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-ink" aria-label="Tutup asisten">
+            <Dialog.Close
+              className="ml-auto grid size-9 shrink-0 place-items-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-ink"
+              aria-label="Tutup asisten"
+            >
               <X size={18} />
             </Dialog.Close>
           </header>
 
           <div className="flex-1 overflow-y-auto p-5">
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
-              <div className="flex items-center gap-2 font-semibold"><Sparkles size={16} /> UI preview</div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+              <div className="flex items-center gap-2 font-semibold">
+                <Sparkles size={16} /> UI preview
+              </div>
               <p className="mt-1.5 text-xs leading-5 text-blue-700">
-                Layanan AI backend belum terhubung. Pertanyaan belum dikirim dan tidak ada data pesanan yang diproses AI.
+                Layanan AI backend belum terhubung. Pertanyaan belum dikirim dan tidak ada data
+                pesanan yang diproses AI.
               </p>
             </div>
 
-            <div className="mt-5 rounded-3xl border bg-white p-5 shadow-sm">
+            <div className="mt-5 rounded-xl border bg-white p-5 shadow-sm">
               <div className="flex items-start gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-600"><MessageCircleQuestion size={18} /></span>
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-600">
+                  <MessageCircleQuestion size={18} />
+                </span>
                 <div>
                   <p className="text-sm font-semibold text-ink">Apa yang ingin Anda pahami?</p>
                   <p className="mt-1 text-xs leading-5 text-stone-500">
-                    Saya nantinya menggunakan halaman aktif sebagai konteks, tanpa meminta Anda menyalin nomor order.
+                    Saya nantinya menggunakan halaman aktif sebagai konteks, tanpa meminta Anda
+                    menyalin nomor order.
                   </p>
                 </div>
               </div>
@@ -77,23 +86,30 @@ export function OrderAssistant({ role }: { role: AppRole }) {
               </div>
             </div>
 
-            <div className="mt-4 flex items-start gap-2 rounded-2xl bg-stone-100 p-3 text-xs leading-5 text-stone-600">
+            <div className="mt-4 flex items-start gap-2 rounded-xl bg-stone-100 p-3 text-xs leading-5 text-stone-600">
               <ShieldCheck className="mt-0.5 shrink-0 text-emerald-600" size={16} />
-              <p>Asisten hanya memberi penjelasan. Verifikasi pembayaran, penolakan, dan perubahan status tetap membutuhkan tindakan pengguna.</p>
+              <p>
+                Asisten hanya memberi penjelasan. Verifikasi pembayaran, penolakan, dan perubahan
+                status tetap membutuhkan tindakan pengguna.
+              </p>
             </div>
           </div>
 
           <footer className="border-t bg-white p-4">
-            <label className="sr-only" htmlFor="pyw-ai-question">Pertanyaan untuk asisten</label>
+            <label className="sr-only" htmlFor="pyw-ai-question">
+              Pertanyaan untuk asisten
+            </label>
             <textarea
-              className="min-h-24 w-full resize-none rounded-2xl border bg-stone-50 px-4 py-3 text-sm outline-none focus:border-blush focus:ring-4 focus:ring-rose-100"
+              className="min-h-24 w-full resize-none rounded-xl border bg-stone-50 px-4 py-3 text-sm outline-none focus:border-blush focus:ring-2 focus:ring-rose-100"
               id="pyw-ai-question"
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Contoh: Setelah pembayaran diverifikasi, apa langkah berikutnya?"
               value={question}
             />
             <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-stone-400">AI dapat keliru. Status resmi selalu berasal dari sistem.</p>
+              <p className="text-[11px] text-stone-400">
+                AI dapat keliru. Status resmi selalu berasal dari sistem.
+              </p>
               <AppButton disabled title="Menunggu integrasi backend">
                 <Send size={15} /> Kirim
               </AppButton>
@@ -114,10 +130,26 @@ function assistantContext(pathname: string, role: AppRole): AssistantContext | n
 function assistantSuggestions(context: AssistantContext) {
   if (context.role === "vendor") {
     return context.orderId
-      ? ["Apa yang harus saya periksa sebelum verifikasi pembayaran?", "Kapan saya bisa menerima pesanan?", "Apa beda menolak bukti dan menolak pesanan?"]
-      : ["Bagaimana alur pesanan vendor?", "Kapan pembayaran perlu diverifikasi?", "Mengapa pesanan belum bisa diterima?"];
+      ? [
+          "Apa yang harus saya periksa sebelum verifikasi pembayaran?",
+          "Kapan saya bisa menerima pesanan?",
+          "Apa beda menolak bukti dan menolak pesanan?",
+        ]
+      : [
+          "Bagaimana alur pesanan vendor?",
+          "Kapan pembayaran perlu diverifikasi?",
+          "Mengapa pesanan belum bisa diterima?",
+        ];
   }
   return context.orderId
-    ? ["Apa arti status pesanan saya?", "Apa langkah setelah upload bukti?", "Bagaimana jika bukti pembayaran ditolak?"]
-    : ["Bagaimana cara membuat pesanan?", "Apa beda bayar DP dan lunas?", "Bagaimana alur verifikasi pembayaran?"];
+    ? [
+        "Apa arti status pesanan saya?",
+        "Apa langkah setelah upload bukti?",
+        "Bagaimana jika bukti pembayaran ditolak?",
+      ]
+    : [
+        "Bagaimana cara membuat pesanan?",
+        "Apa beda bayar DP dan lunas?",
+        "Bagaimana alur verifikasi pembayaran?",
+      ];
 }

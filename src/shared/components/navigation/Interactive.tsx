@@ -8,14 +8,16 @@ export function Tabs({ items }: { items: { label: string; content: React.ReactNo
   const { translateText } = useTranslation();
   const [active, setActive] = useState(0);
   return (
-    <div>
-      <div className="flex gap-1 overflow-x-auto rounded-2xl border bg-white p-1.5">
+    <div className="min-w-0">
+      <div className="flex gap-1 overflow-x-auto border-b bg-transparent">
         {items.map((item, index) => (
           <button
             onClick={() => setActive(index)}
             className={cn(
-              "shrink-0 rounded-xl px-4 py-2 text-sm font-semibold",
-              active === index ? "bg-ink text-white" : "text-stone-500 hover:bg-stone-50",
+              "shrink-0 border-b-2 px-4 py-3 text-sm font-medium",
+              active === index
+                ? "border-blush text-blush"
+                : "border-transparent text-stone-500 hover:text-ink",
             )}
             key={item.label}
           >
@@ -40,7 +42,7 @@ export function Stepper({
   return (
     <ol
       className={cn(
-        "grid grid-cols-2 gap-2 rounded-2xl border bg-white p-3 sm:grid-cols-3 lg:grid-cols-4",
+        "grid grid-cols-1 gap-2 rounded-xl border bg-white p-3 min-[375px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
         steps.length > 4 && "xl:grid-cols-7",
       )}
     >
@@ -52,7 +54,7 @@ export function Stepper({
               "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition",
               index === active
                 ? "bg-rose-50 text-blush"
-                : "text-stone-400 hover:bg-stone-50 hover:text-stone-600",
+                : "text-stone-500 hover:bg-stone-50 hover:text-stone-600",
               onStepChange &&
                 "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush",
             )}
@@ -79,10 +81,11 @@ export function Accordion({ items }: { items: { title: string; content: string }
   const { translateText } = useTranslation();
   const [open, setOpen] = useState(0);
   return (
-    <div className="overflow-hidden rounded-2xl border bg-white">
+    <div className="overflow-hidden rounded-xl border bg-white">
       {items.map((item, index) => (
         <section className="border-b last:border-0" key={item.title}>
           <button
+            aria-expanded={open === index}
             onClick={() => setOpen(open === index ? -1 : index)}
             className="flex w-full items-center justify-between p-5 text-left text-sm font-semibold"
           >
@@ -102,14 +105,14 @@ export function Accordion({ items }: { items: { title: string; content: string }
 export function DragDropUpload() {
   const [file, setFile] = useState("");
   return (
-    <label className="grid cursor-pointer place-items-center rounded-3xl border-2 border-dashed bg-stone-50 p-8 text-center hover:border-blush hover:bg-rose-50">
+    <label className="grid cursor-pointer place-items-center rounded-xl border-2 border-dashed bg-stone-50 p-8 text-center hover:border-blush hover:bg-rose-50">
       <input
         className="sr-only"
         type="file"
         accept=".jpg,.jpeg,.png,.pdf"
         onChange={(e) => setFile(e.target.files?.[0]?.name ?? "")}
       />
-      <span className="grid size-12 place-items-center rounded-2xl bg-white text-blush shadow-sm">
+      <span className="grid size-12 place-items-center rounded-xl bg-white text-blush shadow-sm">
         <UploadCloud />
       </span>
       <span className="mt-4 text-sm font-semibold">

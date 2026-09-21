@@ -21,12 +21,12 @@ export function DashboardCard({
 }) {
   const { translateText } = useTranslation();
   return (
-    <article className="group rounded-3xl border bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:border-rose-200 hover:shadow-xl">
+    <article className="rounded-xl border bg-white p-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-stone-500">{translateText(label)}</p>
-        <span className="size-2 rounded-full bg-blush/70 transition group-hover:scale-150" />
+        <span className="size-1.5 rounded-full bg-stone-300" />
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-4 break-words text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
       {note && <p className="mt-2 text-xs text-stone-500">{translateText(note)}</p>}
     </article>
   );
@@ -36,13 +36,13 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   if (vendor.status !== "VERIFIED_ACTIVE") return null;
   // TODO API: Data vendor card berasal dari endpoint marketplace vendor list
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border bg-white shadow-soft transition duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-rose-100">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-white transition-colors hover:border-stone-300">
       <div className="relative h-52 overflow-hidden">
         <Image
           src={vendor.image}
           alt={vendor.name}
           fill
-          className="object-cover transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-500 "
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
         <button
@@ -105,21 +105,19 @@ export function ProductCard({ product }: { product: Product }) {
   const { translateText } = useTranslation();
   // TODO API: Ambil daftar package aktif dari backend
   return (
-    <article className="group flex h-full flex-col rounded-3xl border bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative h-40 overflow-hidden rounded-2xl">
+    <article className="group flex h-full flex-col rounded-xl border bg-white p-4 transition-colors hover:border-stone-300">
+      <div className="relative h-40 overflow-hidden rounded-xl">
         <Image
           src={product.image}
           alt={product.name}
           fill
-          className="object-cover transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-500 "
         />
         <div className="absolute right-3 top-3">
           <StatusBadge status={product.status} />
         </div>
       </div>
-      <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-blush">
-        {product.category}
-      </p>
+      <p className="mt-4 text-xs font-medium text-blush">{product.category}</p>
       <h3 className="mt-1 font-semibold">{product.name}</h3>
       <p className="mt-2 text-lg font-semibold">{formatCurrency(product.price)}</p>
       <p className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">

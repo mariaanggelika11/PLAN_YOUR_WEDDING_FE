@@ -38,7 +38,7 @@ function RoleCard({
   href: string;
 }) {
   return (
-    <article className="rounded-3xl border bg-white p-7 shadow-soft">
+    <article className="rounded-xl border bg-white p-7 shadow-soft">
       {icon}
       <h2 className="mt-5 text-xl font-semibold">{title}</h2>
       <p className="mb-6 mt-2 text-sm text-stone-500">{text}</p>

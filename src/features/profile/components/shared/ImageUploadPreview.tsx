@@ -34,8 +34,8 @@ export function ImageUploadPreview({
   previewUrl,
 }: ImageUploadPreviewProps) {
   return (
-    <div className="grid gap-4 md:col-span-2 md:grid-cols-[180px_1fr] md:items-center">
-      <div className="grid aspect-square place-items-center overflow-hidden rounded-3xl border-2 border-dashed bg-stone-50">
+    <div className="grid min-w-0 gap-4 md:col-span-2 md:grid-cols-[180px_1fr] md:items-center">
+      <div className="grid aspect-square place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-stone-50">
         {isLoading ? (
           <div className="size-full animate-pulse bg-stone-100" />
         ) : previewUrl ? (
@@ -45,7 +45,7 @@ export function ImageUploadPreview({
           <span className="px-4 text-center text-xs text-stone-400">{emptyLabel}</span>
         )}
       </div>
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         <AppInput
           accept="image/jpeg,image/png,image/webp"
           helper={helper}

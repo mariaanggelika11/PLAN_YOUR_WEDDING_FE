@@ -74,12 +74,15 @@ export function EntityForm({
   }
 
   return (
-    <form className="grid gap-5 rounded-3xl border bg-white p-5 shadow-sm sm:p-7" onSubmit={submit}>
+    <form
+      className="grid min-w-0 gap-5 rounded-xl border bg-white p-5 shadow-sm sm:p-7"
+      onSubmit={submit}
+    >
       {steps && <Stepper active={activeStep} onStepChange={setActiveStep} steps={steps} />}
       {note && (
         <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{translateText(note)}</p>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {fields.map(({ options, step: fieldStep, ...field }) => (
           <div
             className={cn(

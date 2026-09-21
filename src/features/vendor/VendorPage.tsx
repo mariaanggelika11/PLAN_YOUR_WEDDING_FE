@@ -1,4 +1,5 @@
 "use client";
+import { StorePage } from "@/features/marketplace/StorePage";
 import { EmptyState } from "@/shared/components/feedback/AsyncStates";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 
@@ -19,8 +20,10 @@ export function VendorPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
   // TODO API: Tampilkan loading, error, empty, dan success state sesuai hasil request.
   if (page === "dashboard") return <VendorDashboard />;
+  if (page === "marketplace" && slug[1] === "stores" && slug[2])
+    return <StorePage key={slug[2]} vendorId={slug[2]} role="vendor" />;
   if (page === "marketplace" && slug[1] === "products" && slug[2])
-    return <MarketplaceProductDetail canBook={false} productId={slug[2]} />;
+    return <MarketplaceProductDetail key={slug[2]} canBook={false} productId={slug[2]} />;
   if (page === "marketplace")
     return (
       <Page

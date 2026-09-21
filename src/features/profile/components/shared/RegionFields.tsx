@@ -27,13 +27,20 @@ export function RegionFields({
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    let active = true;
     getProvinces()
       .then((items) => {
+        if (!active) return;
         setProvinces(items);
         const selected = items.find((item) => item.name === initialProvince);
         if (selected) setProvinceCode(selected.code);
       })
-      .catch(() => setFailed(true));
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [initialProvince]);
 
   useEffect(() => {
@@ -41,16 +48,25 @@ export function RegionFields({
       setCities([]);
       return;
     }
+    let active = true;
+    setCities([]);
     getCities(provinceCode)
-      .then(setCities)
-      .catch(() => setFailed(true));
+      .then((items) => {
+        if (active) setCities(items);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [provinceCode]);
 
   if (failed) {
     return (
       <>
-        <AppInput defaultValue={initialProvince} label={provinceLabel} name={provinceName} />
-        <AppInput defaultValue={initialCity} label={cityLabel} name={cityName} />
+        <AppInput defaultValue={province} label={provinceLabel} name={provinceName} />
+        <AppInput defaultValue={city} label={cityLabel} name={cityName} />
       </>
     );
   }

@@ -10,14 +10,18 @@ import {
   startOrder,
   verifyPayment,
 } from "@/features/orders/repository";
-import { canVendorDecide, getCurrentPayment, paymentInstallmentLabel, sortPaymentsByInstallment } from "@/features/orders/rules";
+import {
+  canVendorDecide,
+  getCurrentPayment,
+  paymentInstallmentLabel,
+  sortPaymentsByInstallment,
+} from "@/features/orders/rules";
 import { buildOrderTimeline } from "@/features/orders/timeline";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
 import { PaymentStagesCompact, PaymentSummary } from "@/features/orders/components/PaymentSummary";
 import type { Order, OrderPayment } from "@/features/orders/types";
-import { OrderTimeline } from "@/shared/components/data-display/Commerce";
+import { OrderOverview } from "@/features/orders/components/OrderOverview";
 import { DataTable } from "@/shared/components/data-display/DataTable";
-import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { PopupConfirm, usePopup } from "@/shared/components/feedback/Popup";
@@ -35,7 +39,8 @@ import { useCallback } from "react";
 
 export function OrdersPage() {
   const loader = useCallback(
-    (query: { filter?: string; pageNumber?: number; pageSize?: number }) => getOrdersWithPayments(query),
+    (query: { filter?: string; pageNumber?: number; pageSize?: number }) =>
+      getOrdersWithPayments(query),
     [],
   );
   const orders = usePaginatedResource(loader, { pageSize: 10 });
@@ -54,7 +59,16 @@ export function OrdersPage() {
   return (
     <Page title="Pesanan Vendor" description="Tinjau pesanan masuk dan status pelaksanaan.">
       <DataTable
-        columns={["Nomor", "Customer", "Paket", "Tanggal", "Lokasi", "Pembayaran", "Status", "Aksi"]}
+        columns={[
+          "Nomor",
+          "Customer",
+          "Paket",
+          "Tanggal",
+          "Lokasi",
+          "Pembayaran",
+          "Status",
+          "Aksi",
+        ]}
         itemLabel="pesanan"
         onPageChange={orders.setPage}
         onSearchChange={orders.changeSearch}
@@ -68,7 +82,11 @@ export function OrdersPage() {
           order.eventLocation,
           <PaymentStagesCompact key="payment" payments={order.payments} />,
           <StatusBadge key="order" status={order.status} />,
-          <Link className="font-semibold text-blush" href={ROUTES.vendor.order(order.id)} key="detail">
+          <Link
+            className="font-semibold text-blush"
+            href={ROUTES.vendor.order(order.id)}
+            key="detail"
+          >
             Detail
           </Link>,
         ])}
@@ -154,9 +172,15 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   if (resource.loading) return <LoadingSkeleton />;
   if (resource.error) {
     if (/tidak berhak|akses|forbidden/i.test(resource.error)) {
-      return <EmptyState title="Anda tidak memiliki akses" description="Order ini bukan milik vendor Anda." />;
+      return (
+        <EmptyState
+          title="Anda tidak memiliki akses"
+          description="Order ini bukan milik vendor Anda."
+        />
+      );
     }
-    if (/not found|tidak ditemukan/i.test(resource.error)) return <EmptyState title="Order tidak ditemukan" />;
+    if (/not found|tidak ditemukan/i.test(resource.error))
+      return <EmptyState title="Order tidak ditemukan" />;
     return <ErrorState retry={() => void resource.reload()} />;
   }
 
@@ -165,14 +189,17 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const payment = getCurrentPayment(order.payments);
 
   return (
-    <Page title={`Pesanan ${order.orderNumber}`} description="Verifikasi pembayaran dan tinjau kebutuhan customer.">
+    <Page
+      title={`Pesanan ${order.orderNumber}`}
+      description="Verifikasi pembayaran dan tinjau kebutuhan customer."
+    >
       {order.rejectReason && (
-        <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <strong>Alasan penolakan pesanan:</strong> {order.rejectReason}
         </p>
       )}
-      <DetailGrid
-        items={[
+      <OrderOverview
+        details={[
           ["Customer", order.customer.fullName],
           ["Paket", order.productName],
           ["Tanggal", formatDate(order.eventDate)],
@@ -183,20 +210,16 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           ["Status", <StatusBadge key="status" status={order.status} />],
           ["Catatan customer", order.notes || "-"],
         ]}
+        timeline={buildOrderTimeline(order)}
+        paymentSummary={<PaymentSummary order={order} />}
       />
-
-      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
-        <SectionHeader title="Timeline pesanan" />
-        <div className="mt-5">
-          <OrderTimeline items={buildOrderTimeline(order)} />
-        </div>
-      </section>
-
-      <PaymentSummary order={order} />
 
       {!!order.payments?.length && (
         <section className="grid gap-4">
-          <SectionHeader title="Bukti pembayaran per tahap" description="Periksa dan verifikasi setiap pembayaran customer secara terpisah." />
+          <SectionHeader
+            title="Bukti pembayaran per tahap"
+            description="Periksa dan verifikasi setiap pembayaran customer secara terpisah."
+          />
           {sortPaymentsByInstallment(order.payments).map((item) => (
             <PaymentVerificationPanel
               actionLoading={action.loading}
@@ -234,7 +257,7 @@ function PaymentVerificationPanel({
   payment: OrderPayment;
 }) {
   return (
-    <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-ink">Bukti pembayaran</h2>
@@ -246,7 +269,7 @@ function PaymentVerificationPanel({
       </div>
 
       {payment.rejectReason && (
-        <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <strong>Alasan penolakan bukti:</strong> {payment.rejectReason}
         </p>
       )}
@@ -255,7 +278,7 @@ function PaymentVerificationPanel({
         {payment.proofAttachmentId ? (
           <PaymentProof attachmentId={payment.proofAttachmentId} />
         ) : (
-          <p className="rounded-2xl bg-stone-50 p-5 text-sm text-stone-500">
+          <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-500">
             Customer belum mengunggah bukti pembayaran.
           </p>
         )}
@@ -263,7 +286,11 @@ function PaymentVerificationPanel({
 
       {payment.status === "WAITING_VERIFICATION" && (
         <div className="mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <AppButton disabled={actionLoading || !payment.proofAttachmentId} loading={actionLoading} onClick={onVerify}>
+          <AppButton
+            disabled={actionLoading || !payment.proofAttachmentId}
+            loading={actionLoading}
+            onClick={onVerify}
+          >
             Verifikasi {paymentInstallmentLabel(payment.installment)}
           </AppButton>
           <PopupConfirm
@@ -271,7 +298,11 @@ function PaymentVerificationPanel({
             onConfirm={onReject}
             requireReason
             title={`Tolak bukti ${paymentInstallmentLabel(payment.installment)}?`}
-            trigger={<AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">Tolak bukti</AppButton>}
+            trigger={
+              <AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">
+                Tolak bukti
+              </AppButton>
+            }
           />
         </div>
       )}
@@ -298,12 +329,26 @@ function OrderDecision({
 }) {
   if (canVendorDecide(order)) {
     return (
-      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-ink">Keputusan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">Pembayaran sudah terverifikasi. Konfirmasi apakah pesanan dapat diterima.</p>
+        <p className="mt-1 text-sm text-stone-500">
+          Pembayaran sudah terverifikasi. Konfirmasi apakah pesanan dapat diterima.
+        </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <AppButton disabled={actionLoading} loading={actionLoading} onClick={onAccept}>Terima pesanan</AppButton>
-          <PopupConfirm description="Alasan penolakan wajib disampaikan kepada customer." onConfirm={onReject} requireReason title="Tolak pesanan?" trigger={<AppButton disabled={actionLoading} variant="danger">Tolak pesanan</AppButton>} />
+          <AppButton disabled={actionLoading} loading={actionLoading} onClick={onAccept}>
+            Terima pesanan
+          </AppButton>
+          <PopupConfirm
+            description="Alasan penolakan wajib disampaikan kepada customer."
+            onConfirm={onReject}
+            requireReason
+            title="Tolak pesanan?"
+            trigger={
+              <AppButton disabled={actionLoading} variant="danger">
+                Tolak pesanan
+              </AppButton>
+            }
+          />
         </div>
       </section>
     );
@@ -311,38 +356,55 @@ function OrderDecision({
 
   if (order.status === "CONFIRMED") {
     return (
-      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">Mulai pengerjaan ketika layanan sudah memasuki tahap pelaksanaan.</p>
-        <AppButton className="mt-5" loading={actionLoading} onClick={onStart}>Mulai pengerjaan</AppButton>
+        <p className="mt-1 text-sm text-stone-500">
+          Mulai pengerjaan ketika layanan sudah memasuki tahap pelaksanaan.
+        </p>
+        <AppButton className="mt-5" loading={actionLoading} onClick={onStart}>
+          Mulai pengerjaan
+        </AppButton>
       </section>
     );
   }
 
   if (order.status === "IN_PROGRESS") {
     return (
-      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">Jika seluruh layanan telah diberikan, kirim penyelesaian untuk dikonfirmasi customer.</p>
-        <AppButton className="mt-5" loading={actionLoading} onClick={onDeliver}>Tandai layanan selesai</AppButton>
+        <p className="mt-1 text-sm text-stone-500">
+          Jika seluruh layanan telah diberikan, kirim penyelesaian untuk dikonfirmasi customer.
+        </p>
+        <AppButton className="mt-5" loading={actionLoading} onClick={onDeliver}>
+          Tandai layanan selesai
+        </AppButton>
       </section>
     );
   }
 
   if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
-    return <p className="rounded-2xl bg-blue-50 p-4 text-sm text-blue-700">Layanan telah diserahkan. Menunggu customer mengonfirmasi pesanan selesai.</p>;
+    return (
+      <p className="rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
+        Layanan telah diserahkan. Menunggu customer mengonfirmasi pesanan selesai.
+      </p>
+    );
   }
 
   if (order.status === "COMPLETED") {
-    return <p className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">Pesanan telah selesai dan dikonfirmasi customer.</p>;
+    return (
+      <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
+        Pesanan telah selesai dan dikonfirmasi customer.
+      </p>
+    );
   }
 
-  const message = payment?.status === "WAITING_VERIFICATION"
-    ? `${paymentInstallmentLabel(payment.installment)} menunggu verifikasi Anda.`
-    : payment?.status === "REJECTED"
-      ? "Menunggu customer mengunggah ulang bukti pembayaran."
-      : payment?.status === "WAITING_PAYMENT"
-        ? "Menunggu customer mengunggah bukti pembayaran."
-        : "Keputusan pesanan tersedia setelah pembayaran terverifikasi.";
-  return <p className="rounded-2xl bg-stone-100 p-4 text-sm text-stone-600">{message}</p>;
+  const message =
+    payment?.status === "WAITING_VERIFICATION"
+      ? `${paymentInstallmentLabel(payment.installment)} menunggu verifikasi Anda.`
+      : payment?.status === "REJECTED"
+        ? "Menunggu customer mengunggah ulang bukti pembayaran."
+        : payment?.status === "WAITING_PAYMENT"
+          ? "Menunggu customer mengunggah bukti pembayaran."
+          : "Keputusan pesanan tersedia setelah pembayaran terverifikasi.";
+  return <p className="rounded-xl bg-stone-100 p-4 text-sm text-stone-600">{message}</p>;
 }

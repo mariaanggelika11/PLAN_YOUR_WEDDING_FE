@@ -61,7 +61,7 @@ export function SettingsForm({
           {mutation.error}
         </p>
       )}
-      <div className="rounded-2xl border p-4 text-sm">
+      <div className="rounded-xl border p-4 text-sm">
         <p>Tanggal acara: {displayDate(initial.date)}</p>
         <p className="mt-2 text-stone-500">
           Tanggal, lokasi, jumlah tamu, dan anggaran mengikuti profil pernikahanmu.
@@ -77,7 +77,7 @@ export function SettingsForm({
           Ubah detail acara di profil
         </Link>
       </div>
-      <fieldset disabled={mutation.busy} className="grid gap-3 rounded-2xl bg-stone-50 p-4">
+      <fieldset disabled={mutation.busy} className="grid gap-3 rounded-xl bg-stone-50 p-4">
         <legend className="text-sm font-semibold">Kebutuhan tambahan</legend>
         {(
           [

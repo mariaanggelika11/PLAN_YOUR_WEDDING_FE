@@ -20,7 +20,7 @@ export function NotificationItem({
   const date = new Date(notification.createdAt);
   return (
     <article
-      className={`rounded-2xl border p-4 ${notification.isRead ? "bg-white" : "border-rose-100 bg-rose-50"}`}
+      className={`rounded-xl border p-4 ${notification.isRead ? "bg-white" : "border-rose-100 bg-rose-50"}`}
     >
       <div className="flex items-start gap-2">
         {!notification.isRead && (

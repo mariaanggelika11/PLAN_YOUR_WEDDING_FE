@@ -26,17 +26,14 @@ export function AppInput({
     : undefined;
 
   return (
-    <label className="grid gap-1.5 text-sm font-medium">
+    <label className="grid min-w-0 gap-2 text-sm font-medium">
       <span>
         {translatedLabel}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
       <input
-        className={cn(
-          "rounded-xl border bg-white px-3.5 py-3 font-normal shadow-sm hover:border-stone-300 focus:border-blush",
-          error && "border-red-500",
-          className,
-        )}
+        aria-invalid={error ? true : undefined}
+        className={cn("field-control", error && "border-red-500", className)}
         placeholder={placeholder ? translateText(placeholder) : generatedPlaceholder}
         type={type}
         {...props}
@@ -60,17 +57,14 @@ export function AppTextarea({
   const { locale, translateText } = useTranslation();
   const translatedLabel = translateText(label);
   return (
-    <label className="grid gap-1.5 text-sm font-medium">
+    <label className="grid min-w-0 gap-2 text-sm font-medium">
       <span>
         {translatedLabel}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
       <textarea
-        className={cn(
-          "min-h-28 rounded-xl border bg-white px-3.5 py-3 font-normal shadow-sm",
-          error && "border-red-500",
-          className,
-        )}
+        aria-invalid={error ? true : undefined}
+        className={cn("field-control min-h-28 resize-y", error && "border-red-500", className)}
         placeholder={
           placeholder
             ? translateText(placeholder)
@@ -96,16 +90,16 @@ export function AppSelect({
 }: FieldBase & SelectHTMLAttributes<HTMLSelectElement>) {
   const { translateText } = useTranslation();
   return (
-    <label className="grid gap-1.5 text-sm font-medium">
+    <label className="grid min-w-0 gap-2 text-sm font-medium">
       <span>
         {translateText(label)}
         {props.required && <span className="ml-1 text-red-500">*</span>}
       </span>
-      <span className="relative block">
+      <span className="relative block min-w-0">
         <select
           aria-invalid={error ? true : undefined}
           className={cn(
-            "min-h-12 w-full appearance-none rounded-xl border border-stone-200 bg-white px-3.5 py-3 pr-11 font-normal text-ink shadow-sm outline-none transition",
+            "field-control appearance-none pr-11",
             "hover:border-stone-300",
             "focus:border-blush focus:ring-2 focus:ring-rose-100",
             "disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500",

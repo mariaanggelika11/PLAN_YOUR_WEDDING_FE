@@ -12,7 +12,7 @@ export function AdminDashboard() {
   const s = mockAdminSummary;
   /* TODO API: Ambil ringkasan dashboard admin dari backend */ return (
     <Page title="Admin Dashboard" description="Ringkasan operasional Plan Your Wedding.">
-      <section className="rounded-[2rem] bg-gradient-to-r from-[#101828] to-slate-700 p-7 text-white shadow-2xl">
+      <section className="rounded-xl bg-ink p-5 text-white sm:p-7">
         <p className="text-sm text-slate-300">Marketplace health</p>
         <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>

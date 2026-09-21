@@ -24,11 +24,11 @@ export function FormSection({
   const { translateText } = useTranslation();
   return (
     <section className={cn("grid gap-5", !active && "hidden")} data-profile-step={step}>
-      <div className="rounded-2xl bg-rose-50 p-4">
+      <div className="border-b pb-5">
         <h2 className="font-semibold text-ink">{translateText(title)}</h2>
         <p className="mt-1 text-sm text-stone-500">{translateText(description)}</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">{children}</div>
+      <div className="grid gap-5 md:grid-cols-2">{children}</div>
     </section>
   );
 }
@@ -36,7 +36,7 @@ export function FormSection({
 export function FormGroupHeader({ title, description }: { title: string; description: string }) {
   const { translateText } = useTranslation();
   return (
-    <div className="border-b border-rose-100 pb-3 md:col-span-2">
+    <div className="border-b border-stone-200 pb-3 md:col-span-2">
       <h3 className="font-semibold text-ink">{translateText(title)}</h3>
       <p className="mt-1 text-xs leading-5 text-stone-500">{translateText(description)}</p>
     </div>
