@@ -3,7 +3,16 @@ import type { OrderStatus, PaymentStatus } from "@/shared/types/models";
 export type OrderPaymentType = "DP" | "FULL";
 export type OrderPaymentInstallment = OrderPaymentType | "REMAINING";
 
+export interface PaymentProofRecord {
+  id: string;
+  attachmentId: string;
+  status: "WAITING_VERIFICATION" | "PAID" | "REJECTED";
+  rejectReason: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
 export interface OrderPayment {
+  proofs?: PaymentProofRecord[];
   id: string;
   order?: { id: string; orderNumber: string };
   installment: OrderPaymentInstallment;
@@ -38,6 +47,8 @@ export interface Order {
   notes: string | null;
   paymentType: OrderPaymentType;
   totalAmount: number;
+  paidAmount?: number;
+  outstandingAmount?: number;
   status: OrderStatus;
   rejectReason: string | null;
   confirmedAt: string | null;
@@ -48,8 +59,18 @@ export interface Order {
   modifiedAt?: string | null;
 }
 
-export interface OrderPage { data: Order[]; total: number; pageNumber: number; pageSize: number }
-export interface OrderQuery { filter?: string; status?: OrderStatus; pageNumber?: number; pageSize?: number }
+export interface OrderPage {
+  data: Order[];
+  total: number;
+  pageNumber: number;
+  pageSize: number;
+}
+export interface OrderQuery {
+  filter?: string;
+  status?: OrderStatus;
+  pageNumber?: number;
+  pageSize?: number;
+}
 export interface CreateOrderPayload {
   vendorProductId: number;
   eventDate: string;

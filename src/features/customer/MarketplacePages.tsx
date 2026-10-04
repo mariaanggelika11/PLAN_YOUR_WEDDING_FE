@@ -1,8 +1,13 @@
 "use client";
+import { apiErrorCode, shouldReloadResource, isForbiddenResource } from "@/shared/api/errorCodes";
+import { AvailabilityCheck, localDateToday } from "@/features/marketplace/AvailabilityCheck";
+import type { Availability } from "@/features/marketplace/api";
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges";
 
 import { createOrder, getOrder, submitPaymentProof } from "@/features/orders/repository";
 import {
   canSubmitPaymentProof,
+  canPayOrder,
   getCurrentPayment,
   paymentInstallmentLabel,
   validatePaymentProof,
@@ -346,6 +351,11 @@ function PaymentTypeCards({
 }
 
 export function CheckoutPage({ productId }: { productId: string }) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<Availability | null>(null);
+  const [availabilityRevision, setAvailabilityRevision] = useState(0);
+  const [duplicateOrder, setDuplicateOrder] = useState(false);
+  const unsaved = useUnsavedChanges();
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [error, setError] = useState("");
   const customer = useProfileData("customer");
@@ -420,7 +430,32 @@ export function CheckoutPage({ productId }: { productId: string }) {
             </p>
           )}
           <EntityForm
-            fields={checkoutFields}
+            onDirty={unsaved.markDirty}
+            fields={checkoutFields.map((field) =>
+              field.name === "date" ? { ...field, minDate: localDateToday() } : field,
+            )}
+            onFieldChange={(name, value) => {
+              if (name === "date") {
+                setSelectedDate(value);
+                setAvailability(null);
+                setDuplicateOrder(false);
+              }
+            }}
+            afterField={(name) =>
+              name === "date" ? (
+                <AvailabilityCheck
+                  productId={productId}
+                  date={selectedDate ?? initialValues.date}
+                  revision={availabilityRevision}
+                  onResult={setAvailability}
+                />
+              ) : null
+            }
+            submitDisabled={
+              duplicateOrder ||
+              !availability?.available ||
+              availability.eventDate !== (selectedDate ?? initialValues.date)
+            }
             initialValues={initialValues}
             note="Pastikan tanggal, lokasi, dan jumlah tamu sesuai kebutuhan vendor."
             showDraft={false}
@@ -428,6 +463,7 @@ export function CheckoutPage({ productId }: { productId: string }) {
             submitLabel="Buat pesanan & lanjut pembayaran"
             onSave={async (form) => {
               const values = new FormData(form);
+              if (!availability?.available || availability.eventDate !== values.get("date")) return;
               const guestCount = Number(values.get("guests"));
               const result = await action.run(
                 () =>
@@ -441,9 +477,28 @@ export function CheckoutPage({ productId }: { productId: string }) {
                   }),
                 { successMessage: "Pesanan berhasil dibuat." },
               );
-              if (result.success) router.push(ROUTES.customer.payment(result.data.id));
+              if (!result.success) {
+                const code = apiErrorCode(result.error);
+                if (["DATE_FULL", "PAST_DATE", "PRODUCT_UNAVAILABLE"].includes(code ?? "")) {
+                  setAvailability(null);
+                  setAvailabilityRevision((value) => value + 1);
+                }
+                if (code === "DUPLICATE_ORDER") setDuplicateOrder(true);
+              }
+              if (result.success) {
+                unsaved.markSaved();
+                router.push(ROUTES.customer.payment(result.data.id));
+              }
             }}
           >
+            {duplicateOrder && (
+              <p className="text-sm text-amber-800">
+                Anda sudah memiliki pesanan untuk produk dan tanggal ini.{" "}
+                <Link href={ROUTES.customer.orders} className="font-semibold underline">
+                  Lihat pesanan saya
+                </Link>
+              </p>
+            )}
             <PaymentTypeCards
               minimumDp={
                 product.minimumDp && product.minimumDp > 0 ? product.minimumDp : product.price
@@ -513,18 +568,20 @@ export function PaymentPage({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const [forbidden, setForbidden] = useState(false);
   const load = useCallback(async () => {
     setOrder(null);
     setError("");
+    setForbidden(false);
     try {
       setOrder(await getOrder(orderId));
     } catch (loadError) {
+      setForbidden(isForbiddenResource(loadError));
       setError(loadError instanceof Error ? loadError.message : "Detail pembayaran gagal dimuat.");
     }
   }, [orderId]);
   useEffect(() => void load(), [load]);
   if (error) {
-    const forbidden = /tidak berhak|akses|forbidden/i.test(error);
     return forbidden ? (
       <Page title="Akses ditolak" description="Order ini bukan milik akun Anda.">
         <p className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">
@@ -541,12 +598,14 @@ export function PaymentPage({ orderId }: { orderId: string }) {
     return (
       <Page title="Pembayaran" description="Instruksi pembayaran belum tersedia.">
         <p className="rounded-xl bg-amber-50 p-5 text-amber-800">
-          Backend belum membuat installment pembayaran untuk order ini.
+          Instruksi pembayaran belum tersedia. Silakan muat ulang beberapa saat lagi.
         </p>
       </Page>
     );
-  const canUpload = canSubmitPaymentProof(payment);
+  const canUpload =
+    canPayOrder(order) && payment.active !== false && canSubmitPaymentProof(payment);
   async function uploadProof() {
+    if (!canUpload) return;
     if (!file) {
       popup.warning("Pilih file bukti pembayaran terlebih dahulu.");
       return;
@@ -559,7 +618,8 @@ export function PaymentPage({ orderId }: { orderId: string }) {
     const result = await action.run(() => submitPaymentProof(payment!.id, file), {
       successMessage: "Bukti pembayaran berhasil dikirim.",
     });
-    if (result.success) router.replace(ROUTES.customer.order(orderId));
+    if (result.success || shouldReloadResource(result.error))
+      router.replace(ROUTES.customer.order(orderId));
   }
   return (
     <Page

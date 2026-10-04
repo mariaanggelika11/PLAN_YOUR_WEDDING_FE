@@ -1,4 +1,6 @@
 "use client";
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges";
+import { ServiceAreaField } from "@/features/locations/ServiceAreaField";
 
 import {
   createVendorProduct,
@@ -50,11 +52,19 @@ const PRODUCT_FIELDS: FormField[] = [
   {
     label: "Area layanan",
     name: "area",
-    placeholder: "Contoh: Jabodetabek",
     required: true,
     step: 0,
   },
   { label: "Harga", name: "price", type: "number", min: 0, required: true, step: 1 },
+  {
+    label: "Maksimal pesanan per tanggal",
+    name: "maxOrdersPerDay",
+    type: "number",
+    min: 1,
+    required: true,
+    step: 1,
+    helper: "Jumlah acara yang dapat dilayani produk ini dalam satu hari.",
+  },
   { label: "Minimal DP", name: "dp", type: "number", min: 0, step: 1 },
   {
     label: "Foto atau portofolio paket",
@@ -81,6 +91,7 @@ export function VendorProductForm({
   const masterParameters = useMasterParameters([MASTER_PARAMETER_CODES.vendorCategory]);
   const router = useRouter();
   const popup = usePopup();
+  const unsaved = useUnsavedChanges();
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [productLoading, setProductLoading] = useState(Boolean(productId));
   const [productError, setProductError] = useState("");
@@ -108,6 +119,10 @@ export function VendorProductForm({
   async function save(form: HTMLFormElement, action: "draft" | "publish") {
     if (!vendor.profile) return;
     const values = new FormData(form);
+    if (!String(values.get("area") ?? "").trim()) {
+      popup.error("Pilih minimal satu area layanan pada langkah Informasi Layanan.");
+      return;
+    }
     const rawPrice = String(values.get("price") ?? "").trim();
     if (!rawPrice) {
       popup.error("Harga produk wajib diisi.");
@@ -131,6 +146,7 @@ export function VendorProductForm({
       popup.success(
         action === "draft" ? "Draft produk berhasil disimpan." : "Produk berhasil dipublikasikan.",
       );
+      unsaved.markSaved();
       router.push(ROUTES.vendor.product(saved.id));
       router.refresh();
     } catch (error) {
@@ -144,9 +160,22 @@ export function VendorProductForm({
     <EntityForm
       fields={productFields(categories, product?.imageAttachmentIds ?? [])}
       initialValues={productInitialValues(product, categoryOptions)}
+      renderField={(field) =>
+        field.name === "area" ? (
+          <ServiceAreaField
+            key={product?.id ?? "new"}
+            name="area"
+            initialValue={product?.serviceArea}
+            businessArea={vendor.profile?.serviceArea ?? ""}
+            disabled={saving}
+            onDirty={unsaved.markDirty}
+          />
+        ) : undefined
+      }
       loading={saving}
       note={categories.length ? note : "Tambahkan kategori melalui Profil Bisnis terlebih dahulu."}
       onSave={save}
+      onDirty={unsaved.markDirty}
       showDraft={!productId || product?.status === "DRAFT"}
       steps={PRODUCT_FORM_STEPS}
       submitLabel={submitLabel}
@@ -508,10 +537,11 @@ function productInitialValues(
         description: product.description,
         price: product.price,
         dp: product.minimumDp,
+        maxOrdersPerDay: product.maxOrdersPerDay ?? 1,
         duration: product.duration,
         capacity: product.guestCapacity,
         area: product.serviceArea,
         terms: product.terms,
       }
-    : {};
+    : { maxOrdersPerDay: 1 };
 }

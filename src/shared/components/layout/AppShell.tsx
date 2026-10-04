@@ -1,13 +1,11 @@
 "use client";
 
 import { useAuth } from "@/features/auth/useAuth";
-import { OrderAssistant } from "@/features/assistant/OrderAssistant";
 import { NotificationProvider } from "@/features/notifications/NotificationProvider";
 import { NotificationMenu } from "@/features/notifications/NotificationMenu";
 import { getAttachmentBlob, getVendorLogo } from "@/features/profile/api/attachmentApi";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
-import { mockUsers } from "@/mocks/mockData";
 import { BrandMark } from "@/shared/components/BrandMark";
 import {
   PageHeaderContext,
@@ -121,7 +119,6 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
             )}
             {children}
           </main>
-          {role !== "admin" && <OrderAssistant role={role} />}
           {role === "customer" && <BottomNav nav={nav.slice(0, 4)} pathname={pathname} />}
         </div>
       </div>
@@ -347,6 +344,7 @@ function MobileSidebar(props: {
 function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -356,8 +354,8 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     role === "vendor" ? "vendor" : "customer",
     role !== "admin",
   );
-  const fallbackUser = mockUsers.find((item) => item.role.toLowerCase() === role);
-  const currentUser = user ?? fallbackUser;
+  const currentUser = user;
+  useEffect(() => setOpen(false), [pathname]);
   const name = currentUser?.name ?? t("account.user");
   const initials = name
     .split(" ")

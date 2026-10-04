@@ -98,7 +98,8 @@ export function useMasterParameters(codes: readonly string[]) {
     [error],
   );
 
-  return { emptyMessage, error, getOptions, loading, resolveValue, resolveValues };
+  const reload = useCallback(() => setCacheVersion((current) => current + 1), []);
+  return { reload, emptyMessage, error, getOptions, loading, resolveValue, resolveValues };
 }
 
 function optionsFromCache(codes: string[]) {

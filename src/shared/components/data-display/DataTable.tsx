@@ -1,9 +1,8 @@
 "use client";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 
-import { AppButton } from "@/shared/components/ui/AppButton";
-import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { useTranslation } from "@/shared/i18n/useTranslation";
-import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface DataTableProps {
@@ -59,9 +58,6 @@ export function DataTable({
                 onChange={(event) => onSearchChange?.(event.target.value)}
               />
             </label>
-            <AppButton aria-label={t("table.filter")} variant="secondary" className="min-h-9 px-3">
-              <SlidersHorizontal size={15} />
-            </AppButton>
           </div>
         )}
       </div>
@@ -101,29 +97,14 @@ export function DataTable({
         </table>
       </div>
       {(showPagination || totalPages > 1) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-xs text-stone-500">
-          <span aria-live="polite" className="tabular-nums">
-            {t("pagination.summary", { page, totalPages })}
-          </span>
-          <div className="flex gap-1">
-            <AppIconButton
-              className="size-9 rounded-lg"
-              disabled={page <= 1}
-              label={t("pagination.previous")}
-              onClick={() => onPageChange?.(page - 1)}
-            >
-              <ChevronLeft size={15} />
-            </AppIconButton>
-            <AppIconButton
-              className="size-9 rounded-lg"
-              disabled={page >= totalPages}
-              label={t("pagination.next")}
-              onClick={() => onPageChange?.(page + 1)}
-            >
-              <ChevronRight size={15} />
-            </AppIconButton>
-          </div>
-        </div>
+        <Pagination
+          className="border-t px-4 py-3"
+          page={page}
+          totalPages={totalPages}
+          onPageChange={onPageChange ?? (() => {})}
+          disabled={!onPageChange}
+          label="Halaman tabel"
+        />
       )}
     </section>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import {
   createParameter,
@@ -17,7 +18,7 @@ import { useParameterManager } from "@/features/parameters/useParameterManager";
 import { PopupMessage, usePopup } from "@/shared/components/feedback/Popup";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 const PAGE_SIZE = 10;
@@ -290,33 +291,14 @@ export function ParameterManager() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 text-sm text-stone-500">
-          <span>
-            Halaman {page} dari {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <AppButton
-              aria-label="Halaman sebelumnya"
-              className="min-h-9 w-9 px-0"
-              disabled={page <= 1 || isLoading}
-              onClick={() => setPage((current) => current - 1)}
-              type="button"
-              variant="secondary"
-            >
-              <ChevronLeft size={16} />
-            </AppButton>
-            <AppButton
-              aria-label="Halaman berikutnya"
-              className="min-h-9 w-9 px-0"
-              disabled={page >= totalPages || isLoading}
-              onClick={() => setPage((current) => current + 1)}
-              type="button"
-              variant="secondary"
-            >
-              <ChevronRight size={16} />
-            </AppButton>
-          </div>
-        </div>
+        <Pagination
+          className="border-t px-5 py-4"
+          label="Halaman parameter"
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          disabled={isLoading}
+        />
       </section>
     </div>
   );

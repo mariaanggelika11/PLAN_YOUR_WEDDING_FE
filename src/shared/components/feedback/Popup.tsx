@@ -3,6 +3,7 @@
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
+import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle, Check, CircleX, Info, X, type LucideIcon } from "lucide-react";
 import {
   createContext,
@@ -208,87 +209,108 @@ function PopupView({
   const isDestructive = isConfirm && variant === "error";
 
   return (
-    <div
-      aria-labelledby={`popup-title-${popup.id}`}
-      aria-describedby={`popup-message-${popup.id}`}
-      aria-live={variant === "error" ? "assertive" : "polite"}
-      aria-modal="true"
-      className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
-      role={isConfirm ? "alertdialog" : "dialog"}
+    <Dialog.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
     >
-      <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border bg-white p-5 text-left shadow-overlay sm:p-6">
-        <button
-          aria-label={translateText("Tutup popup")}
-          className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
-          onClick={onCancel}
-          type="button"
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[200] bg-slate-950/45 backdrop-blur-[2px]" />
+        <Dialog.Content
+          aria-labelledby={`popup-title-${popup.id}`}
+          aria-describedby={`popup-message-${popup.id}`}
+          aria-live={variant === "error" ? "assertive" : "polite"}
+          aria-modal="true"
+          className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 outline-none"
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            document.getElementById(`popup-focus-${popup.id}`)?.focus();
+          }}
+          role={isConfirm ? "alertdialog" : "dialog"}
         >
-          <X size={18} />
-        </button>
-
-        <div
-          className={cn(
-            "grid size-12 place-items-center rounded-xl ring-1",
-            style.iconBackground,
-            style.ring,
-          )}
-        >
-          <Icon className={style.icon} size={24} strokeWidth={2} />
-        </div>
-        <h2
-          className="mt-5 text-xl font-semibold tracking-tight text-slate-900"
-          id={`popup-title-${popup.id}`}
-        >
-          {translateText(popup.title || style.defaultTitle)}
-        </h2>
-        <p
-          className="mt-2 max-w-sm text-sm leading-6 text-slate-600"
-          id={`popup-message-${popup.id}`}
-        >
-          {translateText(popup.message)}
-        </p>
-
-        {isConfirm && popup.requireReason && (
-          <div className="mt-5 text-left">
-            <label
-              className="mb-2 block text-sm font-semibold text-slate-800"
-              htmlFor={`popup-reason-${popup.id}`}
+          <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border bg-white p-5 text-left shadow-overlay sm:p-6">
+            <button
+              aria-label={translateText("Tutup popup")}
+              className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+              onClick={onCancel}
+              type="button"
             >
-              {translateText(popup.reasonLabel ?? "Alasan")}
-            </label>
-            <textarea
-              autoFocus
-              className="min-h-28 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100"
-              id={`popup-reason-${popup.id}`}
-              onChange={(event) => onReasonChange(event.target.value)}
-              placeholder={translateText("Tuliskan alasan secara singkat...")}
-              value={reason}
-            />
-          </div>
-        )}
+              <X size={18} />
+            </button>
 
-        <div
-          className={cn(
-            "mt-6 flex flex-wrap gap-3 border-t pt-5",
-            isConfirm ? "justify-end" : "justify-end",
-          )}
-        >
-          {isConfirm && (
-            <AppButton className="min-w-24" onClick={onCancel} variant="secondary">
-              {translateText(popup.cancelLabel ?? "Batal")}
-            </AppButton>
-          )}
-          <AppButton
-            className="min-w-24"
-            disabled={isConfirm && popup.requireReason && !reason.trim()}
-            onClick={onConfirm}
-            variant={isDestructive ? "danger" : variant === "success" ? "success" : "primary"}
-          >
-            {isConfirm ? translateText(popup.confirmLabel ?? "Konfirmasi") : "OK"}
-          </AppButton>
-        </div>
-      </div>
-    </div>
+            <div
+              className={cn(
+                "grid size-12 place-items-center rounded-xl ring-1",
+                style.iconBackground,
+                style.ring,
+              )}
+            >
+              <Icon className={style.icon} size={24} strokeWidth={2} />
+            </div>
+            <Dialog.Title
+              className="mt-5 text-xl font-semibold tracking-tight text-slate-900"
+              id={`popup-title-${popup.id}`}
+            >
+              {translateText(popup.title || style.defaultTitle)}
+            </Dialog.Title>
+            <Dialog.Description
+              className="mt-2 max-w-sm text-sm leading-6 text-slate-600"
+              id={`popup-message-${popup.id}`}
+            >
+              {translateText(popup.message)}
+            </Dialog.Description>
+
+            {isConfirm && popup.requireReason && (
+              <div className="mt-5 text-left">
+                <label
+                  className="mb-2 block text-sm font-semibold text-slate-800"
+                  htmlFor={`popup-reason-${popup.id}`}
+                >
+                  {translateText(popup.reasonLabel ?? "Alasan")}
+                </label>
+                <textarea
+                  autoFocus
+                  className="min-h-28 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  id={`popup-reason-${popup.id}`}
+                  onChange={(event) => onReasonChange(event.target.value)}
+                  placeholder={translateText("Tuliskan alasan secara singkat...")}
+                  value={reason}
+                />
+              </div>
+            )}
+
+            <div
+              className={cn(
+                "mt-6 flex flex-wrap gap-3 border-t pt-5",
+                isConfirm ? "justify-end" : "justify-end",
+              )}
+            >
+              {isConfirm && (
+                <AppButton
+                  id={`popup-focus-${popup.id}`}
+                  className="min-w-24"
+                  onClick={onCancel}
+                  variant="secondary"
+                >
+                  {translateText(popup.cancelLabel ?? "Batal")}
+                </AppButton>
+              )}
+              <AppButton
+                id={!isConfirm ? `popup-focus-${popup.id}` : undefined}
+                className="min-w-24"
+                disabled={isConfirm && popup.requireReason && !reason.trim()}
+                onClick={onConfirm}
+                variant={isDestructive ? "danger" : variant === "success" ? "success" : "primary"}
+              >
+                {isConfirm ? translateText(popup.confirmLabel ?? "Konfirmasi") : "OK"}
+              </AppButton>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

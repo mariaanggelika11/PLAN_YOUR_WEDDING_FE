@@ -26,6 +26,7 @@ export type FormField = {
   multiple?: boolean;
   accept?: string;
   min?: number;
+  minDate?: string;
   max?: number;
   placeholder?: string;
   existingImageIds?: string[];
@@ -35,7 +36,12 @@ export function EntityForm({
   fields,
   initialValues = {},
   loading = false,
+  submitDisabled = false,
   onSave,
+  onDirty,
+  onFieldChange,
+  afterField,
+  renderField,
   showDraft = true,
   submitLabel = "Simpan perubahan",
   note,
@@ -45,6 +51,11 @@ export function EntityForm({
   fields: FormField[];
   initialValues?: Record<string, string | number | null | undefined>;
   loading?: boolean;
+  submitDisabled?: boolean;
+  onDirty?: () => void;
+  onFieldChange?: (name: string, value: string) => void;
+  afterField?: (name: string) => ReactNode;
+  renderField?: (field: FormField) => ReactNode;
   onSave?: (form: HTMLFormElement, action: "draft" | "publish") => void | Promise<void>;
   showDraft?: boolean;
   submitLabel?: string;
@@ -69,12 +80,24 @@ export function EntityForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!validateStep(event.currentTarget)) return;
+    if (submitDisabled || loading || !validateStep(event.currentTarget)) return;
     void onSave?.(event.currentTarget, "publish");
   }
 
   return (
     <form
+      onChange={(event) => {
+        const input = event.target;
+        if (
+          input instanceof HTMLInputElement ||
+          input instanceof HTMLSelectElement ||
+          input instanceof HTMLTextAreaElement
+        ) {
+          if (!input.name) return;
+          onDirty?.();
+          onFieldChange?.(input.name, input.value);
+        }
+      }}
       className="grid min-w-0 gap-5 rounded-xl border bg-white p-5 shadow-sm sm:p-7"
       onSubmit={submit}
     >
@@ -83,7 +106,7 @@ export function EntityForm({
         <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">{translateText(note)}</p>
       )}
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
-        {fields.map(({ options, step: fieldStep, ...field }) => (
+        {fields.map(({ options, step: fieldStep, minDate, ...field }) => (
           <div
             className={cn(
               ["images", "textarea"].includes(field.type ?? "") && "md:col-span-2",
@@ -92,48 +115,55 @@ export function EntityForm({
             data-entity-step={fieldStep ?? 0}
             key={field.name}
           >
-            {field.type === "textarea" ? (
-              <AppTextarea {...field} defaultValue={initialValues[field.name] ?? ""} />
-            ) : field.type === "select" ? (
-              <AppSelect
-                {...field}
-                defaultValue={initialValues[field.name] ?? ""}
-                disabled={!options?.length}
-              >
-                <option value="">
-                  {locale === "en" ? "Select" : "Pilih"} {translateText(field.label).toLowerCase()}
-                </option>
-                {options?.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </AppSelect>
-            ) : field.type === "file" ? (
-              <AppFileUpload {...field} />
-            ) : field.type === "images" ? (
-              <MultiImageUpload
-                helper={field.helper}
-                existingImageIds={field.existingImageIds}
-                label={field.label}
-                loadExistingImage={field.loadExistingImage}
-                name={field.name}
-                required={field.required}
-              />
-            ) : field.type === "date" ? (
-              <AppDatePicker {...field} defaultValue={initialValues[field.name] ?? ""} />
-            ) : field.type === "number" ? (
-              <FormattedNumberInput
-                defaultValue={initialValues[field.name]}
-                helper={field.helper}
-                label={field.label}
-                max={field.max}
-                min={field.min}
-                name={field.name}
-                placeholder={field.placeholder}
-                required={field.required}
-              />
-            ) : (
-              <AppInput {...field} defaultValue={initialValues[field.name] ?? ""} />
-            )}
+            {renderField?.(field) ??
+              (field.type === "textarea" ? (
+                <AppTextarea {...field} defaultValue={initialValues[field.name] ?? ""} />
+              ) : field.type === "select" ? (
+                <AppSelect
+                  {...field}
+                  defaultValue={initialValues[field.name] ?? ""}
+                  disabled={!options?.length}
+                >
+                  <option value="">
+                    {locale === "en" ? "Select" : "Pilih"}{" "}
+                    {translateText(field.label).toLowerCase()}
+                  </option>
+                  {options?.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </AppSelect>
+              ) : field.type === "file" ? (
+                <AppFileUpload {...field} />
+              ) : field.type === "images" ? (
+                <MultiImageUpload
+                  helper={field.helper}
+                  existingImageIds={field.existingImageIds}
+                  label={field.label}
+                  loadExistingImage={field.loadExistingImage}
+                  name={field.name}
+                  required={field.required}
+                />
+              ) : field.type === "date" ? (
+                <AppDatePicker
+                  {...field}
+                  min={minDate}
+                  defaultValue={initialValues[field.name] ?? ""}
+                />
+              ) : field.type === "number" ? (
+                <FormattedNumberInput
+                  defaultValue={initialValues[field.name]}
+                  helper={field.helper}
+                  label={field.label}
+                  max={field.max}
+                  min={field.min}
+                  name={field.name}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                />
+              ) : (
+                <AppInput {...field} defaultValue={initialValues[field.name] ?? ""} />
+              ))}
+            {afterField?.(field.name)}
           </div>
         ))}
       </div>
@@ -176,7 +206,7 @@ export function EntityForm({
               Lanjutkan
             </AppButton>
           ) : (
-            <AppButton loading={loading} type="submit">
+            <AppButton loading={loading} type="submit" disabled={submitDisabled}>
               {submitLabel}
             </AppButton>
           )}

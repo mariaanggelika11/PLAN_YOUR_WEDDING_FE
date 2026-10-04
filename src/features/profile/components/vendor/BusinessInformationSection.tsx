@@ -10,6 +10,7 @@ import {
   MasterParameterCheckboxGroup,
 } from "@/features/profile/components/shared/ProfileFormFields";
 import { RegionFields } from "@/features/profile/components/shared/RegionFields";
+import { ServiceAreaField } from "@/features/locations/ServiceAreaField";
 import { BusinessInformationSection } from "@/features/profile/components/shared/StepSectionLayouts";
 import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { vendorProfileToForm } from "@/features/profile/mappers";
@@ -67,12 +68,18 @@ export function VendorBusinessInformationSection({
           />
         </div>
         <FormGroupHeader
-          description="Lokasi operasional dan wilayah yang dapat dilayani."
-          title="Lokasi dan layanan"
+          description="Alamat kantor atau tempat usaha Anda. Wilayah yang dilayani dipilih secara terpisah di bawah."
+          title="Lokasi bisnis"
         />
         <RegionFields initialCity={values.city} initialProvince={values.province} />
         <LocationPicker initialLatitude={values.latitude} initialLongitude={values.longitude} />
-        <AppInput defaultValue={values.serviceArea} label="Area layanan" name="serviceArea" />
+        <div className="md:col-span-2">
+          <ServiceAreaField
+            name="serviceArea"
+            initialValue={values.serviceArea}
+            disabled={!canEditBusiness}
+          />
+        </div>
         <div className="md:col-span-2">
           <AppTextarea
             defaultValue={values.businessAddress}

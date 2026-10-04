@@ -45,7 +45,13 @@ function productRequestBody(payload: FormData): FormData | string {
     .some((value) => value instanceof File && value.size > 0);
   if (hasImages) return payload;
 
-  const numericFields = new Set(["vendorId", "price", "minimumDp", "guestCapacity"]);
+  const numericFields = new Set([
+    "vendorId",
+    "price",
+    "minimumDp",
+    "guestCapacity",
+    "maxOrdersPerDay",
+  ]);
   const result: Record<string, string | number | boolean> = {};
   payload.forEach((value, key) => {
     if (typeof value !== "string") return;

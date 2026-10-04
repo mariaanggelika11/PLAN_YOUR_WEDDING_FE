@@ -107,6 +107,9 @@ function NotificationSession({ children, enabled }: { children: ReactNode; enabl
         current
           ? {
               ...current,
+              unreadCount: id
+                ? Math.max(0, current.unreadCount - (current.data.some((item) => item.id === id && !item.isRead) ? 1 : 0))
+                : 0,
               data: current.data.map((item) =>
                 !id || item.id === id ? { ...item, isRead: true } : item,
               ),

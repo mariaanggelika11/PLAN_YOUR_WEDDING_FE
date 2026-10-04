@@ -9,10 +9,7 @@ const ACTIVE_EXECUTION_STATUSES: Order["status"][] = [
   "COMPLETED",
 ];
 
-const CONFIRMED_STATUSES: Order["status"][] = [
-  "CONFIRMED",
-  ...ACTIVE_EXECUTION_STATUSES,
-];
+const CONFIRMED_STATUSES: Order["status"][] = ["CONFIRMED", ...ACTIVE_EXECUTION_STATUSES];
 
 export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
   const events: Array<OrderTimelineItem & { timestamp?: string | null }> = [
@@ -29,22 +26,35 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
       });
     }
     if (payment.status === "REJECTED") {
-      events.push({ label: `${installment} ditolak vendor`, date: timelineDate(payment.modifiedAt), timestamp: payment.modifiedAt });
+      events.push({
+        label: `${installment} ditolak vendor`,
+        date: timelineDate(payment.modifiedAt),
+        timestamp: payment.modifiedAt,
+      });
     }
     if (payment.status === "PAID") {
-      events.push({ label: `${installment} diverifikasi vendor`, date: timelineDate(payment.verifiedAt), timestamp: payment.verifiedAt });
+      events.push({
+        label: `${installment} diverifikasi vendor`,
+        date: timelineDate(payment.verifiedAt),
+        timestamp: payment.verifiedAt,
+      });
     }
   }
 
   if (CONFIRMED_STATUSES.includes(order.status)) {
-    events.push({ label: "Vendor mengonfirmasi pesanan", date: timelineDate(order.confirmedAt), timestamp: order.confirmedAt });
+    events.push({
+      label: "Vendor mengonfirmasi pesanan",
+      date: timelineDate(order.confirmedAt),
+      timestamp: order.confirmedAt,
+    });
   }
   if (ACTIVE_EXECUTION_STATUSES.includes(order.status)) {
-    if (order.status === "IN_PROGRESS") events.push({
-      label: "Vendor memulai pengerjaan",
-      date: timelineDate(order.modifiedAt),
-      timestamp: order.modifiedAt,
-    });
+    if (order.status === "IN_PROGRESS")
+      events.push({
+        label: "Vendor memulai pengerjaan",
+        date: timelineDate(order.modifiedAt),
+        timestamp: order.modifiedAt,
+      });
   }
   if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
     events.push({
@@ -54,10 +64,25 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
     });
   }
   if (order.status === "REJECTED_BY_VENDOR") {
-    events.push({ label: "Pesanan ditolak vendor", date: timelineDate(order.modifiedAt), timestamp: order.modifiedAt });
+    events.push({
+      label: "Pesanan ditolak vendor",
+      date: timelineDate(order.modifiedAt),
+      timestamp: order.modifiedAt,
+    });
   }
   if (order.status === "COMPLETED") {
-    events.push({ label: "Pesanan diselesaikan oleh customer", date: timelineDate(order.completedAt), timestamp: order.completedAt });
+    events.push({
+      label: "Pesanan diselesaikan oleh customer",
+      date: timelineDate(order.completedAt),
+      timestamp: order.completedAt,
+    });
+  }
+  if (order.status === "CANCELLED" || order.status === "DISPUTED") {
+    events.push({
+      label: order.status === "CANCELLED" ? "Pesanan dibatalkan" : "Pesanan dalam sengketa",
+      date: timelineDate(order.modifiedAt),
+      timestamp: order.modifiedAt,
+    });
   }
   return events
     .sort((left, right) => {

@@ -1,8 +1,11 @@
 "use client";
+import { shouldReloadResource } from "@/shared/api/errorCodes";
 
+import { readAllPages } from "@/shared/api/readAllPages";
 import { getAdminVendor, getAdminVendors, verifyVendor } from "@/features/admin/api/adminApi";
 import type { VendorAdminProfile } from "@/features/admin/types";
 import { getPayment, getPayments } from "@/features/payments/repository";
+import { PaymentProofHistory } from "@/features/orders/components/PaymentProofHistory";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
 import { rejectPayment, verifyPayment } from "@/features/orders/repository";
 import { paymentInstallmentLabel } from "@/features/orders/rules";
@@ -26,10 +29,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 const PAGE_SIZE = 10;
 
 export function AdminVendorVerificationPage() {
-  const list = usePaginatedResource(getAdminVendors, {
-    mapError: errorMessage,
-    pageSize: 1000,
-  });
+  const loader = useCallback(async (query: { filter?: string }) => {
+    const data = await readAllPages((pageNumber) =>
+      getAdminVendors({ filter: query.filter, pageNumber, pageSize: 100 }),
+    );
+    return { data, total: data.length };
+  }, []);
+  const list = usePaginatedResource(loader, { mapError: errorMessage, pageSize: PAGE_SIZE });
   const pending = useMemo(() => list.data.filter((vendor) => vendor.status === 2), [list.data]);
   const start = (list.page - 1) * PAGE_SIZE;
   const visible = pending.slice(start, start + PAGE_SIZE);
@@ -79,7 +85,10 @@ export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: stri
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
-    if (!Number.isInteger(id)) return setError("ID vendor tidak valid.");
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      setLoading(false);
+      return setError("ID vendor tidak valid.");
+    }
     setLoading(true);
     setError("");
     try {
@@ -326,7 +335,7 @@ export function PaymentDetail({ paymentId }: { paymentId: string }) {
     const result = await action.run(() => verifyPayment(paymentId), {
       successMessage: "Pembayaran berhasil diverifikasi.",
     });
-    if (result.success) await payment.reload();
+    if (result.success || shouldReloadResource(result.error)) await payment.reload();
   }
 
   async function reject(reason?: string) {
@@ -334,7 +343,7 @@ export function PaymentDetail({ paymentId }: { paymentId: string }) {
     const result = await action.run(() => rejectPayment(paymentId, reason), {
       successMessage: "Bukti pembayaran berhasil ditolak.",
     });
-    if (result.success) await payment.reload();
+    if (result.success || shouldReloadResource(result.error)) await payment.reload();
   }
 
   return (
@@ -344,7 +353,10 @@ export function PaymentDetail({ paymentId }: { paymentId: string }) {
     >
       <div className="grid gap-6 lg:grid-cols-2">
         {p.proofAttachmentId ? (
-          <PaymentProof attachmentId={p.proofAttachmentId} />
+          <div className="grid content-start gap-3">
+            <PaymentProof attachmentId={p.proofAttachmentId} />
+            <PaymentProofHistory proofs={p.proofs} />
+          </div>
         ) : (
           <PlaceholderPanel
             title="Bukti belum tersedia"

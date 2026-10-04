@@ -1,5 +1,5 @@
 "use client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 import { useCallback, useEffect, useState } from "react";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
 import { AppButton } from "@/shared/components/ui/AppButton";
@@ -79,29 +79,12 @@ export function NotificationPage() {
               description={t("notification.emptyDescription")}
             />
           )}
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <p>{t("notification.pagination", { page, pages, total })}</p>
-            <div className="flex gap-2">
-              <AppButton
-                variant="secondary"
-                aria-label={t("notification.previous")}
-                className="min-h-9 w-9 px-0"
-                disabled={page <= 1}
-                onClick={() => setPage((value) => value - 1)}
-              >
-                <ChevronLeft size={16} aria-hidden="true" />
-              </AppButton>
-              <AppButton
-                variant="secondary"
-                aria-label={t("notification.next")}
-                className="min-h-9 w-9 px-0"
-                disabled={page >= pages}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                <ChevronRight size={16} aria-hidden="true" />
-              </AppButton>
-            </div>
-          </div>
+          <Pagination
+            label="Halaman notifikasi"
+            page={page}
+            totalPages={pages}
+            onPageChange={setPage}
+          />
         </>
       )}
     </FeaturePage>

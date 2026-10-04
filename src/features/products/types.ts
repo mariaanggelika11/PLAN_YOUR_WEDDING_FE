@@ -7,6 +7,7 @@ export interface VendorProduct {
   name: string;
   description?: string | null;
   price: number;
+  maxOrdersPerDay?: number;
   minimumDp?: number | null;
   duration?: string | null;
   guestCapacity?: number | null;
@@ -28,6 +29,13 @@ export interface VendorProductPage {
 }
 
 export interface VendorProductQuery {
+  marketplace?: boolean;
+  category?: string;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minCapacity?: number;
+  sortBy?: "newest" | "price_asc" | "price_desc" | "rating" | "popular";
   filter?: string;
   vendorId?: number;
   status?: ProductStatus;

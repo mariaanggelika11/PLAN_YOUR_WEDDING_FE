@@ -16,6 +16,7 @@ export function useAsyncAction() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const actionId = useRef(0);
+  const pending = useRef(false);
 
   const clearFeedback = useCallback(() => {
     setError("");
@@ -24,6 +25,9 @@ export function useAsyncAction() {
 
   const run = useCallback(
     async <T>(action: () => Promise<T>, options: AsyncActionOptions = {}) => {
+      if (pending.current)
+        return { success: false as const, error: new Error("Permintaan sedang diproses.") };
+      pending.current = true;
       const currentAction = ++actionId.current;
       setLoading(true);
       clearFeedback();
@@ -43,6 +47,7 @@ export function useAsyncAction() {
         }
         return { error: actionError, success: false as const };
       } finally {
+        pending.current = false;
         if (currentAction === actionId.current) setLoading(false);
       }
     },

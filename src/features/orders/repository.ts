@@ -11,7 +11,10 @@ function queryString(query: OrderQuery) {
 }
 
 export function createOrder(payload: CreateOrderPayload) {
-  return authenticatedDataRequest<Order>(API_ROUTES.orders.root, { method: "POST", body: JSON.stringify(payload) });
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.root, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 export function getOrders(query: OrderQuery = {}) {
   return authenticatedDataRequest<OrderPage>(`${API_ROUTES.orders.root}${queryString(query)}`);
@@ -38,7 +41,10 @@ export function confirmOrder(id: string) {
   return authenticatedDataRequest<Order>(API_ROUTES.orders.confirm(id), { method: "PUT" });
 }
 export function rejectOrder(id: string, rejectReason: string) {
-  return authenticatedDataRequest<Order>(API_ROUTES.orders.reject(id), { method: "PUT", body: JSON.stringify({ rejectReason: rejectReason.trim() }) });
+  return authenticatedDataRequest<Order>(API_ROUTES.orders.reject(id), {
+    method: "PUT",
+    body: JSON.stringify({ rejectReason: rejectReason.trim() }),
+  });
 }
 export function startOrder(id: string) {
   return authenticatedDataRequest<Order>(API_ROUTES.orders.start(id), { method: "PUT" });
@@ -55,7 +61,10 @@ export function createRemainingPayment(id: string) {
 export function submitPaymentProof(paymentId: string, proof: File) {
   const body = new FormData();
   body.set("proof", proof);
-  return authenticatedDataRequest<OrderPayment>(API_ROUTES.orderPayments.proof(paymentId), { method: "PUT", body });
+  return authenticatedDataRequest<OrderPayment>(API_ROUTES.orderPayments.proof(paymentId), {
+    method: "PUT",
+    body,
+  });
 }
 export function verifyPayment(paymentId: string) {
   return authenticatedDataRequest<OrderPayment>(API_ROUTES.orderPayments.verify(paymentId), {
@@ -66,5 +75,13 @@ export function rejectPayment(paymentId: string, rejectReason: string) {
   return authenticatedDataRequest<OrderPayment>(API_ROUTES.orderPayments.reject(paymentId), {
     method: "PUT",
     body: JSON.stringify({ rejectReason: rejectReason.trim() }),
+  });
+}
+
+export function cancelOrder(id: string, reason: string) {
+  if (!reason.trim()) throw new Error("Alasan pembatalan wajib diisi.");
+  return authenticatedDataRequest<Order>(`${API_ROUTES.orders.byId(id)}/cancel`, {
+    method: "PUT",
+    body: JSON.stringify({ reason: reason.trim() }),
   });
 }

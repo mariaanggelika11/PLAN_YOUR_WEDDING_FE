@@ -6,6 +6,7 @@ import {
   VENDOR_PROFILE_PARAMETER_CODES,
 } from "@/features/parameters/constants";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges";
 import { ProfileError } from "@/features/profile/api/profileApi";
 import { CustomerProfileSections } from "@/features/profile/components/customer/CustomerProfileSections";
 import {
@@ -30,6 +31,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 type ProfileType = "customer" | "vendor";
 
 export function ProfileFormController({ type }: { type: ProfileType }) {
+  const unsaved = useUnsavedChanges();
   const masterParameters = useMasterParameters(
     type === "customer" ? CUSTOMER_PROFILE_PARAMETER_CODES : VENDOR_PROFILE_PARAMETER_CODES,
   );
@@ -62,6 +64,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
         form,
         masterParameters.getOptions(MASTER_PARAMETER_CODES.customerEventType),
       );
+      unsaved.markSaved();
       setMessage("Profile berhasil disimpan.");
     } catch (submitError) {
       setError(
@@ -87,6 +90,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
         const input = form.elements.namedItem("legalDocumentFile");
         if (input instanceof HTMLInputElement) input.value = "";
       }
+      if (!result.logoUploadFailed) unsaved.markSaved();
       if (result.logoUploadFailed)
         setError(
           "Profile berhasil disimpan, tetapi perubahan logo bisnis gagal diproses. Silakan coba lagi.",
@@ -112,6 +116,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
     startSaving("draft");
     try {
       await vendorResource.saveVerifiedProfile(activeStep, form, vendorProfile);
+      unsaved.markSaved();
       setMessage("Perubahan berhasil disimpan tanpa mengubah status verifikasi.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Perubahan gagal disimpan.");
@@ -157,6 +162,16 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
 
   return (
     <form
+      onChange={(event) => {
+        const input = event.target;
+        if (
+          (input instanceof HTMLInputElement ||
+            input instanceof HTMLSelectElement ||
+            input instanceof HTMLTextAreaElement) &&
+          input.name
+        )
+          unsaved.markDirty();
+      }}
       className="grid min-w-0 gap-5 rounded-xl border bg-white p-5 shadow-sm sm:p-7"
       onSubmit={(event: FormEvent<HTMLFormElement>) => event.preventDefault()}
     >

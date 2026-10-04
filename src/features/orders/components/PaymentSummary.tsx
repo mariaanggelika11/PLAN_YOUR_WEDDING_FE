@@ -1,27 +1,18 @@
+export { getPaymentSummary } from "@/features/orders/rules";
 import type { Order, OrderPayment } from "@/features/orders/types";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
-import { paymentInstallmentLabel, sortPaymentsByInstallment } from "@/features/orders/rules";
+import {
+  getPaymentSummary,
+  paymentInstallmentLabel,
+  sortPaymentsByInstallment,
+} from "@/features/orders/rules";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 
-export function getPaymentSummary(order: Pick<Order, "totalAmount" | "payments">) {
-  const payments = order.payments ?? [];
-  const paidAmount = sumPayments(payments, ["PAID"]);
-  const pendingVerificationAmount = sumPayments(payments, ["WAITING_VERIFICATION"]);
-  return {
-    paidAmount,
-    pendingVerificationAmount,
-    remainingAmount: Math.max(order.totalAmount - paidAmount, 0),
-    isFullyPaid: paidAmount >= order.totalAmount,
-  };
-}
-
-function sumPayments(payments: OrderPayment[], statuses: OrderPayment["status"][]) {
-  return payments
-    .filter((payment) => statuses.includes(payment.status))
-    .reduce((total, payment) => total + Number(payment.amount || 0), 0);
-}
-
-export function PaymentSummary({ order }: { order: Pick<Order, "totalAmount" | "payments"> }) {
+export function PaymentSummary({
+  order,
+}: {
+  order: Pick<Order, "totalAmount" | "payments" | "paidAmount" | "outstandingAmount">;
+}) {
   const summary = getPaymentSummary(order);
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">

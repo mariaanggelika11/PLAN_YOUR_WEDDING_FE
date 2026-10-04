@@ -1,8 +1,10 @@
 "use client";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Store } from "lucide-react";
+import { PortfolioGallery } from "@/features/profile/components/portfolio/Portfolio";
 import { getStore, getStoreProducts, getStoreReviews } from "./storeApi";
 import { MarketplaceProductCard } from "./MarketplaceExplorer";
 import { ReviewImage, RatingStars } from "@/features/reviews/components/ProductReviews";
@@ -11,7 +13,6 @@ import { useImageUpload } from "@/features/profile/hooks/useImageUpload";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { Tabs } from "@/shared/components/navigation/Interactive";
-import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { formatDate } from "@/shared/utils/formatDate";
 
@@ -27,7 +28,8 @@ export function StorePage({
   const loader = useCallback(() => getStore(vendorId), [vendorId]);
   const resource = useAsyncResource(loader, { initialData: null });
   if (resource.loading) return <LoadingSkeleton />;
-  if (resource.error) return <ErrorState retry={() => void resource.reload()} />;
+  if (resource.error)
+    return <ErrorState description={resource.error} retry={() => void resource.reload()} />;
   const store = resource.data;
   if (!store) return <EmptyState title="Toko tidak ditemukan" />;
   return (
@@ -47,6 +49,13 @@ export function StorePage({
               <BadgeCheck size={14} /> Terverifikasi
             </p>
           )}
+          <p className="mt-2 text-sm text-stone-500">
+            {store.stats.productCount} produk ·{" "}
+            {store.stats.reviewCount
+              ? `${Number(store.stats.averageRating).toFixed(1)} / 5 (${store.stats.reviewCount} ulasan)`
+              : "Belum ada ulasan"}{" "}
+            · {store.stats.soldCount} terjual
+          </p>
           {store.location && <p className="mt-2 text-sm text-stone-500">{store.location}</p>}
           {store.description && (
             <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-600">
@@ -59,6 +68,7 @@ export function StorePage({
         key={store.id}
         items={[
           { label: "Produk", content: <StoreProducts vendorId={store.id} role={role} /> },
+          { label: "Portofolio", content: <PortfolioGallery ids={store.portfolioAttachmentIds} /> },
           { label: "Ulasan", content: <StoreReviews vendorId={store.id} role={role} /> },
           {
             label: "Tentang toko",
@@ -149,11 +159,12 @@ function StoreProducts({ vendorId, role }: { vendorId: number; role: Marketplace
         />
       )}
       {result && (
-        <StorePagination
+        <Pagination
+          className="pt-4"
+          label="Halaman hasil toko"
           page={page}
-          pageSize={result.pageSize}
-          total={result.total}
-          onChange={setPage}
+          totalPages={Math.ceil(result.total / result.pageSize)}
+          onPageChange={setPage}
         />
       )}
     </div>
@@ -227,45 +238,14 @@ function StoreReviews({ vendorId, role }: { vendorId: number; role: MarketplaceR
         )}
       </div>
       {result && (
-        <StorePagination
+        <Pagination
+          className="pt-4"
+          label="Halaman hasil toko"
           page={page}
-          pageSize={result.pageSize}
-          total={result.total}
-          onChange={setPage}
+          totalPages={Math.ceil(result.total / result.pageSize)}
+          onPageChange={setPage}
         />
       )}
     </section>
-  );
-}
-
-function StorePagination({
-  page,
-  pageSize,
-  total,
-  onChange,
-}: {
-  page: number;
-  pageSize: number;
-  total: number;
-  onChange: (page: number) => void;
-}) {
-  if (page === 1 && total <= pageSize) return null;
-  return (
-    <nav
-      aria-label="Halaman hasil toko"
-      className="flex flex-wrap items-center justify-between gap-3 pt-4"
-    >
-      <AppButton variant="secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-        Sebelumnya
-      </AppButton>
-      <span className="text-sm text-stone-500">Halaman {page}</span>
-      <AppButton
-        variant="secondary"
-        disabled={page * pageSize >= total}
-        onClick={() => onChange(page + 1)}
-      >
-        Berikutnya
-      </AppButton>
-    </nav>
   );
 }

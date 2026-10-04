@@ -1,3 +1,4 @@
+import { readAllPages } from "@/shared/api/readAllPages";
 import type {
   AdminUser,
   AdminUserRole,
@@ -10,14 +11,12 @@ import { API_ROUTES } from "@/shared/config/apiRoutes";
 export async function getAdminUsers(query: AdminListQuery = {}) {
   const [users, roles] = await Promise.all([
     getPage<AdminUser>(API_ROUTES.users.root, query),
-    getPage<AdminUserRole>(API_ROUTES.userRoles.root, {
-      filter: query.filter,
-      pageNumber: 1,
-      pageSize: 1000,
-    }),
+    readAllPages((pageNumber) =>
+      getPage<AdminUserRole>(API_ROUTES.userRoles.root, { pageNumber, pageSize: 100 }),
+    ),
   ]);
   const rolesByUser = new Map<number, string[]>();
-  roles.data.forEach((role) => {
+  roles.forEach((role) => {
     rolesByUser.set(role.userId, [...(rolesByUser.get(role.userId) ?? []), role.roleName]);
   });
   return {
@@ -46,22 +45,15 @@ export async function verifyVendor(
   decision: "approve" | "reject",
   reason?: string,
 ) {
-  const approved = decision === "approve";
-  const status = approved ? 3 : 4;
-  const rejectReason = approved ? "" : reason?.trim();
-
-  await Promise.all(
-    (vendor.verificationDocuments ?? []).map((document) =>
-      request(API_ROUTES.verificationDocuments.byId(document.id), {
-        method: "PUT",
-        body: JSON.stringify({ status, rejectReason }),
-      }),
-    ),
+  if (vendor.status !== 2) throw new Error("Vendor tidak sedang menunggu verifikasi.");
+  if (decision === "reject" && !reason?.trim()) throw new Error("Alasan penolakan wajib diisi.");
+  return request<VendorAdminProfile>(
+    `${API_ROUTES.profile.vendorById(vendor.id)}/${decision === "approve" ? "verify" : "reject"}`,
+    {
+      method: "PUT",
+      ...(decision === "reject" ? { body: JSON.stringify({ rejectReason: reason!.trim() }) } : {}),
+    },
   );
-  return request<VendorAdminProfile>(API_ROUTES.profile.vendorById(vendor.id), {
-    method: "PUT",
-    body: JSON.stringify({ status, isVerified: approved, rejectReason }),
-  });
 }
 
 interface AdminListQuery {

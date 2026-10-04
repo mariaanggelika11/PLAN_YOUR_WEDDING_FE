@@ -1,20 +1,16 @@
 "use client";
 
-import { mockOrders } from "@/mocks/mockData";
 import { useVendorProfile } from "@/features/profile/hooks/useVendorProfile";
 import { canVendorSell, vendorDisplayStatus } from "@/features/profile/rules";
 import type { VendorApiProfile } from "@/features/profile/types";
-import { DashboardCard } from "@/shared/components/data-display/Cards";
-import { DataTable } from "@/shared/components/data-display/DataTable";
-import { PlaceholderPanel } from "@/shared/components/data-display/DetailBlocks";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { ROUTES } from "@/shared/config/routes";
 import { cn } from "@/shared/utils/cn";
-import { formatCurrency } from "@/shared/utils/formatCurrency";
 import Link from "next/link";
+import { OrderDashboard } from "@/features/dashboard/OrderDashboard";
 
 export function VendorDashboard() {
   const vendor = useVendorProfile();
@@ -39,7 +35,6 @@ export function VendorDashboard() {
     profile?.user?.fullname?.trim() ||
     "Vendor";
 
-  // TODO API: Ambil statistik paket, pesanan, dan pendapatan dari backend.
   return (
     <Page title="Seller Center" description="Pantau performa bisnis dan pesanan terbaru.">
       <section
@@ -61,28 +56,7 @@ export function VendorDashboard() {
           </AppButton>
         </div>
       </section>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard label="Total paket" value="12" />
-        <DashboardCard label="Pesanan masuk" value="8" />
-        <DashboardCard label="Pesanan selesai" value="146" />
-        <DashboardCard label="Pendapatan bulan ini" value={formatCurrency(184000000)} />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
-        <PlaceholderPanel
-          title="Ringkasan revenue"
-          description="Grafik pendapatan dan tren booking akan tampil di sini."
-        />
-        <DataTable
-          title="Pesanan terbaru"
-          columns={["Nomor", "Customer", "Status", "Total"]}
-          rows={mockOrders.map((o) => [
-            o.number,
-            o.customerName,
-            <StatusBadge status={o.status} />,
-            formatCurrency(o.total),
-          ])}
-        />
-      </div>
+      <OrderDashboard role="vendor" />
     </Page>
   );
 }

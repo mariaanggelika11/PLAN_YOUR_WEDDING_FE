@@ -1,4 +1,5 @@
 "use client";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { getVendorProductReviews } from "@/features/reviews/api";
@@ -7,7 +8,7 @@ import { compactCount } from "@/features/reviews/metrics";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 import { formatDate } from "@/shared/utils/formatDate";
-import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function ProductReviews({ product }: { product: VendorProduct }) {
@@ -106,25 +107,14 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
             </article>
           ))}
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-        <button
-          aria-label="Halaman sebelumnya"
-          className="pagination-button"
-          disabled={pageNumber === 1}
-          onClick={() => setPageNumber((page) => page - 1)}
-        >
-          <ChevronLeft size={16} aria-hidden="true" />
-        </button>
-        <span>Halaman {pageNumber}</span>
-        <button
-          aria-label="Halaman berikutnya"
-          className="pagination-button"
-          disabled={pageNumber * reviews.data.pageSize >= reviews.data.total}
-          onClick={() => setPageNumber((page) => page + 1)}
-        >
-          <ChevronRight size={16} aria-hidden="true" />
-        </button>
-      </div>
+      <Pagination
+        className="mt-4"
+        label="Halaman ulasan produk"
+        page={pageNumber}
+        totalPages={Math.ceil(reviews.data.total / reviews.data.pageSize)}
+        onPageChange={setPageNumber}
+        disabled={reviews.loading}
+      />
     </section>
   );
 }

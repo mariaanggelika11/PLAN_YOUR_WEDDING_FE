@@ -1,5 +1,3 @@
-import { marketplaceRepository } from "@/features/marketplace/repository";
-import { VendorCard } from "@/shared/components/data-display/Cards";
 import { SectionHeader } from "@/shared/components/data-display/SectionHeaders";
 import { PublicNavbar } from "@/shared/components/layout/PublicNavbar";
 import { AppButton } from "@/shared/components/ui/AppButton";
@@ -11,23 +9,13 @@ import {
   Building2,
   CalendarCheck2,
   Heart,
-  MapPin,
-  Search,
   Sparkles,
-  Star,
   Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-const stats = [
-  ["800+", "Vendor terverifikasi"],
-  ["12.000+", "Couple bergabung"],
-  ["4,9/5", "Rating pengalaman"],
-];
-
 export default function HomePage() {
-  // TODO API: Ambil featured categories, featured vendors, statistik, dan testimonial dari backend
   return (
     <main className="overflow-hidden">
       <PublicNavbar />
@@ -53,89 +41,11 @@ export default function HomePage() {
             Temukan vendor terverifikasi, bandingkan paket, kelola budget, dan pantau seluruh
             persiapan wedding dalam satu tempat.
           </p>
-          <div className="mt-8 grid max-w-3xl gap-2 rounded-xl border border-white/20 bg-white p-3 text-left text-ink md:grid-cols-[1fr_1fr_auto]">
-            <label className="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-stone-50">
-              <Search className="text-blush" size={19} />
-              <span>
-                <span className="block text-xs font-semibold text-stone-400">Layanan</span>
-                <input
-                  className="w-full bg-transparent text-sm outline-none"
-                  placeholder="Catering, dekorasi, venue..."
-                />
-              </span>
-            </label>
-            <label className="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-stone-50">
-              <MapPin className="text-blush" size={19} />
-              <span>
-                <span className="block text-xs font-semibold text-stone-400">Lokasi</span>
-                <input
-                  className="w-full bg-transparent text-sm outline-none"
-                  placeholder="Jakarta, Bandung..."
-                />
-              </span>
-            </label>
-            <AppButton asChild className="rounded-xl px-8">
-              <Link href={ROUTES.customer.marketplace}>
-                Cari Vendor <ArrowRight size={16} />
-              </Link>
-            </AppButton>
-          </div>
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-4">
-            {stats.map(([value, label]) => (
-              <div key={label}>
-                <p className="text-xl font-semibold md:text-2xl">{value}</p>
-                <p className="mt-1 text-xs text-stone-300 md:text-sm">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <SectionHeader
-            title="Semua kebutuhan dalam satu marketplace"
-            description="Mulai dari venue hingga detail terakhir perayaan Anda."
-          />
-          <Link className="text-sm font-semibold text-blush" href={ROUTES.customer.marketplace}>
-            Lihat semua kategori →
-          </Link>
-        </div>
-        <div className="mt-9 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {marketplaceRepository
-            .categories()
-            .slice(0, 12)
-            .map((category, index) => (
-              <Link
-                className="group rounded-xl border bg-white p-5 text-sm font-medium shadow-sm hover:border-rose-200 hover:bg-rose-50 hover:text-blush hover:shadow-soft"
-                href={ROUTES.customer.marketplace}
-                key={category.id}
-              >
-                <span className="mb-5 grid size-10 place-items-center rounded-xl bg-stone-100 text-stone-500 group-hover:bg-white group-hover:text-blush">
-                  {index % 2 ? <Heart size={17} /> : <Sparkles size={17} />}
-                </span>
-                {category.name}
-              </Link>
-            ))}
-        </div>
-      </section>
-
-      <section className="bg-white py-14 sm:py-20">
-        <div className="mx-auto max-w-7xl px-5">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <SectionHeader
-              title="Vendor pilihan untuk momen terbaik"
-              description="Vendor berkualitas dengan reputasi dan layanan yang telah diverifikasi."
-            />
-            <AppButton asChild variant="secondary" className="rounded-lg">
-              <Link href={ROUTES.customer.marketplace}>Jelajahi marketplace</Link>
-            </AppButton>
-          </div>
-          <div className="mt-9 grid gap-6 md:grid-cols-3">
-            {marketplaceRepository.vendors().map((vendor) => (
-              <VendorCard vendor={vendor} key={vendor.id} />
-            ))}
-          </div>
+          <AppButton asChild className="mt-8">
+            <Link href={ROUTES.customer.marketplace}>
+              Jelajahi paket vendor <ArrowRight size={16} />
+            </Link>
+          </AppButton>
         </div>
       </section>
 
@@ -183,12 +93,11 @@ export default function HomePage() {
 
       <section id="tentang" className="scroll-mt-24 px-5 py-12">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-xl bg-ink px-7 py-16 text-center text-white shadow-soft md:px-16">
-          <Star className="relative mx-auto fill-rose-300 text-rose-300" />
-          <blockquote className="relative mx-auto mt-6 max-w-3xl text-2xl font-medium leading-relaxed md:text-3xl">
-            &ldquo;Kami bisa fokus menikmati prosesnya karena semua vendor dan pembayaran tersusun
-            rapi.&rdquo;
-          </blockquote>
-          <p className="relative mt-5 text-sm text-stone-300">Sinta & Raka, Jakarta</p>
+          <h2 className="text-2xl font-semibold">Persiapan pernikahan dalam satu tempat</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-stone-300">
+            Bandingkan paket vendor, pantau pesanan dan pembayaran, serta susun tugas persiapan
+            sesuai kebutuhan acara Anda.
+          </p>
         </div>
       </section>
 

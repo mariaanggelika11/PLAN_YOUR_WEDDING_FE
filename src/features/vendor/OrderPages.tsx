@@ -1,4 +1,8 @@
 "use client";
+import { OrderConversation } from "@/features/orders/components/OrderConversation";
+import { shouldReloadResource, apiErrorStatus, isForbiddenResource } from "@/shared/api/errorCodes";
+import { canPayOrder } from "@/features/orders/rules";
+import { DisputeOrder } from "@/features/orders/components/DisputeOrder";
 
 import {
   confirmOrder,
@@ -17,6 +21,7 @@ import {
   sortPaymentsByInstallment,
 } from "@/features/orders/rules";
 import { buildOrderTimeline } from "@/features/orders/timeline";
+import { PaymentProofHistory } from "@/features/orders/components/PaymentProofHistory";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
 import { PaymentStagesCompact, PaymentSummary } from "@/features/orders/components/PaymentSummary";
 import type { Order, OrderPayment } from "@/features/orders/types";
@@ -115,7 +120,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => confirmOrder(orderId), {
       successMessage: "Pesanan berhasil diterima.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   async function rejectCurrentOrder(reason?: string) {
@@ -123,14 +128,14 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => rejectOrder(orderId, reason), {
       successMessage: "Pesanan berhasil ditolak.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   async function startCurrentOrder() {
     const result = await action.run(() => startOrder(orderId), {
       successMessage: "Pengerjaan pesanan dimulai.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   async function deliverCurrentOrder() {
@@ -144,7 +149,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => deliverOrder(orderId), {
       successMessage: "Layanan ditandai selesai dan menunggu konfirmasi customer.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   async function verifyCurrentPayment(paymentId: string) {
@@ -158,7 +163,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => verifyPayment(paymentId), {
       successMessage: "Pembayaran berhasil diverifikasi.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   async function rejectCurrentPayment(paymentId: string, reason?: string) {
@@ -166,12 +171,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => rejectPayment(paymentId, reason), {
       successMessage: "Bukti pembayaran ditolak. Customer dapat mengunggah ulang.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
 
   if (resource.loading) return <LoadingSkeleton />;
   if (resource.error) {
-    if (/tidak berhak|akses|forbidden/i.test(resource.error)) {
+    if (isForbiddenResource(resource.errorCause)) {
       return (
         <EmptyState
           title="Anda tidak memiliki akses"
@@ -179,7 +184,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         />
       );
     }
-    if (/not found|tidak ditemukan/i.test(resource.error))
+    if (apiErrorStatus(resource.errorCause) === 404)
       return <EmptyState title="Order tidak ditemukan" />;
     return <ErrorState retry={() => void resource.reload()} />;
   }
@@ -198,6 +203,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           <strong>Alasan penolakan pesanan:</strong> {order.rejectReason}
         </p>
       )}
+      <DisputeOrder order={order} onChanged={resource.reload} />
       <OrderOverview
         details={[
           ["Customer", order.customer.fullName],
@@ -213,6 +219,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         timeline={buildOrderTimeline(order)}
         paymentSummary={<PaymentSummary order={order} />}
       />
+      <OrderConversation key={order.id} orderId={order.id} />
 
       {!!order.payments?.length && (
         <section className="grid gap-4">
@@ -222,6 +229,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           />
           {sortPaymentsByInstallment(order.payments).map((item) => (
             <PaymentVerificationPanel
+              allowVerification={canPayOrder(order)}
               actionLoading={action.loading}
               key={item.id}
               onReject={(reason) => void rejectCurrentPayment(item.id, reason)}
@@ -246,11 +254,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 }
 
 function PaymentVerificationPanel({
+  allowVerification,
   actionLoading,
   onReject,
   onVerify,
   payment,
 }: {
+  allowVerification: boolean;
   actionLoading: boolean;
   onReject: (reason?: string) => void;
   onVerify: () => void;
@@ -276,7 +286,10 @@ function PaymentVerificationPanel({
 
       <div className="mt-5">
         {payment.proofAttachmentId ? (
-          <PaymentProof attachmentId={payment.proofAttachmentId} />
+          <>
+            <PaymentProof attachmentId={payment.proofAttachmentId} />
+            <PaymentProofHistory proofs={payment.proofs} />
+          </>
         ) : (
           <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-500">
             Customer belum mengunggah bukti pembayaran.
@@ -284,28 +297,30 @@ function PaymentVerificationPanel({
         )}
       </div>
 
-      {payment.status === "WAITING_VERIFICATION" && (
-        <div className="mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <AppButton
-            disabled={actionLoading || !payment.proofAttachmentId}
-            loading={actionLoading}
-            onClick={onVerify}
-          >
-            Verifikasi {paymentInstallmentLabel(payment.installment)}
-          </AppButton>
-          <PopupConfirm
-            description="Jelaskan alasan penolakan agar customer dapat memperbaiki bukti pembayaran."
-            onConfirm={onReject}
-            requireReason
-            title={`Tolak bukti ${paymentInstallmentLabel(payment.installment)}?`}
-            trigger={
-              <AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">
-                Tolak bukti
-              </AppButton>
-            }
-          />
-        </div>
-      )}
+      {allowVerification &&
+        payment.active !== false &&
+        payment.status === "WAITING_VERIFICATION" && (
+          <div className="mt-5 flex flex-wrap gap-3 border-t pt-5">
+            <AppButton
+              disabled={actionLoading || !payment.proofAttachmentId}
+              loading={actionLoading}
+              onClick={onVerify}
+            >
+              Verifikasi {paymentInstallmentLabel(payment.installment)}
+            </AppButton>
+            <PopupConfirm
+              description="Jelaskan alasan penolakan agar customer dapat memperbaiki bukti pembayaran."
+              onConfirm={onReject}
+              requireReason
+              title={`Tolak bukti ${paymentInstallmentLabel(payment.installment)}?`}
+              trigger={
+                <AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">
+                  Tolak bukti
+                </AppButton>
+              }
+            />
+          </div>
+        )}
     </section>
   );
 }

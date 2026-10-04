@@ -1,5 +1,11 @@
 "use client";
+import { OrderConversation } from "@/features/orders/components/OrderConversation";
+import { shouldReloadResource, apiErrorStatus, isForbiddenResource } from "@/shared/api/errorCodes";
+import { DisputeOrder } from "@/features/orders/components/DisputeOrder";
+import { CancelOrder } from "@/features/orders/components/CancelOrder";
+import { canPayOrder } from "@/features/orders/rules";
 
+import { PaymentProofHistory } from "@/features/orders/components/PaymentProofHistory";
 import { PaymentProof } from "@/features/orders/components/PaymentProof";
 import {
   getPaymentSummary,
@@ -139,24 +145,32 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => completeOrder(orderId), {
       successMessage: "Pesanan berhasil diselesaikan.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
   async function createSettlement() {
     const result = await action.run(() => createRemainingPayment(orderId), {
       successMessage: "Tagihan pelunasan berhasil dibuat.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
   const loader = useCallback(() => getOrder(orderId), [orderId]);
   const resource = useAsyncResource<Order | null>(loader, { initialData: null });
   if (resource.loading) return <LoadingSkeleton />;
-  if (resource.error) return <OrderAccessError error={resource.error} retry={resource.reload} />;
+  if (resource.error)
+    return (
+      <OrderAccessError
+        error={resource.error}
+        cause={resource.errorCause}
+        retry={resource.reload}
+      />
+    );
   const order = resource.data;
   if (!order) return <ErrorState retry={() => void resource.reload()} />;
   const payment = getCurrentPayment(order.payments);
   const paymentSummary = getPaymentSummary(order);
   const remainingPayment = order.payments?.find((item) => item.installment === "REMAINING");
   async function uploadAgain(paymentId: string, file: File) {
+    if (!order || !canPayOrder(order)) return;
     const validationError = validatePaymentProof(file);
     if (validationError) {
       popup.error(validationError);
@@ -165,7 +179,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     const result = await action.run(() => submitPaymentProof(paymentId, file), {
       successMessage: "Bukti pembayaran berhasil diunggah ulang.",
     });
-    if (result.success) await resource.reload();
+    if (result.success || shouldReloadResource(result.error)) await resource.reload();
   }
   return (
     <Page
@@ -177,6 +191,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           <strong>Pesanan ditolak:</strong> {order.rejectReason}
         </p>
       )}
+      <DisputeOrder order={order} onChanged={resource.reload} />
       <OrderOverview
         details={[
           ["Vendor", order.vendor.businessName],
@@ -191,6 +206,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         timeline={buildOrderTimeline(order)}
         paymentSummary={<PaymentSummary order={order} />}
       />
+      <OrderConversation key={order.id} orderId={order.id} />
       {!!order.payments?.length && (
         <section className="grid gap-4">
           <SectionHeader
@@ -200,6 +216,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           {sortPaymentsByInstallment(order.payments).map((item) => (
             <CustomerPaymentPanel
               key={item.id}
+              allowUpload={canPayOrder(order)}
               loading={action.loading}
               onUpload={(file) => void uploadAgain(item.id, file)}
               payment={item}
@@ -247,6 +264,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           </AppButton>
         </section>
       )}
+      <CancelOrder order={order} onCancelled={resource.reload} />
       {order.status === "COMPLETED" && <CustomerReviewSection order={order} />}
       {order.status === "PENDING_PAYMENT" && payment?.status === "WAITING_PAYMENT" && (
         <Link className="font-semibold text-blush" href={ROUTES.customer.payment(order.id)}>
@@ -270,7 +288,14 @@ export function ReviewPage({ orderId }: { orderId: string }) {
   );
 
   if (resource.loading) return <LoadingSkeleton />;
-  if (resource.error) return <OrderAccessError error={resource.error} retry={resource.reload} />;
+  if (resource.error)
+    return (
+      <OrderAccessError
+        error={resource.error}
+        cause={resource.errorCause}
+        retry={resource.reload}
+      />
+    );
   const data = resource.data;
   if (!data) return <ErrorState retry={() => void resource.reload()} />;
   const { order, review } = data;
@@ -301,7 +326,8 @@ export function ReviewPage({ orderId }: { orderId: string }) {
           const result = await action.run(() => createVendorProductReview(orderId, form), {
             successMessage: "Ulasan berhasil dikirim.",
           });
-          if (result.success) router.replace(ROUTES.customer.order(orderId));
+          if (result.success || shouldReloadResource(result.error))
+            router.replace(ROUTES.customer.order(orderId));
         }}
       />
     </Page>
@@ -542,16 +568,18 @@ function ReviewForm({
 }
 
 function CustomerPaymentPanel({
+  allowUpload,
   loading,
   onUpload,
   payment,
 }: {
+  allowUpload: boolean;
   loading: boolean;
   onUpload: (file: File) => void;
   payment: OrderPayment;
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const canUploadAgain = payment.status === "REJECTED";
+  const canUploadAgain = allowUpload && payment.active !== false && payment.status === "REJECTED";
 
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
@@ -573,7 +601,10 @@ function CustomerPaymentPanel({
 
       <div className="mt-5">
         {payment.proofAttachmentId ? (
-          <PaymentProof attachmentId={payment.proofAttachmentId} />
+          <>
+            <PaymentProof attachmentId={payment.proofAttachmentId} />
+            <PaymentProofHistory proofs={payment.proofs} />
+          </>
         ) : (
           <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-500">
             Bukti pembayaran belum diunggah.
@@ -585,7 +616,8 @@ function CustomerPaymentPanel({
         <div className="mt-5 border-t pt-5">
           <h3 className="font-semibold text-ink">Upload ulang bukti</h3>
           <p className="mt-1 text-sm text-stone-500">
-            Perbaiki bukti sesuai alasan penolakan vendor. File sebelumnya akan diganti.
+            Perbaiki bukti sesuai alasan penolakan vendor. Bukti sebelumnya tetap tersimpan dalam
+            riwayat.
           </p>
           <label className="mt-4 grid cursor-pointer place-items-center rounded-xl border-2 border-dashed bg-stone-50 p-6 text-center hover:border-blush hover:bg-rose-50">
             <input
@@ -614,9 +646,17 @@ function CustomerPaymentPanel({
   );
 }
 
-function OrderAccessError({ error, retry }: { error: string; retry: () => Promise<unknown> }) {
-  const forbidden = /tidak berhak|akses|forbidden/i.test(error);
-  const missing = /not found|tidak ditemukan/i.test(error);
+function OrderAccessError({
+  error,
+  cause,
+  retry,
+}: {
+  error: string;
+  cause: unknown;
+  retry: () => Promise<unknown>;
+}) {
+  const forbidden = isForbiddenResource(cause);
+  const missing = apiErrorStatus(cause) === 404;
   if (forbidden || missing)
     return (
       <EmptyState
@@ -626,7 +666,7 @@ function OrderAccessError({ error, retry }: { error: string; retry: () => Promis
         }
       />
     );
-  return <ErrorState retry={() => void retry()} />;
+  return <ErrorState description={error} retry={() => void retry()} />;
 }
 
 export function ReviewList() {

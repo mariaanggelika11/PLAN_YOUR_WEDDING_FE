@@ -15,18 +15,23 @@ export function useAsyncResource<T>(
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(autoLoad);
   const [error, setError] = useState("");
+  const [errorCause, setErrorCause] = useState<unknown>(null);
   const requestId = useRef(0);
 
   const reload = useCallback(async () => {
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError("");
+    setErrorCause(null);
     try {
       const result = await loader();
       if (currentRequest === requestId.current) setData(result);
       return result;
     } catch (loadError) {
-      if (currentRequest === requestId.current) setError(mapError(loadError));
+      if (currentRequest === requestId.current) {
+        setError(mapError(loadError));
+        setErrorCause(loadError);
+      }
       return undefined;
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
@@ -40,7 +45,7 @@ export function useAsyncResource<T>(
     };
   }, [autoLoad, reload]);
 
-  return { data, error, loading, reload, setData };
+  return { data, error, errorCause, loading, reload, setData };
 }
 
 function defaultErrorMessage(error: unknown) {

@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const role = request.cookies.get("pyw_role")?.value;
   const area = request.nextUrl.pathname.split("/")[1]?.toUpperCase();
-  if (!role) {
+  if (!role || !["CUSTOMER", "VENDOR", "ADMIN"].includes(role)) {
     const loginUrl = new URL(ROUTES.login, request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);

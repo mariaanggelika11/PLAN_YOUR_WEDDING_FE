@@ -142,7 +142,8 @@ export function vendorFormToPayload(form: HTMLFormElement) {
   ] as const;
   fields.forEach((field) => {
     const value = formValue(form, field);
-    if (value) data.set(field, field === "businessEmail" ? value.toLowerCase() : value);
+    if (value || (field === "serviceArea" && new FormData(form).has(field)))
+      data.set(field, field === "businessEmail" ? value.toLowerCase() : value);
   });
   data.set("categories", serializeCategoryValues(formValues(form, "categories")));
   return data;

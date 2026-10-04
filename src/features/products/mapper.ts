@@ -16,6 +16,7 @@ export function productFormToPayload(
     dp: "minimumDp",
     duration: "duration",
     capacity: "guestCapacity",
+    maxOrdersPerDay: "maxOrdersPerDay",
     area: "serviceArea",
     terms: "terms",
   } as const;

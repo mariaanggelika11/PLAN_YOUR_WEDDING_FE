@@ -37,13 +37,13 @@ export function EmptyState({
     </div>
   );
 }
-export function ErrorState({ retry }: { retry?: () => void }) {
+export function ErrorState({ retry, description }: { retry?: () => void; description?: string }) {
   const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-6">
       <AlertCircle className="mb-2 text-red-600" />
       <h3 className="font-semibold text-red-800">{t("error.loadTitle")}</h3>
-      <p className="mt-1 text-sm text-red-700">{t("error.loadDescription")}</p>
+      <p className="mt-1 text-sm text-red-700">{description ?? t("error.loadDescription")}</p>
       {retry && (
         <AppButton className="mt-4" variant="secondary" onClick={retry}>
           {t("error.retry")}

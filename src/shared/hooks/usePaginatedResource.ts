@@ -12,6 +12,7 @@ export interface PaginationQuery {
 interface PaginatedResult<T> {
   data: T[];
   total: number;
+  pageSize?: number;
 }
 
 export function usePaginatedResource<T>(
@@ -20,6 +21,7 @@ export function usePaginatedResource<T>(
 ) {
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
+  const [effectivePageSize, setEffectivePageSize] = useState(pageSize);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ export function usePaginatedResource<T>(
       if (currentRequest === requestId.current) {
         setData(result.data);
         setTotal(result.total);
+        setEffectivePageSize(result.pageSize && result.pageSize > 0 ? result.pageSize : pageSize);
       }
     } catch (loadError) {
       if (currentRequest === requestId.current) setError(mapError(loadError));
@@ -60,7 +63,19 @@ export function usePaginatedResource<T>(
     setPage(1);
   }
 
-  return { changeSearch, data, error, loading, page, reload, search, setData, setPage, total };
+  return {
+    changeSearch,
+    data,
+    error,
+    loading,
+    page,
+    reload,
+    search,
+    setData,
+    setPage,
+    total,
+    pageSize: effectivePageSize,
+  };
 }
 
 function defaultErrorMessage(error: unknown) {

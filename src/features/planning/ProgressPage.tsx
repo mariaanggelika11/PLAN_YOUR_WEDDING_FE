@@ -1,4 +1,5 @@
 "use client";
+import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -6,7 +7,6 @@ import {
   ArrowRight,
   CalendarDays,
   Check,
-  ChevronLeft,
   ChevronRight,
   Download,
   Heart,
@@ -145,7 +145,6 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   const pageSize = query.pageSize ?? 10;
   const totalPages = Math.max(1, Math.ceil(taskTotal / pageSize));
   const currentPage = query.pageNumber ?? 1;
-  const pageStart = (currentPage - 1) * pageSize;
   const paginatedTasks = progress.tasks.loading || progress.tasks.error ? [] : visible;
   return (
     <FeaturePage
@@ -389,38 +388,13 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     ))}
                   </div>
                   {!progress.tasks.loading && !progress.tasks.error && taskTotal > 0 && (
-                    <nav
-                      aria-label="Halaman daftar tugas"
-                      className="flex flex-wrap items-center justify-between gap-3 border-t p-5 text-sm text-stone-500 sm:px-6"
-                    >
-                      <p>
-                        {pageStart + 1}–{Math.min(pageStart + visible.length, taskTotal)} dari{" "}
-                        {taskTotal} tugas
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <AppButton
-                          variant="secondary"
-                          disabled={currentPage === 1}
-                          onClick={() => setPage(currentPage - 1)}
-                          className="min-h-9 w-9 px-0"
-                          aria-label="Halaman sebelumnya"
-                        >
-                          <ChevronLeft size={16} aria-hidden="true" />
-                        </AppButton>
-                        <span aria-live="polite">
-                          {currentPage} / {totalPages}
-                        </span>
-                        <AppButton
-                          variant="secondary"
-                          disabled={currentPage === totalPages}
-                          onClick={() => setPage(currentPage + 1)}
-                          className="min-h-9 w-9 px-0"
-                          aria-label="Halaman berikutnya"
-                        >
-                          <ChevronRight size={16} aria-hidden="true" />
-                        </AppButton>
-                      </div>
-                    </nav>
+                    <Pagination
+                      className="border-t p-4"
+                      label="Halaman daftar tugas"
+                      page={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setPage}
+                    />
                   )}
                   {!progress.tasks.loading && !progress.tasks.error && !visible.length && (
                     <div className="p-8 text-center">
