@@ -182,18 +182,30 @@ export function getSession(): AuthSession | null {
   }
 }
 
+/**
+ * Clears the local session first so the UI is locked out immediately, then asks the backend to
+ * revoke the token. Revocation is best-effort: a network failure must not keep the user signed in.
+ */
 export async function logout(): Promise<void> {
   const accessToken = getSession()?.accessToken;
+  expireSession();
+  if (!accessToken) return;
 
   try {
     await apiRequest<ApiResponse<null>>(API_ROUTES.auth.logout, {
       method: "POST",
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      keepalive: true,
     });
-  } finally {
-    clearSession();
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("pyw-auth-change"));
+  } catch {
+    // Token yang sudah expired/dicabut menghasilkan 401 — sesi lokal sudah dihapus di atas.
   }
+}
+
+/** Drops the local session and notifies listeners (other hooks, providers, tabs via storage). */
+export function expireSession() {
+  clearSession();
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("pyw-auth-change"));
 }
 
 export function getDashboardRoute(role: UserRole) {

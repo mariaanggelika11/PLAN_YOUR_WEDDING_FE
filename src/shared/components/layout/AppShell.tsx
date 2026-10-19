@@ -40,7 +40,15 @@ export function AppShell(props: AppShellProps) {
 function AppShellContent({ role, label, nav, children }: AppShellProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Sesi bisa hilang di tengah jalan: logout di tab lain, token dicabut/expired (401).
+  useEffect(() => {
+    if (isLoading || isAuthenticated) return;
+    router.replace(`${ROUTES.login}?next=${encodeURIComponent(pathname)}`);
+  }, [isAuthenticated, isLoading, pathname, router]);
   const [pageHeader, setPageHeader] = useState<ShellPageHeader | null>(null);
   const dark = false;
   const translatedLabel = t(

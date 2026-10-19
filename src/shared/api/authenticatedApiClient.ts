@@ -1,4 +1,4 @@
-import { getSession } from "@/features/auth/api/authApi";
+import { expireSession, getSession } from "@/features/auth/api/authApi";
 import { API_BASE_URL, ApiError, apiRequest } from "@/shared/api/apiClient";
 import type { ApiResponse } from "@/shared/types/api";
 
@@ -11,12 +11,17 @@ export function getAuthenticatedContext() {
   };
 }
 
-export function authenticatedRequest<T>(path: string, init?: RequestInit) {
+export async function authenticatedRequest<T>(path: string, init?: RequestInit) {
   const { accessToken } = getAuthenticatedContext();
-  return apiRequest<T>(path, {
-    ...init,
-    headers: withBearerToken(init?.headers, accessToken),
-  });
+  try {
+    return await apiRequest<T>(path, {
+      ...init,
+      headers: withBearerToken(init?.headers, accessToken),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) expireSession();
+    throw error;
+  }
 }
 
 export async function authenticatedDataRequest<T>(path: string, init?: RequestInit) {
@@ -40,14 +45,17 @@ export async function featureDataRequest<T>(
 
 export async function authenticatedFetch(path: string, init?: RequestInit) {
   const { accessToken } = getAuthenticatedContext();
+  let response: Response;
   try {
-    return await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: withBearerToken(init?.headers, accessToken),
     });
   } catch {
     throw new ApiError("Tidak dapat terhubung ke server.", 0);
   }
+  if (response.status === 401) expireSession();
+  return response;
 }
 
 function withBearerToken(headers: HeadersInit | undefined, accessToken: string) {
