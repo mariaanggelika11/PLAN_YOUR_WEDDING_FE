@@ -106,8 +106,11 @@ export function ParameterForm({
               value={detail.code}
               onChange={(event) => updateDetail(index, { code: event.target.value })}
             />
-            <AppInput
+            <AppTextarea
               label="Deskripsi"
+              rows={1}
+              wrap="off"
+              className="min-h-0 resize-none overflow-x-auto whitespace-pre"
               value={detail.description ?? ""}
               onChange={(event) => updateDetail(index, { description: event.target.value })}
             />
