@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { getOrders } from "@/features/orders/repository";
 import type { Order } from "@/features/orders/types";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
@@ -21,6 +21,7 @@ import {
 import { dueGuidance } from "../format";
 import { usePlanningMutation } from "../usePlanningMutation";
 import { usePlanningModalBusy } from "./PlanningModal";
+import { usePopup } from "@/shared/components/feedback/Popup";
 
 const orderLoader = () => getOrders({ pageNumber: 1, pageSize: 100 });
 export function TaskEditor({
@@ -29,15 +30,19 @@ export function TaskEditor({
   today,
   onSave,
   onCancel,
+  onDelete,
 }: {
   task: WeddingTask;
   weddingDate: string;
   today: string;
   onSave: (task: WeddingTask) => Promise<void>;
   onCancel: () => void;
+  onDelete?: () => Promise<void>;
 }) {
   const [draft, setDraft] = useState(task);
   const mutation = usePlanningMutation();
+  const { confirm } = usePopup();
+  const [deleting, setDeleting] = useState(false);
   usePlanningModalBusy(mutation.busy);
   const [subtask, setSubtask] = useState("");
   const orders = useAsyncResource(orderLoader, { initialData: null });
@@ -46,6 +51,25 @@ export function TaskEditor({
     e.preventDefault();
     if (draft.title.trim())
       void mutation.run(() => onSave({ ...draft, title: draft.title.trim() }));
+  }
+  async function remove() {
+    if (!onDelete || !task.id) return;
+    await mutation.run(async () => {
+      const result = await confirm({
+        title: "Hapus tugas ini?",
+        message: `“${task.title}” beserta subtugasnya akan dihapus. Pesanan terkait tetap tersimpan. Tugas template dapat muncul kembali jika template diterapkan ulang melalui Atur rencana.`,
+        variant: "warning",
+        confirmLabel: "Ya, hapus tugas",
+        cancelLabel: "Kembali",
+      });
+      if (!result.confirmed) return;
+      setDeleting(true);
+      try {
+        await onDelete();
+      } finally {
+        setDeleting(false);
+      }
+    });
   }
   return (
     <form onSubmit={submit} className="grid gap-5">
@@ -219,13 +243,25 @@ export function TaskEditor({
           Penanggung jawab dicatat untuk koordinasi; belum mengirim undangan atau notifikasi.
           Menautkan pesanan tidak otomatis menyelesaikan tugas.
         </p>
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white py-4">
-          <AppButton type="button" variant="secondary" onClick={onCancel}>
-            Batal
-          </AppButton>
-          <AppButton type="submit" disabled={mutation.busy}>
-            {mutation.busy ? "Menyimpan…" : "Simpan tugas"}
-          </AppButton>
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-white py-4">
+          {onDelete && task.id && (
+            <AppButton
+              type="button"
+              variant="danger"
+              disabled={mutation.busy}
+              onClick={() => void remove()}
+            >
+              <Trash2 size={16} /> {deleting ? "Menghapus…" : "Hapus tugas"}
+            </AppButton>
+          )}
+          <div className="ml-auto flex flex-wrap justify-end gap-3">
+            <AppButton type="button" variant="secondary" onClick={onCancel}>
+              Batal
+            </AppButton>
+            <AppButton type="submit" disabled={mutation.busy}>
+              {mutation.busy ? "Menyimpan…" : "Simpan tugas"}
+            </AppButton>
+          </div>
         </div>
       </fieldset>
     </form>

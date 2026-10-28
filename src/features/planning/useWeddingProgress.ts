@@ -19,21 +19,25 @@ export function useWeddingProgress() {
   const debouncedSearch = useDebounce(search);
   const plan = useAsyncResource(repository.getWeddingPlan, { initialData: null });
   const summary = useAsyncResource(planningService.getSummary, { initialData: null });
-  const taskLoader = useCallback(() => repository.getWeddingTasks(query), [query]);
-  const tasks = useAsyncResource(taskLoader, { initialData: null });
+  const { pageNumber: _pageNumber, pageSize: _pageSize, ...filters } = query;
+  const filterKey = JSON.stringify(filters);
+  const globalTasks = useAsyncResource(planningService.getAllTasks, { initialData: null });
+  const hasFilters = Object.entries(filters).some(([key, value]) =>
+    key === "sortBy" ? value !== "due_asc" : value !== undefined && value !== "",
+  );
+  const taskLoader = useCallback(
+    () => planningService.getAllTasks(JSON.parse(filterKey) as WeddingTaskQuery),
+    [filterKey],
+  );
+  const filteredTasks = useAsyncResource(taskLoader, { initialData: null, autoLoad: hasFilters });
+  const taskCollection = hasFilters ? filteredTasks : globalTasks;
+  const tasks = taskCollection;
   const previousSearch = useRef(debouncedSearch);
   useEffect(() => {
     if (previousSearch.current === debouncedSearch) return;
     previousSearch.current = debouncedSearch;
     setQuery((current) => ({ ...current, filter: debouncedSearch, pageNumber: 1 }));
   }, [debouncedSearch]);
-  useEffect(() => {
-    if (!tasks.data || tasks.loading || tasks.error) return;
-    const lastPage = Math.max(1, Math.ceil(tasks.data.total / (query.pageSize ?? 10)));
-    if ((query.pageNumber ?? 1) > lastPage) {
-      setQuery((current) => ({ ...current, pageNumber: lastPage }));
-    }
-  }, [tasks.data, tasks.loading, tasks.error, query.pageNumber, query.pageSize]);
 
   function changeFilters(next: Partial<WeddingTaskQuery>) {
     setQuery((current) => ({ ...current, ...next, pageNumber: 1 }));
@@ -44,19 +48,24 @@ export function useWeddingProgress() {
     setQuery((current) => ({ pageNumber: 1, pageSize: current.pageSize, sortBy: current.sortBy }));
   }
   async function refresh() {
-    await Promise.allSettled([summary.reload(), tasks.reload()]);
+    await Promise.allSettled([
+      summary.reload(),
+      globalTasks.reload(),
+      ...(hasFilters ? [filteredTasks.reload()] : []),
+    ]);
   }
 
   return {
     plan,
     summary,
     tasks,
+    allTasks: taskCollection.data ?? [],
+    globalTasks,
     query,
     search,
     setSearch,
     changeFilters,
     resetFilters,
-    setPage: (pageNumber: number) => setQuery((current) => ({ ...current, pageNumber })),
     refresh,
   };
 }

@@ -1,20 +1,8 @@
 "use client";
-import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Download,
-  Heart,
-  Plus,
-  Search,
-  Settings2,
-  ClipboardCheck,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Download, Plus, Settings2 } from "lucide-react";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile } from "@/features/profile/types";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
@@ -28,8 +16,6 @@ import {
   categories,
   dateOffset,
   daysUntil,
-  isPending,
-  setTaskStatus,
   statuses,
   todayDate,
   type PlanSettings,
@@ -42,6 +28,7 @@ import {
   getWeddingTask,
   createWeddingTask,
   updateWeddingTask,
+  deleteWeddingTask,
   saveWeddingPlan,
 } from "./repository";
 import { planningService, useWeddingProgress } from "./useWeddingProgress";
@@ -50,7 +37,10 @@ import { usePlanningMutation } from "./usePlanningMutation";
 import { PlanningModal as Modal } from "./components/PlanningModal";
 import { SettingsForm } from "./components/SettingsForm";
 import { TaskEditor } from "./components/TaskEditor";
-import { displayDate, dueLabel } from "./format";
+import { displayDate } from "./format";
+import { PlanningCalendar } from "./components/PlanningCalendar";
+import { OverdueReminder } from "./components/OverdueReminder";
+import { upcomingTasks } from "./calendar";
 
 export function ProgressPage() {
   const profile = useProfileData("customer");
@@ -75,6 +65,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   const progress = useWeddingProgress();
   const mutation = usePlanningMutation();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newTaskDate, setNewTaskDate] = useState("");
   const [showDeadlineGuide, setShowDeadlineGuide] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -89,7 +80,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
     [selected],
   );
   const detail = useAsyncResource(detailLoader, { initialData: null, autoLoad: Boolean(selected) });
-  const { query, search, setSearch, changeFilters, setPage } = progress;
+  const { query, search, setSearch, changeFilters } = progress;
   const category = query.category ?? "";
   const filter = query.overdue ? "LATE" : (query.status ?? "ALL");
   const sortOrder = query.sortBy ?? "due_asc";
@@ -140,15 +131,9 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   const settings = defaultSettings;
   const days = settings.date ? daysUntil(settings.date, today) : null;
   const selectedTask = detail.data?.id === selected ? detail.data : null;
-  const visible = progress.tasks.data?.data ?? [];
-  const taskTotal = progress.tasks.data?.total ?? 0;
-  const pageSize = query.pageSize ?? 10;
-  const totalPages = Math.max(1, Math.ceil(taskTotal / pageSize));
-  const currentPage = query.pageNumber ?? 1;
-  const paginatedTasks = progress.tasks.loading || progress.tasks.error ? [] : visible;
   return (
     <FeaturePage
-      title="Persiapan pernikahan"
+      title="Wedding Progress"
       description="Langkah kecil menuju hari istimewa."
       showHeader={false}
     >
@@ -162,254 +147,223 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
           </div>
         )}
         {progress.summary.error && <ErrorState retry={() => void progress.summary.reload()} />}
-        {!hasTasks ? (
-          <section className="rounded-xl border border-rose-100 bg-white p-6 sm:p-10">
-            <span className="inline-flex rounded-xl bg-white p-3 text-blush shadow-sm">
-              <Heart size={28} />
-            </span>
-            <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-blush">
-              Rencana untuk hari istimewamu
-            </p>
-            <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight text-ink">
-              Persiapan pernikahan, satu langkah setiap hari.
-            </h2>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-stone-600">
-              Mulai dengan template dari perencanaan awal hingga setelah acara. Sesuaikan dengan
-              kebutuhanmu, bagi tanggung jawab, dan centang setiap kemajuan.
-            </p>
-            <div className="my-7 grid gap-3 sm:grid-cols-3">
-              {[
-                "Checklist siap disesuaikan",
-                "Tenggat mengikuti hari acara",
-                "Catatan dan pesanan dalam tugas",
-              ].map((label) => (
-                <div key={label} className="flex gap-2 rounded-xl border bg-white/80 p-4 text-sm">
-                  <Check size={18} className="shrink-0 text-blush" />
-                  {label}
-                </div>
-              ))}
+        <section className="overflow-hidden rounded-xl border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <h2 className="text-lg font-semibold text-ink sm:text-2xl">
+                {days === null
+                  ? "Hari istimewamu dimulai dari sini"
+                  : days > 0
+                    ? `${days} hari menuju hari istimewa`
+                    : days === 0
+                      ? "Selamat menikmati hari pernikahanmu!"
+                      : "Lengkapi langkah setelah pernikahan"}
+              </h2>
+              <p className="mt-2 flex items-center gap-2 text-sm text-stone-500">
+                <CalendarDays size={16} />
+                {displayDate(settings.date)}
+                {settings.event && ` · ${settings.event.replaceAll("_", " ")}`}
+              </p>
             </div>
-            <AppButton onClick={() => setSettingsOpen(true)}>
-              <ClipboardCheck size={17} /> Buat checklist pernikahanku
+            <AppButton variant="secondary" onClick={() => setSettingsOpen(true)}>
+              <Settings2 size={16} /> {hasTasks ? "Atur rencana" : "Buat checklist pernikahanku"}
             </AppButton>
-            <p className="mt-4 text-xs leading-5 text-stone-500">
-              Checklist tersimpan di akunmu dan bisa dibuka dari perangkat lain.
+          </div>
+          <div className="mt-5 grid items-center gap-5 lg:grid-cols-[1.5fr_1fr]">
+            <div>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="font-medium text-ink">Tugas selesai</p>
+                  <p className="mt-1 text-xs text-stone-500">
+                    {summary.completed} dari {summary.total} tugas yang diperlukan
+                  </p>
+                </div>
+                <strong className="text-3xl font-semibold text-blush">{summary.percent}%</strong>
+              </div>
+              <div
+                role="progressbar"
+                aria-label="Tugas persiapan selesai"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={summary.percent}
+                className="mt-3 h-2.5 overflow-hidden rounded-full bg-rose-100"
+              >
+                <div
+                  className="h-full rounded-full bg-blush transition-colors"
+                  style={{ width: `${summary.percent}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-xs leading-6 text-stone-500">
+              {summary.pending} perlu dikerjakan · {summary.important} tugas penting
             </p>
-          </section>
+          </div>
+        </section>
+        {!progress.globalTasks.data && progress.globalTasks.loading ? (
+          <p role="status" className="text-xs text-stone-500">
+            Memeriksa tugas terlambat…
+          </p>
+        ) : progress.globalTasks.error ? (
+          <ErrorState
+            description="Pengingat tugas terlambat belum dapat dimuat."
+            retry={() => void progress.globalTasks.reload()}
+          />
         ) : (
-          <>
-            <section className="overflow-hidden rounded-xl border border-rose-100 bg-white p-6 sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-5">
-                <div>
-                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-blush">
-                    <Heart size={16} /> Persiapan pernikahan
-                  </p>
-                  <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">
-                    {days === null
-                      ? "Hari istimewamu dimulai dari sini"
-                      : days > 0
-                        ? `${days} hari menuju hari istimewa`
-                        : days === 0
-                          ? "Selamat menikmati hari pernikahanmu!"
-                          : "Lengkapi langkah setelah pernikahan"}
-                  </h2>
-                  <p className="mt-3 flex items-center gap-2 text-sm text-stone-500">
-                    <CalendarDays size={16} />
-                    {displayDate(settings.date)}
-                    {settings.event && ` · ${settings.event.replaceAll("_", " ")}`}
-                  </p>
-                </div>
-                <AppButton variant="secondary" onClick={() => setSettingsOpen(true)}>
-                  <Settings2 size={16} /> Atur rencana
-                </AppButton>
-              </div>
-              <div className="mt-7 grid items-center gap-6 lg:grid-cols-[1.2fr_1fr]">
-                <div>
-                  <div className="flex items-end justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-ink">Tugas selesai</p>
-                      <p className="mt-1 text-xs text-stone-500">
-                        {summary.completed} dari {summary.total} tugas yang diperlukan
-                      </p>
-                    </div>
-                    <strong className="text-3xl font-semibold text-blush">
-                      {summary.percent}%
-                    </strong>
+          <OverdueReminder
+            tasks={progress.globalTasks.data ?? []}
+            today={today}
+            busy={mutation.busy}
+            onOpen={setSelected}
+            onUpdate={patch}
+          />
+        )}
+        <div className="grid items-start gap-5">
+          <div className="grid min-w-0 gap-6">
+            <section className="overflow-hidden rounded-xl border bg-white">
+              <div className="grid gap-4 border-b p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-ink">Kalender persiapan</h2>
                   </div>
-                  <div
-                    role="progressbar"
-                    aria-label="Tugas persiapan selesai"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={summary.percent}
-                    className="mt-3 h-2.5 overflow-hidden rounded-full bg-rose-100"
-                  >
-                    <div
-                      className="h-full rounded-full bg-blush transition-colors"
-                      style={{ width: `${summary.percent}%` }}
+                  <div className="flex items-center gap-2">
+                    <AppButton
+                      variant="ghost"
+                      disabled={progress.tasks.loading}
+                      onClick={() => void progress.refresh()}
+                    >
+                      Segarkan
+                    </AppButton>
+                    <AppButton
+                      variant="secondary"
+                      onClick={() => {
+                        setNewTaskDate("");
+                        setAdding(true);
+                      }}
+                    >
+                      <Plus size={16} /> Tambah tugas
+                    </AppButton>
+                  </div>
+                </div>
+                <p className="text-xs text-stone-500">
+                  {progress.tasks.loading
+                    ? "Memuat jadwal…"
+                    : progress.tasks.error
+                      ? "Jadwal belum dapat dimuat."
+                      : `${upcomingTasks(progress.allTasks, today)} tugas akan datang · ${progress.allTasks.filter((task) => !task.due).length} tanpa tenggat`}
+                  {query.filter || category || filter !== "ALL" ? " · sesuai filter" : ""}
+                </p>
+                <details className="rounded-xl border border-stone-100 bg-stone-50/50 p-3">
+                  <summary className="cursor-pointer text-sm font-medium text-stone-600">
+                    Cari dan filter tugas
+                    {query.filter || category || filter !== "ALL" ? " · Filter aktif" : ""}
+                  </summary>
+                  <div className="mt-4 grid items-start gap-3 sm:grid-cols-2 [&>label]:min-w-0">
+                    <AppInput
+                      className="h-12 min-w-0 w-full"
+                      label="Cari tugas"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Nama tugas, PIC, catatan"
                     />
+                    <AppSelect
+                      className="h-12 min-w-0 w-full"
+                      label="Kategori"
+                      value={category}
+                      onChange={(e) => changeFilters({ category: e.target.value || undefined })}
+                    >
+                      <option value="">Semua kategori</option>
+                      {categories.map((item) => (
+                        <option key={item}>{item}</option>
+                      ))}
+                    </AppSelect>
+                    <AppSelect
+                      className="h-12 min-w-0 w-full"
+                      label="Status"
+                      value={filter}
+                      onChange={(e) =>
+                        changeFilters({
+                          status:
+                            e.target.value === "ALL" || e.target.value === "LATE"
+                              ? undefined
+                              : (e.target.value as TaskStatus),
+                          overdue: e.target.value === "LATE" ? true : undefined,
+                        })
+                      }
+                    >
+                      <option value="ALL">Semua status</option>
+                      <option value="LATE">Lewat tenggat</option>
+                      {Object.entries(statuses).map(([value, label]) => (
+                        <option value={value} key={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </AppSelect>
+                    <AppSelect
+                      className="h-12 min-w-0 w-full"
+                      label="Urutkan"
+                      value={sortOrder}
+                      onChange={(e) =>
+                        changeFilters({ sortBy: e.target.value as "due_asc" | "due_desc" })
+                      }
+                    >
+                      <option value="due_asc">Tenggat terdekat</option>
+                      <option value="due_desc">Tenggat terjauh</option>
+                    </AppSelect>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 divide-x rounded-xl border bg-white/80 py-4 text-center">
-                  <Count value={summary.pending} label="Perlu dikerjakan" />
-                  <Count value={summary.overdue} label="Lewat tenggat" />
-                  <Count value={summary.important} label="Tugas penting" />
-                </div>
+                  <AppButton variant="ghost" className="mt-3" onClick={progress.resetFilters}>
+                    Reset filter
+                  </AppButton>
+                </details>
               </div>
-            </section>
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="grid min-w-0 gap-6">
-                <section className="overflow-hidden rounded-xl border bg-white">
-                  <div className="grid gap-4 border-b p-5 sm:p-6">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-semibold text-ink">Checklist persiapan</h2>
-                        <p className="mt-1 text-sm text-stone-500">
-                          Buka tugas untuk panduan, subtugas, dan catatan.
-                        </p>
-                      </div>
-                      <AppButton variant="secondary" onClick={() => setAdding(true)}>
-                        <Plus size={16} /> Tambah tugas
-                      </AppButton>
-                    </div>
-                    <div className="grid items-start gap-3 sm:grid-cols-2 [&>label]:min-w-0">
-                      <AppInput
-                        className="h-12 min-w-0 w-full"
-                        label="Cari tugas"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Nama tugas, PIC, catatan"
-                      />
-                      <AppSelect
-                        className="h-12 min-w-0 w-full"
-                        label="Kategori"
-                        value={category}
-                        onChange={(e) => changeFilters({ category: e.target.value || undefined })}
-                      >
-                        <option value="">Semua kategori</option>
-                        {categories.map((item) => (
-                          <option key={item}>{item}</option>
-                        ))}
-                      </AppSelect>
-                      <AppSelect
-                        className="h-12 min-w-0 w-full"
-                        label="Status"
-                        value={filter}
-                        onChange={(e) =>
-                          changeFilters({
-                            status:
-                              e.target.value === "ALL" || e.target.value === "LATE"
-                                ? undefined
-                                : (e.target.value as TaskStatus),
-                            overdue: e.target.value === "LATE" ? true : undefined,
-                          })
-                        }
-                      >
-                        <option value="ALL">Semua status</option>
-                        <option value="LATE">Lewat tenggat</option>
-                        {Object.entries(statuses).map(([value, label]) => (
-                          <option value={value} key={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </AppSelect>
-                      <AppSelect
-                        className="h-12 min-w-0 w-full"
-                        label="Urutkan"
-                        value={sortOrder}
-                        onChange={(e) =>
-                          changeFilters({ sortBy: e.target.value as "due_asc" | "due_desc" })
-                        }
-                      >
-                        <option value="due_asc">Tenggat terdekat</option>
-                        <option value="due_desc">Tenggat terjauh</option>
-                      </AppSelect>
-                    </div>
-                  </div>
-                  {progress.tasks.loading && (
-                    <div className="p-5" role="status">
-                      Memuat tugas…
-                    </div>
-                  )}
-                  {progress.tasks.error && (
-                    <ErrorState retry={() => void progress.tasks.reload()} />
-                  )}
-                  <div className="divide-y" aria-busy={progress.tasks.loading}>
-                    {paginatedTasks.map((task) => (
-                      <div key={task.id} className="flex items-center gap-3 px-5 py-4 sm:px-6">
-                        <input
-                          type="checkbox"
-                          aria-label={`Tandai ${task.title} selesai`}
-                          disabled={mutation.busy}
-                          checked={task.status === "COMPLETED"}
-                          onChange={(e) =>
-                            patch(setTaskStatus(task, e.target.checked ? "COMPLETED" : "TODO"))
-                          }
-                          className="size-5 shrink-0 accent-blush"
-                        />
-                        <button
-                          onClick={() => setSelected(task.id)}
-                          className="min-w-0 flex-1 text-left"
-                        >
-                          <span
-                            className={`block text-sm font-medium ${task.status === "COMPLETED" || task.status === "SKIPPED" ? "text-stone-400 line-through" : "text-ink"}`}
-                          >
-                            {task.title}
-                          </span>
-                          <span
-                            className={`mt-1 block text-xs ${isPending(task) && task.due && task.due < today ? "text-amber-700" : "text-stone-500"}`}
-                          >
-                            {dueLabel(task, today)} · {task.assignee || "Belum ditugaskan"}
-                            {task.subtasks.length > 0 &&
-                              ` · ${task.subtasks.filter((item) => item.done).length}/${task.subtasks.length} langkah`}
-                          </span>
-                          <span className="mt-2 flex flex-wrap gap-2">
-                            <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
-                              {task.category}
-                            </span>
-                            {task.important && (
-                              <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] text-blush">
-                                Penting
-                              </span>
-                            )}
-                            <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
-                              {statuses[task.status]}
-                            </span>
-                          </span>
-                        </button>
-                        <button
-                          aria-label={`Buka detail ${task.title}`}
-                          onClick={() => setSelected(task.id)}
-                          className="p-2 text-stone-400 hover:text-blush"
-                        >
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  {!progress.tasks.loading && !progress.tasks.error && taskTotal > 0 && (
-                    <Pagination
-                      className="border-t p-4"
-                      label="Halaman daftar tugas"
-                      page={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setPage}
-                    />
-                  )}
-                  {!progress.tasks.loading && !progress.tasks.error && !visible.length && (
-                    <div className="p-8 text-center">
-                      <Search className="mx-auto text-stone-300" />
-                      <p className="mt-3 text-sm text-stone-500">
-                        Tidak ada tugas yang cocok dengan filter.
-                      </p>
+              {progress.tasks.loading && (
+                <div className="p-5" role="status">
+                  Memuat tugas…
+                </div>
+              )}
+              {progress.tasks.error && <ErrorState retry={() => void progress.tasks.reload()} />}
+              {!progress.tasks.error && (
+                <div
+                  className={progress.tasks.loading ? "pointer-events-none opacity-50" : ""}
+                  aria-busy={progress.tasks.loading}
+                  inert={progress.tasks.loading}
+                >
+                  <PlanningCalendar
+                    tasks={progress.tasks.loading ? [] : progress.allTasks}
+                    today={today}
+                    busy={mutation.busy || progress.tasks.loading}
+                    onOpen={setSelected}
+                    onUpdate={patch}
+                    onAdd={(date) => {
+                      setNewTaskDate(date);
+                      setAdding(true);
+                    }}
+                  />
+                </div>
+              )}
+              {!progress.tasks.loading &&
+                !progress.tasks.error &&
+                progress.allTasks.length === 0 && (
+                  <div className="border-t p-5 text-center text-sm text-stone-500">
+                    <p>
+                      {hasTasks
+                        ? "Tidak ada tugas yang cocok dengan filter."
+                        : "Belum ada tugas. Tambahkan persiapanmu atau mulai dari template melalui Buat checklist pernikahanku."}
+                    </p>
+                    {hasTasks && (
                       <AppButton variant="ghost" onClick={progress.resetFilters}>
                         Tampilkan semua tugas
                       </AppButton>
-                    </div>
-                  )}
-                </section>
-              </div>
-              <aside className="grid gap-5">
+                    )}
+                  </div>
+                )}
+            </section>
+          </div>
+          <aside className="grid gap-5">
+            <details className="group">
+              <summary className="cursor-pointer rounded-xl border bg-white p-4 text-sm font-semibold text-ink">
+                Detail acara & alat bantu
+              </summary>
+              <div className="mt-3 grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
                 <section className="rounded-xl border bg-white p-5">
                   <h2 className="font-semibold text-ink">Rencana acaramu</h2>
                   <dl className="mt-4 grid gap-4 text-sm">
@@ -470,10 +424,10 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     <Download size={16} /> {exporting ? "Menyiapkan unduhan…" : "Unduh PDF"}
                   </AppButton>
                 </section>
-              </aside>
-            </div>
-          </>
-        )}
+              </div>
+            </details>
+          </aside>
+        </div>
       </div>
       {settingsOpen && (
         <Modal
@@ -547,6 +501,11 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                   setSelected(null);
                 }}
                 onCancel={() => setSelected(null)}
+                onDelete={async () => {
+                  await deleteWeddingTask(selectedTask.id);
+                  await progress.refresh();
+                  setSelected(null);
+                }}
               />
             )
           )}
@@ -567,7 +526,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
               category: "Lainnya",
               guide: "",
               daysBefore: null,
-              due: "",
+              due: newTaskDate,
               customDue: true,
               important: false,
               status: "TODO",
@@ -590,14 +549,6 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   );
 }
 
-function Count({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="px-2">
-      <strong className="text-xl text-ink">{value}</strong>
-      <p className="mt-1 text-[11px] text-stone-500">{label}</p>
-    </div>
-  );
-}
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>

@@ -36,11 +36,16 @@ export function createPlanningService(api: PlanningRepository) {
     };
   }
 
-  /** Only exports and template reconciliation require the full list. Normal browsing is paginated. */
-  async function getAllTasks(): Promise<WeddingTask[]> {
+  /** Read every server page so calendars, exports and templates never use a partial list. */
+  async function getAllTasks(query: WeddingTaskQuery = {}): Promise<WeddingTask[]> {
     const tasks = new Map<string, WeddingTask>();
     for (let pageNumber = 1; ; pageNumber += 1) {
-      const page = await api.getWeddingTasks({ pageNumber, pageSize: 100, sortBy: "due_asc" });
+      const page = await api.getWeddingTasks({
+        sortBy: "due_asc",
+        ...query,
+        pageNumber,
+        pageSize: 100,
+      });
       const before = tasks.size;
       for (const task of page.data) tasks.set(task.id, task);
       if (tasks.size >= page.total) return [...tasks.values()];

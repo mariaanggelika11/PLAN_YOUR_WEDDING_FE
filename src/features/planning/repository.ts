@@ -1,4 +1,7 @@
-import { authenticatedDataRequest } from "@/shared/api/authenticatedApiClient";
+import {
+  authenticatedDataRequest,
+  authenticatedRequest,
+} from "@/shared/api/authenticatedApiClient";
 import { API_ROUTES } from "@/shared/config/apiRoutes";
 import { fromApiTask, taskQueryString, toTaskPayload } from "./adapters";
 import type { WeddingTask } from "./model";
@@ -48,4 +51,8 @@ export async function updateWeddingTask(id: string, payload: Partial<WeddingTask
     body: JSON.stringify(payload),
   });
   return fromApiTask(result);
+}
+
+export async function deleteWeddingTask(id: string): Promise<void> {
+  await authenticatedRequest(API_ROUTES.weddingTasks.byId(id), { method: "DELETE" });
 }
