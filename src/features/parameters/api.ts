@@ -60,19 +60,34 @@ export async function getActiveParameterDetailsByCodes(codes: string[]) {
 export async function createParameter(data: ParameterPayload) {
   return authenticatedDataRequest<SystemParameter>(API_ROUTES.parameters.root, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(parameterWritePayload(data)),
   });
 }
 
 export async function updateParameter(id: string, data: Partial<ParameterPayload>) {
   return authenticatedDataRequest<SystemParameter>(API_ROUTES.parameters.byId(id), {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: JSON.stringify(parameterWritePayload(data)),
   });
 }
 
 export async function deleteParameter(id: string) {
   await authenticatedRequest(API_ROUTES.parameters.byId(id), { method: "DELETE" });
+}
+
+function parameterWritePayload(data: Partial<ParameterPayload>): Partial<ParameterPayload> {
+  return {
+    code: data.code,
+    description: data.description,
+    active: data.active,
+    details: data.details?.map((detail) => ({
+      id: detail.id,
+      code: detail.code,
+      description: detail.description,
+      ordering: detail.ordering,
+      active: detail.active,
+    })),
+  };
 }
 
 async function fetchParameterPage(filter: string, pageNumber: number, pageSize: number) {

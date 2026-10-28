@@ -108,7 +108,6 @@ export function ParameterForm({
             />
             <AppInput
               label="Deskripsi"
-              maxLength={200}
               value={detail.description ?? ""}
               onChange={(event) => updateDetail(index, { description: event.target.value })}
             />
