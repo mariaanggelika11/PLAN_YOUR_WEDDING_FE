@@ -104,6 +104,7 @@ export function CustomerWeddingDetailsSection({
         <option value="CUSTOM">Paket custom</option>
       </AppSelect>
       <MasterParameterCheckboxGroup
+        allowSelectAll
         emptyMessage={masterParameters.emptyMessage(MASTER_PARAMETER_CODES.vendorCategory)}
         initialValues={masterParameters.resolveValues(
           MASTER_PARAMETER_CODES.vendorCategory,
@@ -139,6 +140,7 @@ export function CustomerWeddingDetailsSection({
         />
       </div>
       <MasterParameterCheckboxGroup
+        allowSelectAll
         emptyMessage={masterParameters.emptyMessage(MASTER_PARAMETER_CODES.vendorCategory)}
         initialValues={masterParameters.resolveValues(
           MASTER_PARAMETER_CODES.vendorCategory,
