@@ -18,7 +18,15 @@ import { LanguageSwitcher } from "@/shared/i18n/LanguageSwitcher";
 import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  LoaderCircle,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -62,6 +70,19 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
   const activeNavigation = nav
     .flatMap((item) => item.children ?? [item])
     .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+  // Unmount protected content as soon as the session disappears, including while
+  // a redirect is pending. Profile/auth listeners may clear their data first.
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas p-6">
+        <p role="status" className="flex items-center gap-2 text-sm text-stone-500">
+          <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />
+          {isLoading ? "Memeriksa sesi…" : "Mengalihkan ke halaman masuk…"}
+        </p>
+      </div>
+    );
+  }
 
   // TODO API: Ambil data user login dari backend
   // TODO API: Tampilkan menu mobile berdasarkan role user login
@@ -351,7 +372,6 @@ function MobileSidebar(props: {
 
 function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const { t } = useTranslation();
-  const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -407,15 +427,13 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     };
   }, [profileResource.data, role]);
 
-  async function handleLogout() {
+  function handleLogout() {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      router.replace(ROUTES.login);
-      router.refresh();
-    }
+    // logout clears storage/cookie synchronously and revokes the token via a
+    // keepalive request. Navigation must not wait for a slow/offline backend.
+    void logout();
+    window.location.replace(ROUTES.login);
   }
 
   return (
