@@ -54,7 +54,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
           >
             <option value="">Semua kategori</option>
             {categories.getOptions(MASTER_PARAMETER_CODES.vendorCategory).map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.label}>
                 {option.label}
               </option>
             ))}
