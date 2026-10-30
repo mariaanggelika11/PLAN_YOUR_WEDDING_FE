@@ -1,4 +1,6 @@
 "use client";
+import { ConfirmationDeadline } from "@/features/orders/components/ConfirmationDeadline";
+import { useOrderRefresh } from "@/features/orders/useOrderRefresh";
 import { OrderConversation } from "@/features/orders/components/OrderConversation";
 import { shouldReloadResource, apiErrorStatus, isForbiddenResource } from "@/shared/api/errorCodes";
 import { DisputeOrder } from "@/features/orders/components/DisputeOrder";
@@ -78,6 +80,7 @@ export function Orders() {
     [],
   );
   const orders = usePaginatedResource(loader, { pageSize: 10 });
+  useOrderRefresh(orders.reload, orders.loading);
   if (orders.loading && !orders.data.length) return <LoadingSkeleton />;
   if (orders.error) return <ErrorState retry={() => void orders.reload()} />;
   if (!orders.data.length)
@@ -155,6 +158,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   }
   const loader = useCallback(() => getOrder(orderId), [orderId]);
   const resource = useAsyncResource<Order | null>(loader, { initialData: null });
+  useOrderRefresh(resource.reload, resource.loading || action.loading);
   if (resource.loading) return <LoadingSkeleton />;
   if (resource.error)
     return (
@@ -191,6 +195,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           <strong>Pesanan ditolak:</strong> {order.rejectReason}
         </p>
       )}
+      <ConfirmationDeadline order={order} />
       <DisputeOrder order={order} onChanged={resource.reload} />
       <OrderOverview
         details={[
@@ -206,7 +211,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         timeline={buildOrderTimeline(order)}
         paymentSummary={<PaymentSummary order={order} />}
       />
-      <OrderConversation key={order.id} orderId={order.id} />
+      <OrderConversation key={order.id} orderId={order.id} status={order.status} />
       {!!order.payments?.length && (
         <section className="grid gap-4">
           <SectionHeader

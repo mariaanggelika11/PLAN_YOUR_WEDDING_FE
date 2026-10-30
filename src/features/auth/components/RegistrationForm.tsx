@@ -19,6 +19,7 @@ import { AppInput } from "@/shared/components/ui/FormFields";
 import { ROUTES } from "@/shared/config/routes";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { RegistrationTerms } from "@/features/auth/components/RegistrationTerms";
 
 type RegistrationType = "customer" | "vendor";
 type RegistrationStep = "details" | "otp" | "success";
@@ -29,8 +30,14 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
   const [isLoading, setIsLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
 
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) return;
+    if (!acceptedTerms) {
+      return setError("Anda wajib membaca dan menyetujui syarat dan ketentuan sebelum mendaftar.");
+    }
     const form = new FormData(event.currentTarget);
     const password = value(form, "password");
     const confirmPassword = value(form, "confirmPassword");
@@ -138,8 +145,24 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
         required
       />
 
+      <div className="grid gap-3 rounded-xl border p-4 text-sm">
+        <RegistrationTerms type={type} />
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            name="acceptedTerms"
+            required
+            checked={acceptedTerms}
+            disabled={isLoading}
+            onChange={(event) => setAcceptedTerms(event.target.checked)}
+            className="mt-1 size-4 shrink-0 accent-blush"
+          />
+          <span>Saya telah membaca dan menyetujui syarat dan ketentuan Plan Your Wedding.</span>
+        </label>
+      </div>
+
       {error && <PopupMessage message={error} variant="error" />}
-      <AppButton loading={isLoading} type="submit">
+      <AppButton loading={isLoading} disabled={!acceptedTerms} type="submit">
         Daftar sekarang
       </AppButton>
     </form>

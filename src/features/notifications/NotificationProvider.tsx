@@ -43,6 +43,7 @@ function NotificationSession({ children, enabled }: { children: ReactNode; enabl
   const mutating = useRef(false);
   const generation = useRef(0);
   const alive = useRef(true);
+  const seenAutoCompleted = useRef(new Set<string>());
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -57,6 +58,12 @@ function NotificationSession({ children, enabled }: { children: ReactNode; enabl
       try {
         const data = await notificationRepository.list({ pageNumber: 1, pageSize: 5 });
         if (alive.current && current === generation.current) {
+          const newAutoCompleted = data.data.filter(
+            (item) =>
+              item.type === "ORDER_AUTO_COMPLETED" && !seenAutoCompleted.current.has(item.id),
+          );
+          newAutoCompleted.forEach((item) => seenAutoCompleted.current.add(item.id));
+          if (newAutoCompleted.length) window.dispatchEvent(new Event("pyw-order-refresh"));
           setLatest(data);
           setError(false);
         }
@@ -108,7 +115,11 @@ function NotificationSession({ children, enabled }: { children: ReactNode; enabl
           ? {
               ...current,
               unreadCount: id
-                ? Math.max(0, current.unreadCount - (current.data.some((item) => item.id === id && !item.isRead) ? 1 : 0))
+                ? Math.max(
+                    0,
+                    current.unreadCount -
+                      (current.data.some((item) => item.id === id && !item.isRead) ? 1 : 0),
+                  )
                 : 0,
               data: current.data.map((item) =>
                 !id || item.id === id ? { ...item, isRead: true } : item,

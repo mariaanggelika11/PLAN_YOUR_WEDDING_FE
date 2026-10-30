@@ -1,4 +1,6 @@
 "use client";
+import { ConfirmationDeadline } from "@/features/orders/components/ConfirmationDeadline";
+import { useOrderRefresh } from "@/features/orders/useOrderRefresh";
 import { OrderConversation } from "@/features/orders/components/OrderConversation";
 import { useCallback } from "react";
 import { getOrder } from "@/features/orders/repository";
@@ -14,6 +16,7 @@ import { formatDate } from "@/shared/utils/formatDate";
 export function AdminOrderDetail({ id }: { id: string }) {
   const loader = useCallback(() => getOrder(id), [id]);
   const resource = useAsyncResource(loader, { initialData: null });
+  useOrderRefresh(resource.reload, resource.loading);
   if (resource.loading) return <LoadingSkeleton />;
   if (resource.error) return <ErrorState retry={() => void resource.reload()} />;
   const order = resource.data;
@@ -23,6 +26,7 @@ export function AdminOrderDetail({ id }: { id: string }) {
       title={`Pesanan ${order.orderNumber}`}
       description="Detail transaksi dan tindak lanjut sengketa."
     >
+      <ConfirmationDeadline order={order} />
       <OrderOverview
         details={[
           ["Customer", order.customer.fullName],
@@ -35,7 +39,7 @@ export function AdminOrderDetail({ id }: { id: string }) {
         timeline={buildOrderTimeline(order)}
         paymentSummary={<PaymentSummary order={order} />}
       />
-      <OrderConversation key={order.id} orderId={order.id} />
+      <OrderConversation key={order.id} orderId={order.id} status={order.status} />
       {order.rejectReason && (
         <p className="rounded-xl border bg-white p-4 text-sm">
           Catatan pesanan: {order.rejectReason}

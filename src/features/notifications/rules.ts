@@ -26,3 +26,23 @@ export function notificationDestination(value: string | null, role: string): str
     return null;
   }
 }
+
+/** Preserve safe server links; older auto-complete notices can use their order reference. */
+export function notificationItemDestination(
+  notification: Pick<
+    import("./types.ts").AppNotification,
+    "type" | "actionUrl" | "referenceTable" | "referenceId"
+  >,
+  role: string,
+) {
+  if (notification.actionUrl) return notificationDestination(notification.actionUrl, role);
+  if (
+    notification.type !== "ORDER_AUTO_COMPLETED" ||
+    notification.referenceTable !== "orders" ||
+    !notification.referenceId ||
+    !/^[A-Za-z0-9_-]+$/.test(notification.referenceId) ||
+    !["customer", "vendor", "admin"].includes(role)
+  )
+    return null;
+  return notificationDestination(`/${role}/orders/${notification.referenceId}`, role);
+}

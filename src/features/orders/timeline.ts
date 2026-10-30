@@ -59,8 +59,8 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
   if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
     events.push({
       label: "Layanan selesai, menunggu konfirmasi customer",
-      date: timelineDate(order.modifiedAt),
-      timestamp: order.modifiedAt,
+      date: timelineDate(order.deliveredAt ?? order.modifiedAt),
+      timestamp: order.deliveredAt ?? order.modifiedAt,
     });
   }
   if (order.status === "REJECTED_BY_VENDOR") {
@@ -72,7 +72,7 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
   }
   if (order.status === "COMPLETED") {
     events.push({
-      label: "Pesanan diselesaikan oleh customer",
+      label: "Pesanan selesai",
       date: timelineDate(order.completedAt),
       timestamp: order.completedAt,
     });

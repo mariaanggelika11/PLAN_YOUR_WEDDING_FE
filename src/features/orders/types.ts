@@ -52,6 +52,8 @@ export interface Order {
   status: OrderStatus;
   rejectReason: string | null;
   confirmedAt: string | null;
+  deliveredAt?: string | null;
+  autoCompleteAt?: string | null;
   completedAt: string | null;
   payments?: OrderPayment[];
   active: boolean;

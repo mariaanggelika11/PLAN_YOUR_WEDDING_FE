@@ -23,7 +23,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 const PAGE_SIZE = 10;
 export function ParameterManager() {
-  const { confirm } = usePopup();
+  const { confirm, success } = usePopup();
   const [parameters, setParameters] = useState<SystemParameter[]>([]);
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -44,7 +44,6 @@ export function ParameterManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const load = useCallback(async () => {
@@ -107,7 +106,7 @@ export function ParameterManager() {
     try {
       if (editing) await updateParameter(editing.id, payload);
       else await createParameter(payload);
-      setMessage(editing ? "Parameter berhasil diperbarui." : "Parameter berhasil ditambahkan.");
+      success(editing ? "Parameter berhasil diperbarui." : "Parameter berhasil ditambahkan.");
       setFormOpen(false);
       setEditing(null);
       await load();
@@ -128,7 +127,7 @@ export function ParameterManager() {
     if (!result.confirmed) return;
     try {
       await deleteParameter(parameter.id);
-      setMessage("Parameter berhasil dihapus.");
+      success("Parameter berhasil dihapus.");
       if (parameters.length === 1 && page > 1) setPage((current) => current - 1);
       else await load();
     } catch (deleteError) {
@@ -141,16 +140,13 @@ export function ParameterManager() {
 
     setUpdatingStatusIds((current) => [...current, parameter.id]);
     setError("");
-    setMessage("");
     setParameters((current) =>
       current.map((item) => (item.id === parameter.id ? { ...item, active } : item)),
     );
 
     try {
       await updateParameter(parameter.id, { active });
-      setMessage(
-        `Parameter ${parameter.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`,
-      );
+      success(`Parameter ${parameter.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`);
     } catch (statusError) {
       setParameters((current) =>
         current.map((item) =>
@@ -178,7 +174,6 @@ export function ParameterManager() {
     );
     setUpdatingStatusIds((current) => [...current, statusId]);
     setError("");
-    setMessage("");
     setParameters((current) =>
       current.map((item) =>
         item.id === parameter.id ? { ...item, details: updatedDetails } : item,
@@ -187,7 +182,7 @@ export function ParameterManager() {
 
     try {
       await updateParameter(parameter.id, { details: updatedDetails });
-      setMessage(`Detail ${detail.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`);
+      success(`Detail ${detail.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`);
     } catch (statusError) {
       setParameters((current) =>
         current.map((item) => (item.id === parameter.id ? parameter : item)),
@@ -223,7 +218,6 @@ export function ParameterManager() {
       </div>
 
       {error && <PopupMessage message={error} variant="error" />}
-      {message && <PopupMessage message={message} />}
 
       {formOpen && (
         <ParameterForm

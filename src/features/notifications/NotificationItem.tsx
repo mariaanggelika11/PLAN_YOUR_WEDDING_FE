@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useAuth } from "@/features/auth/useAuth";
 import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useNotifications } from "./NotificationProvider";
-import { notificationDestination } from "./rules";
+import { notificationItemDestination } from "./rules";
 import type { AppNotification } from "./types";
 
 export function NotificationItem({
@@ -16,12 +16,15 @@ export function NotificationItem({
   const { user } = useAuth();
   const { t, locale } = useTranslation();
   const { busy, markRead } = useNotifications();
-  const href = notificationDestination(notification.actionUrl, user?.role.toLowerCase() ?? "");
+  const href = notificationItemDestination(notification, user?.role.toLowerCase() ?? "");
   const date = new Date(notification.createdAt);
   return (
     <article
       className={`rounded-xl border p-4 ${notification.isRead ? "bg-white" : "border-rose-100 bg-rose-50"}`}
     >
+      {notification.type === "ORDER_AUTO_COMPLETED" && (
+        <p className="mb-2 text-xs font-semibold text-emerald-700">Pesanan selesai otomatis</p>
+      )}
       <div className="flex items-start gap-2">
         {!notification.isRead && (
           <span
@@ -57,6 +60,7 @@ export function NotificationItem({
             href={href}
             onClick={() => {
               if (!notification.isRead) void markRead(notification.id);
+              window.dispatchEvent(new Event("pyw-order-refresh"));
               onNavigate?.();
             }}
           >

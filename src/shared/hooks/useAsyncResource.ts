@@ -18,25 +18,28 @@ export function useAsyncResource<T>(
   const [errorCause, setErrorCause] = useState<unknown>(null);
   const requestId = useRef(0);
 
-  const reload = useCallback(async () => {
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError("");
-    setErrorCause(null);
-    try {
-      const result = await loader();
-      if (currentRequest === requestId.current) setData(result);
-      return result;
-    } catch (loadError) {
-      if (currentRequest === requestId.current) {
-        setError(mapError(loadError));
-        setErrorCause(loadError);
+  const reload = useCallback(
+    async (options?: { background?: boolean }) => {
+      const currentRequest = ++requestId.current;
+      if (!options?.background) setLoading(true);
+      setError("");
+      setErrorCause(null);
+      try {
+        const result = await loader();
+        if (currentRequest === requestId.current) setData(result);
+        return result;
+      } catch (loadError) {
+        if (currentRequest === requestId.current) {
+          setError(mapError(loadError));
+          setErrorCause(loadError);
+        }
+        return undefined;
+      } finally {
+        if (currentRequest === requestId.current) setLoading(false);
       }
-      return undefined;
-    } finally {
-      if (currentRequest === requestId.current) setLoading(false);
-    }
-  }, [loader, mapError]);
+    },
+    [loader, mapError],
+  );
 
   useEffect(() => {
     if (autoLoad) void reload();

@@ -29,27 +29,30 @@ export function usePaginatedResource<T>(
   const requestId = useRef(0);
   const debouncedSearch = useDebounce(search);
 
-  const reload = useCallback(async () => {
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError("");
-    try {
-      const result = await loader({
-        filter: debouncedSearch || undefined,
-        pageNumber: page,
-        pageSize,
-      });
-      if (currentRequest === requestId.current) {
-        setData(result.data);
-        setTotal(result.total);
-        setEffectivePageSize(result.pageSize && result.pageSize > 0 ? result.pageSize : pageSize);
+  const reload = useCallback(
+    async (options?: { background?: boolean }) => {
+      const currentRequest = ++requestId.current;
+      if (!options?.background) setLoading(true);
+      setError("");
+      try {
+        const result = await loader({
+          filter: debouncedSearch || undefined,
+          pageNumber: page,
+          pageSize,
+        });
+        if (currentRequest === requestId.current) {
+          setData(result.data);
+          setTotal(result.total);
+          setEffectivePageSize(result.pageSize && result.pageSize > 0 ? result.pageSize : pageSize);
+        }
+      } catch (loadError) {
+        if (currentRequest === requestId.current) setError(mapError(loadError));
+      } finally {
+        if (currentRequest === requestId.current) setLoading(false);
       }
-    } catch (loadError) {
-      if (currentRequest === requestId.current) setError(mapError(loadError));
-    } finally {
-      if (currentRequest === requestId.current) setLoading(false);
-    }
-  }, [debouncedSearch, loader, mapError, page, pageSize]);
+    },
+    [debouncedSearch, loader, mapError, page, pageSize],
+  );
 
   useEffect(() => {
     void reload();

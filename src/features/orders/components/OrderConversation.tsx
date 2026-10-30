@@ -1,4 +1,6 @@
 "use client";
+import { conversationClosedReason } from "../completion";
+import type { Order } from "../types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getOrderMessages, readOrderMessages, sendOrderMessage } from "../messagesApi";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
@@ -9,7 +11,13 @@ import { AppTextarea } from "@/shared/components/ui/FormFields";
 import { ErrorState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { PortfolioImage } from "@/features/profile/components/portfolio/Portfolio";
 import { formatDateTime } from "@/shared/utils/formatDate";
-export function OrderConversation({ orderId }: { orderId: string }) {
+export function OrderConversation({
+  orderId,
+  status,
+}: {
+  orderId: string;
+  status?: Order["status"];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <details
@@ -17,11 +25,11 @@ export function OrderConversation({ orderId }: { orderId: string }) {
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
       <summary className="cursor-pointer font-semibold">Percakapan pesanan</summary>
-      {open && <ConversationBody key={orderId} orderId={orderId} />}
+      {open && <ConversationBody key={orderId} orderId={orderId} status={status} />}
     </details>
   );
 }
-function ConversationBody({ orderId }: { orderId: string }) {
+function ConversationBody({ orderId, status }: { orderId: string; status?: Order["status"] }) {
   const [pages, setPages] = useState(1);
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -76,7 +84,8 @@ function ConversationBody({ orderId }: { orderId: string }) {
       active = false;
     };
   }, [orderId, resource.data]);
-  const canSend = resource.data?.canSend && !resource.error && !closed;
+  const closedReason = conversationClosedReason(status);
+  const canSend = resource.data?.canSend === true && !resource.error && !closed && !closedReason;
   return (
     <div className="mt-4 grid min-w-0 gap-4">
       <div className="flex flex-wrap gap-2">
@@ -139,8 +148,10 @@ function ConversationBody({ orderId }: { orderId: string }) {
       )}
       {!canSend && resource.data && (
         <p className="text-sm text-stone-500">
-          Percakapan ini hanya dapat dibaca. Pengiriman pesan tidak tersedia untuk status pesanan
-          atau peran Anda saat ini.
+          {closedReason ??
+            (closed
+              ? "Pesanan telah ditutup. Riwayat percakapan tetap dapat dibaca."
+              : "Percakapan ini hanya dapat dibaca. Pengiriman pesan tidak tersedia untuk status pesanan atau peran Anda saat ini.")}
         </p>
       )}
       <form

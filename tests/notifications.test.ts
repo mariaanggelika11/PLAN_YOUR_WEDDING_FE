@@ -33,3 +33,32 @@ test("notification actions only open safe same-role application routes", () => {
   ])
     assert.equal(notificationDestination(url, "customer"), null);
 });
+
+test("auto-completion notifications link to the recipient's order without accepting unsafe overrides", async () => {
+  const { notificationItemDestination } = await import("../src/features/notifications/rules.ts");
+  const notice = {
+    type: "ORDER_AUTO_COMPLETED",
+    actionUrl: null,
+    referenceTable: "orders",
+    referenceId: "42",
+  };
+  assert.equal(notificationItemDestination(notice, "customer"), "/customer/orders/42");
+  assert.equal(notificationItemDestination(notice, "vendor"), "/vendor/orders/42");
+  assert.equal(
+    notificationItemDestination({ ...notice, actionUrl: "/vendor/orders/42" }, "customer"),
+    null,
+  );
+  assert.equal(
+    notificationItemDestination({ ...notice, actionUrl: "https://evil.test" }, "customer"),
+    null,
+  );
+  assert.equal(
+    notificationItemDestination({ ...notice, referenceId: "../users" }, "customer"),
+    null,
+  );
+  assert.equal(
+    notificationItemDestination({ ...notice, referenceTable: "users" }, "customer"),
+    null,
+  );
+  assert.equal(notificationItemDestination({ ...notice, type: "OTHER" }, "customer"), null);
+});

@@ -96,7 +96,8 @@ async function fetchParameterPage(filter: string, pageNumber: number, pageSize: 
     pageSize: String(pageSize),
   });
   if (filter) query.set("filter", filter);
-  return authenticatedDataRequest<ParameterPage>(`${API_ROUTES.parameters.root}?${query}`);
+  const path = `${API_ROUTES.parameters.root}?${query}`;
+  return authenticatedDataRequest<ParameterPage>(path);
 }
 
 function normalizeParameterValue(value: string) {
