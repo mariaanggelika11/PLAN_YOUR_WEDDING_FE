@@ -6,21 +6,26 @@ import type {
 } from "@/features/auth/types/registration";
 import { PASSWORD_REGEX, validationMessages } from "@/features/auth/validation";
 import { ApiError, apiRequest } from "@/shared/api/apiClient";
+import { apiErrorCode } from "@/shared/api/errorCodes";
 import { API_ROUTES } from "@/shared/config/apiRoutes";
 import type { ApiResponse } from "@/shared/types/api";
 
 type RegistrationKind = "customer" | "vendor";
 
 export class RegistrationError extends Error {
-  constructor(message: string) {
+  /** Stable backend error code (e.g. TERMS_OUTDATED), when the API returned one. */
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
     this.name = "RegistrationError";
+    this.code = code;
   }
 }
 
 export function registerCustomer(data: CustomerRegistrationData) {
   validatePasswords(data.password, data.confirmPassword);
-  return register("customer", {
+  return register("customer", data.termsVersionId, {
     fullname: data.fullname.trim(),
     email: normalizeEmail(data.email),
     phoneNumber: data.phoneNumber.trim(),
@@ -30,7 +35,7 @@ export function registerCustomer(data: CustomerRegistrationData) {
 
 export function registerVendor(data: VendorRegistrationData) {
   validatePasswords(data.password, data.confirmPassword);
-  return register("vendor", {
+  return register("vendor", data.termsVersionId, {
     ownerName: data.ownerName.trim(),
     businessName: data.businessName.trim(),
     email: normalizeEmail(data.email),
@@ -42,6 +47,7 @@ export function registerVendor(data: VendorRegistrationData) {
 
 async function register(
   kind: RegistrationKind,
+  termsVersionId: number,
   data: Record<string, string> & { password: string },
 ): Promise<RegistrationResult> {
   try {
@@ -54,12 +60,14 @@ async function register(
         ...profileData,
         password: cipherText,
         confirmPassword: cipherText,
+        acceptedTerms: true,
+        termsVersionId,
       }),
     });
 
     return response.data;
   } catch (error) {
-    if (error instanceof ApiError) throw new RegistrationError(error.message);
+    if (error instanceof ApiError) throw new RegistrationError(error.message, apiErrorCode(error));
     throw new RegistrationError("Registrasi gagal. Silakan coba kembali.");
   }
 }

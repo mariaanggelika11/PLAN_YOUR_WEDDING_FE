@@ -55,6 +55,7 @@ export const ROUTES = {
     reports: "/admin/reports",
     auditLogs: "/admin/audit-logs",
     parameters: "/admin/parameters",
+    terms: "/admin/terms",
     vendorVerification: (id: string) => `/admin/vendor-verification/${id}`,
     paymentVerification: (id: string) => `/admin/payment-verification/${id}`,
   },

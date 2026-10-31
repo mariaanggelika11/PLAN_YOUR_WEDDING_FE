@@ -3,6 +3,7 @@
 import { useAuth } from "@/features/auth/useAuth";
 import { NotificationProvider } from "@/features/notifications/NotificationProvider";
 import { NotificationMenu } from "@/features/notifications/NotificationMenu";
+import { TermsConsentGate } from "@/features/terms/components/TermsConsentGate";
 import { getAttachmentBlob, getVendorLogo } from "@/features/profile/api/attachmentApi";
 import { useProfileData } from "@/features/profile/context/ProfileProvider";
 import type { CustomerApiProfile, VendorApiProfile } from "@/features/profile/types";
@@ -150,6 +151,8 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
           </main>
           {role === "customer" && <BottomNav nav={nav.slice(0, 4)} pathname={pathname} />}
         </div>
+        {/* Admin tidak terikat S&K pengguna/vendor. */}
+        {role !== "admin" && <TermsConsentGate />}
       </div>
     </PageHeaderContext.Provider>
   );

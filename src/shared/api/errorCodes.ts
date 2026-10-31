@@ -13,6 +13,10 @@ export function shouldReloadResource(error: unknown) {
     "DUPLICATE_REVIEW",
   ].includes(apiErrorCode(error) ?? "");
 }
+/** The terms the user saw are no longer the active version: reload them and ask again. */
+export function isTermsOutdated(error: unknown) {
+  return ["TERMS_OUTDATED", "TERMS_INVALID"].includes(apiErrorCode(error) ?? "");
+}
 export function apiErrorStatus(error: unknown): number | undefined {
   if (!error || typeof error !== "object") return;
   if ("status" in error && typeof error.status === "number") return error.status;

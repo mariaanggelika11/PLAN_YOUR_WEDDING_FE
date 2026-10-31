@@ -70,6 +70,7 @@ export const enDictionary = {
   "navigation.auditLog": "Audit Log",
   "navigation.masterData": "Master Data",
   "navigation.masterParameter": "Master Parameters",
+  "navigation.terms": "Terms & Conditions",
   "table.defaultTitle": "Data list",
   "table.resultCount": "{total} {item} found",
   "table.search": "Search data",

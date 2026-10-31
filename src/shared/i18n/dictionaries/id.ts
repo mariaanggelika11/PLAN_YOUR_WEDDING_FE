@@ -69,6 +69,7 @@ export const idDictionary = {
   "navigation.auditLog": "Audit Log",
   "navigation.masterData": "Master Data",
   "navigation.masterParameter": "Master Parameter",
+  "navigation.terms": "Syarat & Ketentuan",
   "table.defaultTitle": "Daftar data",
   "table.resultCount": "{total} {item} ditemukan",
   "table.search": "Cari data",

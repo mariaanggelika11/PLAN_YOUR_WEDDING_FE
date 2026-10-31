@@ -18,8 +18,12 @@ import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
 import { ROUTES } from "@/shared/config/routes";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { RegistrationTerms } from "@/features/auth/components/RegistrationTerms";
+import { getActiveTerms } from "@/features/terms/api";
+import type { TermsDocument } from "@/features/terms/types";
+import { isTermsOutdated } from "@/shared/api/errorCodes";
+import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 
 type RegistrationType = "customer" | "vendor";
 type RegistrationStep = "details" | "otp" | "success";
@@ -31,10 +35,17 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
   const [registeredEmail, setRegisteredEmail] = useState("");
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const loadTerms = useCallback(() => getActiveTerms(type), [type]);
+  const termsResource = useAsyncResource<TermsDocument | null>(loadTerms, {
+    initialData: null,
+    mapError: () => "Syarat dan ketentuan gagal dimuat.",
+  });
+  const terms = termsResource.data;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isLoading) return;
+    if (!terms) return setError("Syarat dan ketentuan belum berhasil dimuat. Silakan muat ulang.");
     if (!acceptedTerms) {
       return setError("Anda wajib membaca dan menyetujui syarat dan ketentuan sebelum mendaftar.");
     }
@@ -51,12 +62,17 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     try {
       const result =
         type === "customer"
-          ? await registerCustomer(customerData(form, password, confirmPassword))
-          : await registerVendor(vendorData(form, password, confirmPassword));
+          ? await registerCustomer(customerData(form, password, confirmPassword, terms.id))
+          : await registerVendor(vendorData(form, password, confirmPassword, terms.id));
 
       setRegisteredEmail(result.user.email);
       setStep("otp");
     } catch (submitError) {
+      // S&K diperbarui saat user mengisi form: muat versi terbaru dan minta persetujuan ulang.
+      if (submitError instanceof RegistrationError && isTermsOutdated(submitError)) {
+        setAcceptedTerms(false);
+        void termsResource.reload();
+      }
       setError(
         submitError instanceof RegistrationError
           ? submitError.message
@@ -146,14 +162,31 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       />
 
       <div className="grid gap-3 rounded-xl border p-4 text-sm">
-        <RegistrationTerms type={type} />
+        {terms ? (
+          <RegistrationTerms type={type} terms={terms} />
+        ) : termsResource.loading ? (
+          <p role="status" className="text-stone-500">
+            Memuat syarat dan ketentuan…
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-red-700">
+            <span>{termsResource.error || "Syarat dan ketentuan gagal dimuat."}</span>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => void termsResource.reload()}
+            >
+              Muat ulang
+            </AppButton>
+          </div>
+        )}
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
             name="acceptedTerms"
             required
             checked={acceptedTerms}
-            disabled={isLoading}
+            disabled={isLoading || !terms}
             onChange={(event) => setAcceptedTerms(event.target.checked)}
             className="mt-1 size-4 shrink-0 accent-blush"
           />
@@ -162,7 +195,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       </div>
 
       {error && <PopupMessage message={error} variant="error" />}
-      <AppButton loading={isLoading} disabled={!acceptedTerms} type="submit">
+      <AppButton loading={isLoading} disabled={!acceptedTerms || !terms} type="submit">
         Daftar sekarang
       </AppButton>
     </form>
@@ -173,6 +206,7 @@ function customerData(
   form: FormData,
   password: string,
   confirmPassword: string,
+  termsVersionId: number,
 ): CustomerRegistrationData {
   return {
     fullname: value(form, "fullname"),
@@ -180,6 +214,7 @@ function customerData(
     phoneNumber: value(form, "phoneNumber"),
     password,
     confirmPassword,
+    termsVersionId,
   };
 }
 
@@ -187,6 +222,7 @@ function vendorData(
   form: FormData,
   password: string,
   confirmPassword: string,
+  termsVersionId: number,
 ): VendorRegistrationData {
   return {
     ownerName: value(form, "ownerName"),
@@ -196,6 +232,7 @@ function vendorData(
     businessAddress: value(form, "businessAddress"),
     password,
     confirmPassword,
+    termsVersionId,
   };
 }
 

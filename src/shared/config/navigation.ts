@@ -190,6 +190,11 @@ export const ADMIN_NAVIGATION: NavigationItem[] = [
         translationKey: "navigation.masterParameter",
         href: ROUTES.admin.parameters,
       },
+      {
+        label: "Syarat & Ketentuan",
+        translationKey: "navigation.terms",
+        href: ROUTES.admin.terms,
+      },
     ],
   },
 ];

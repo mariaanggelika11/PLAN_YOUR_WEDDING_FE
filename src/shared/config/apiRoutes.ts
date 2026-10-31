@@ -20,6 +20,14 @@ export const API_ROUTES = {
     customer: "/register/customer",
     vendor: "/register/vendor",
   },
+  terms: {
+    root: "/terms",
+    active: (type: "customer" | "vendor") => `/terms/active/${type}`,
+    myStatus: "/terms/me/status",
+    accept: "/terms/accept",
+    byId: (id: number) => `/terms/${id}`,
+    activate: (id: number) => `/terms/${id}/activate`,
+  },
   profile: {
     customer: "/customer-profile",
     customerById: (id: number) => `/customer-profile/${id}`,

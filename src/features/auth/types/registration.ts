@@ -4,6 +4,8 @@ export interface CustomerRegistrationData {
   phoneNumber: string;
   password: string;
   confirmPassword: string;
+  /** id of the active terms version shown to (and accepted by) the user */
+  termsVersionId: number;
 }
 
 export interface VendorRegistrationData {
@@ -14,6 +16,8 @@ export interface VendorRegistrationData {
   businessAddress: string;
   password: string;
   confirmPassword: string;
+  /** id of the active terms version shown to (and accepted by) the user */
+  termsVersionId: number;
 }
 
 export interface RegisteredUser {

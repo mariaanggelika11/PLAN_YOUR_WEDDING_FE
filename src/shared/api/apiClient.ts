@@ -87,6 +87,7 @@ const FIELD_LABELS: Record<string, string> = {
   serviceArea: "area layanan",
   status: "status",
   terms: "syarat dan ketentuan",
+  termsVersionId: "versi syarat dan ketentuan",
   vendorId: "vendor",
 };
 

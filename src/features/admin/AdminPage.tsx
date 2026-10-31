@@ -15,6 +15,7 @@ import {
   PaymentVerification,
 } from "@/features/admin/VerificationPages";
 import { ParameterManager } from "@/features/parameters/ParameterManager";
+import { TermsVersionManager } from "@/features/terms/TermsVersionManager";
 
 export function AdminPage({ slug }: { slug: string[] }) {
   const page = slug[0] ?? "dashboard";
@@ -39,6 +40,15 @@ export function AdminPage({ slug }: { slug: string[] }) {
         description="Kelola parameter dan konfigurasi sistem yang hanya dapat diakses administrator."
       >
         <ParameterManager />
+      </Page>
+    );
+  if (page === "terms")
+    return (
+      <Page
+        title="Syarat & Ketentuan"
+        description="Kelola versi syarat dan ketentuan customer dan vendor beserta riwayat persetujuannya."
+      >
+        <TermsVersionManager />
       </Page>
     );
   if (page === "users") return <AdminUsersPage />;
