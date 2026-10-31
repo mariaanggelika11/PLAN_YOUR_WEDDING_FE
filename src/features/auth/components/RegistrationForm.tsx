@@ -25,6 +25,8 @@ import type { TermsDocument } from "@/features/terms/types";
 import { isTermsOutdated } from "@/shared/api/errorCodes";
 import { useAsyncResource } from "@/shared/hooks/useAsyncResource";
 
+const termsLoadError = () => "Syarat dan ketentuan gagal dimuat.";
+
 type RegistrationType = "customer" | "vendor";
 type RegistrationStep = "details" | "otp" | "success";
 
@@ -38,7 +40,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
   const loadTerms = useCallback(() => getActiveTerms(type), [type]);
   const termsResource = useAsyncResource<TermsDocument | null>(loadTerms, {
     initialData: null,
-    mapError: () => "Syarat dan ketentuan gagal dimuat.",
+    mapError: termsLoadError,
   });
   const terms = termsResource.data;
   const termsReady = Boolean(
