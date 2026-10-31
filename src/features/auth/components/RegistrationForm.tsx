@@ -18,7 +18,7 @@ import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppInput } from "@/shared/components/ui/FormFields";
 import { ROUTES } from "@/shared/config/routes";
 import Link from "next/link";
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { RegistrationTerms } from "@/features/auth/components/RegistrationTerms";
 import { getActiveTerms } from "@/features/terms/api";
 import type { TermsDocument } from "@/features/terms/types";
@@ -41,11 +41,19 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     mapError: () => "Syarat dan ketentuan gagal dimuat.",
   });
   const terms = termsResource.data;
+  const termsReady = Boolean(
+    terms &&
+    terms.termsType === type.toUpperCase() &&
+    !termsResource.loading &&
+    !termsResource.error,
+  );
+  useEffect(() => setAcceptedTerms(false), [type, terms?.id]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isLoading) return;
-    if (!terms) return setError("Syarat dan ketentuan belum berhasil dimuat. Silakan muat ulang.");
+    if (!terms || !termsReady)
+      return setError("Syarat dan ketentuan belum berhasil dimuat. Silakan muat ulang.");
     if (!acceptedTerms) {
       return setError("Anda wajib membaca dan menyetujui syarat dan ketentuan sebelum mendaftar.");
     }
@@ -62,8 +70,12 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     try {
       const result =
         type === "customer"
-          ? await registerCustomer(customerData(form, password, confirmPassword, terms.id))
-          : await registerVendor(vendorData(form, password, confirmPassword, terms.id));
+          ? await registerCustomer(
+              customerData(form, password, confirmPassword, terms.id, acceptedTerms),
+            )
+          : await registerVendor(
+              vendorData(form, password, confirmPassword, terms.id, acceptedTerms),
+            );
 
       setRegisteredEmail(result.user.email);
       setStep("otp");
@@ -71,6 +83,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       // S&K diperbarui saat user mengisi form: muat versi terbaru dan minta persetujuan ulang.
       if (submitError instanceof RegistrationError && isTermsOutdated(submitError)) {
         setAcceptedTerms(false);
+        termsResource.setData(null);
         void termsResource.reload();
       }
       setError(
@@ -186,7 +199,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
             name="acceptedTerms"
             required
             checked={acceptedTerms}
-            disabled={isLoading || !terms}
+            disabled={isLoading || !termsReady}
             onChange={(event) => setAcceptedTerms(event.target.checked)}
             className="mt-1 size-4 shrink-0 accent-blush"
           />
@@ -195,7 +208,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       </div>
 
       {error && <PopupMessage message={error} variant="error" />}
-      <AppButton loading={isLoading} disabled={!acceptedTerms || !terms} type="submit">
+      <AppButton loading={isLoading} disabled={!acceptedTerms || !termsReady} type="submit">
         Daftar sekarang
       </AppButton>
     </form>
@@ -207,6 +220,7 @@ function customerData(
   password: string,
   confirmPassword: string,
   termsVersionId: number,
+  acceptedTerms: boolean,
 ): CustomerRegistrationData {
   return {
     fullname: value(form, "fullname"),
@@ -215,6 +229,7 @@ function customerData(
     password,
     confirmPassword,
     termsVersionId,
+    acceptedTerms,
   };
 }
 
@@ -223,6 +238,7 @@ function vendorData(
   password: string,
   confirmPassword: string,
   termsVersionId: number,
+  acceptedTerms: boolean,
 ): VendorRegistrationData {
   return {
     ownerName: value(form, "ownerName"),
@@ -233,6 +249,7 @@ function vendorData(
     password,
     confirmPassword,
     termsVersionId,
+    acceptedTerms,
   };
 }
 

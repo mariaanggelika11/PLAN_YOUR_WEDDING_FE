@@ -6,6 +6,7 @@ export interface CustomerRegistrationData {
   confirmPassword: string;
   /** id of the active terms version shown to (and accepted by) the user */
   termsVersionId: number;
+  acceptedTerms: boolean;
 }
 
 export interface VendorRegistrationData {
@@ -18,6 +19,7 @@ export interface VendorRegistrationData {
   confirmPassword: string;
   /** id of the active terms version shown to (and accepted by) the user */
   termsVersionId: number;
+  acceptedTerms: boolean;
 }
 
 export interface RegisteredUser {

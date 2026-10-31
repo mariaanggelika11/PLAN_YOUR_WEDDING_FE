@@ -1,3 +1,4 @@
+import { validateActiveTerms } from "@/features/auth/termsRules";
 import type {
   CreateTermsVersionInput,
   TermsDocument,
@@ -13,8 +14,10 @@ import type { ApiResponse } from "@/shared/types/api";
 
 /** Public: used by the registration page before the user has an account. */
 export async function getActiveTerms(type: TermsUserType) {
-  const response = await apiRequest<ApiResponse<TermsDocument>>(API_ROUTES.terms.active(type));
-  return response.data;
+  const response = await apiRequest<ApiResponse<TermsDocument>>(API_ROUTES.terms.active(type), {
+    cache: "no-store",
+  });
+  return validateActiveTerms(response.data, type);
 }
 
 export function getMyTermsStatus() {

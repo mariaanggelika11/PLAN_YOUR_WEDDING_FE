@@ -1,3 +1,4 @@
+import { registrationConsent } from "@/features/auth/termsRules";
 import { encryptText } from "@/features/auth/api/cryptographyApi";
 import type {
   CustomerRegistrationData,
@@ -25,6 +26,7 @@ export class RegistrationError extends Error {
 
 export function registerCustomer(data: CustomerRegistrationData) {
   validatePasswords(data.password, data.confirmPassword);
+  registrationConsent(data.acceptedTerms, data.termsVersionId);
   return register("customer", data.termsVersionId, {
     fullname: data.fullname.trim(),
     email: normalizeEmail(data.email),
@@ -35,6 +37,7 @@ export function registerCustomer(data: CustomerRegistrationData) {
 
 export function registerVendor(data: VendorRegistrationData) {
   validatePasswords(data.password, data.confirmPassword);
+  registrationConsent(data.acceptedTerms, data.termsVersionId);
   return register("vendor", data.termsVersionId, {
     ownerName: data.ownerName.trim(),
     businessName: data.businessName.trim(),
