@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { AuthError, changePassword, requestPasswordReset } from "@/features/auth/api/authApi";
 import { OtpVerificationForm } from "@/features/auth/components/OtpVerificationForm";
@@ -15,6 +16,7 @@ import { useState, type FormEvent } from "react";
 type ResetStep = "email" | "otp" | "password" | "success";
 
 export function ForgotPasswordForm() {
+  const { translateText } = useTranslation();
   const [step, setStep] = useState<ResetStep>("email");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -79,24 +81,25 @@ export function ForgotPasswordForm() {
     return (
       <form className="grid gap-4" onSubmit={submitNewPassword}>
         <p className="rounded-xl bg-rose-50 p-3 text-sm text-stone-700">
-          OTP berhasil diverifikasi. Buat password baru untuk <strong>{email}</strong>.
+          {translateText("OTP berhasil diverifikasi. Buat password baru untuk")}{" "}
+          <strong>{email}</strong>.
         </p>
         <PasswordInput
-          label="Password baru"
+          label={translateText("Password baru")}
           name="newPassword"
           helper={validationMessages.password}
           autoComplete="new-password"
           required
         />
         <PasswordInput
-          label="Konfirmasi password baru"
+          label={translateText("Konfirmasi password baru")}
           name="confirmNewPassword"
           autoComplete="new-password"
           required
         />
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && <ErrorMessage>{translateText(error)}</ErrorMessage>}
         <AppButton loading={isLoading} type="submit">
-          Ubah password
+          {translateText("Ubah password")}{" "}
         </AppButton>
       </form>
     );
@@ -107,7 +110,7 @@ export function ForgotPasswordForm() {
       <div className="grid gap-4">
         <SuccessState message="Password berhasil diubah. Silakan masuk menggunakan password baru." />
         <AppButton asChild>
-          <Link href={ROUTES.login}>Kembali ke halaman masuk</Link>
+          <Link href={ROUTES.login}>{translateText("Kembali ke halaman masuk")}</Link>
         </AppButton>
       </div>
     );
@@ -119,14 +122,14 @@ export function ForgotPasswordForm() {
         label="Email"
         name="email"
         type="email"
-        placeholder="nama@email.com"
+        placeholder={translateText("nama@email.com")}
         autoComplete="email"
         defaultValue={email}
         required
       />
-      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {error && <ErrorMessage>{translateText(error)}</ErrorMessage>}
       <AppButton loading={isLoading} type="submit">
-        Kirim kode OTP
+        {translateText("Kirim kode OTP")}{" "}
       </AppButton>
     </form>
   );

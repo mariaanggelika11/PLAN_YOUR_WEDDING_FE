@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { AuthError, resendOtp, verifyOtp } from "@/features/auth/api/authApi";
 import type { OtpPurpose } from "@/features/auth/types/auth";
@@ -23,6 +24,7 @@ export function OtpVerificationForm({
   onVerified,
   onChangeEmail,
 }: OtpVerificationFormProps) {
+  const { translateText } = useTranslation();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -39,7 +41,7 @@ export function OtpVerificationForm({
     event.preventDefault();
     const otpCode = String(new FormData(event.currentTarget).get("otpCode") ?? "").trim();
     if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otpCode)) {
-      setError(`Kode OTP harus terdiri dari ${OTP_LENGTH} digit.`);
+      setError(translateText("Kode OTP harus terdiri dari {0} digit.", { 0: OTP_LENGTH }));
       return;
     }
 
@@ -74,12 +76,12 @@ export function OtpVerificationForm({
   return (
     <form className="grid gap-4" onSubmit={submit}>
       <div className="rounded-xl bg-rose-50 p-3 text-sm text-stone-700">
-        Permintaan kode OTP 6 digit telah diterima untuk <strong>{email}</strong>. Periksa inbox dan
-        folder spam. Kode berlaku dalam waktu terbatas.
+        {translateText("Permintaan kode OTP 6 digit telah diterima untuk")} <strong>{email}</strong>
+        {translateText(". Periksa inbox dan folder spam. Kode berlaku dalam waktu terbatas.")}{" "}
       </div>
 
       <AppInput
-        label="Kode OTP"
+        label={translateText("Kode OTP")}
         name="otpCode"
         inputMode="numeric"
         autoComplete="one-time-code"
@@ -89,29 +91,29 @@ export function OtpVerificationForm({
         required
       />
 
-      {error && <Feedback>{error}</Feedback>}
+      {error && <Feedback>{translateText(error)}</Feedback>}
       {message && <PopupMessage message={message} />}
 
       <AppButton loading={isVerifying} type="submit">
-        Verifikasi OTP
+        {translateText("Verifikasi OTP")}{" "}
       </AppButton>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <button
-          className="font-semibold text-blush disabled:cursor-not-allowed disabled:text-stone-400"
+          className="font-semibold text-blush disabled:cursor-not-allowed disabled:text-stone-600"
           disabled={cooldown > 0 || isResending || isVerifying}
           onClick={resend}
           type="button"
         >
           {isResending
-            ? "Mengirim ulang..."
+            ? translateText("Mengirim ulang...")
             : cooldown > 0
-              ? `Kirim ulang (${cooldown} detik)`
-              : "Kirim ulang OTP"}
+              ? translateText("Kirim ulang ({0} detik)", { 0: cooldown })
+              : translateText("Kirim ulang OTP")}
         </button>
         {onChangeEmail && (
           <button className="text-stone-600 hover:text-blush" onClick={onChangeEmail} type="button">
-            Ganti email
+            {translateText("Ganti email")}{" "}
           </button>
         )}
       </div>

@@ -57,7 +57,7 @@ export function NotificationMenu({ role }: { role: AppRole }) {
                 />
               ))
             ) : (
-              <p className="text-sm text-stone-500">{t("notification.empty")}</p>
+              <p className="text-sm text-stone-600">{t("notification.empty")}</p>
             )}
           </div>
           {state.mutationError && (

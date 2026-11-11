@@ -26,7 +26,7 @@ export function FormSection({
     <section className={cn("grid gap-5", !active && "hidden")} data-profile-step={step}>
       <div className="border-b pb-5">
         <h2 className="font-semibold text-ink">{translateText(title)}</h2>
-        <p className="mt-1 text-sm text-stone-500">{translateText(description)}</p>
+        <p className="mt-1 text-sm text-stone-600">{translateText(description)}</p>
       </div>
       <div className="grid gap-5 md:grid-cols-2">{children}</div>
     </section>
@@ -38,7 +38,7 @@ export function FormGroupHeader({ title, description }: { title: string; descrip
   return (
     <div className="border-b border-stone-200 pb-3 md:col-span-2">
       <h3 className="font-semibold text-ink">{translateText(title)}</h3>
-      <p className="mt-1 text-xs leading-5 text-stone-500">{translateText(description)}</p>
+      <p className="mt-1 text-xs leading-5 text-stone-600">{translateText(description)}</p>
     </div>
   );
 }
@@ -58,19 +58,20 @@ export function MasterParameterSelect({
   placeholder: string;
   value: string;
 }) {
+  const { translateText } = useTranslation();
   return (
     <AppSelect
       defaultValue={value}
       disabled={options.length === 0}
-      helper={options.length === 0 ? emptyMessage : undefined}
+      helper={options.length === 0 ? translateText(emptyMessage ?? "") : undefined}
       key={`${name}-${options.map((item) => item.value).join("-")}`}
-      label={label}
+      label={translateText(label)}
       name={name}
     >
-      <option value="">{placeholder}</option>
+      <option value="">{translateText(placeholder)}</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
-          {option.label}
+          {translateText(option.label)}
         </option>
       ))}
     </AppSelect>
@@ -92,6 +93,7 @@ export function MasterParameterCheckboxGroup({
   options: MasterParameterOption[];
   allowSelectAll?: boolean;
 }) {
+  const { translateText } = useTranslation();
   const [selectedValues, setSelectedValues] = useState(() =>
     parameterOptionLabels(initialValues, options),
   );
@@ -117,7 +119,7 @@ export function MasterParameterCheckboxGroup({
 
   return (
     <fieldset className="md:col-span-2">
-      <legend className="text-sm font-medium">{label}</legend>
+      <legend className="text-sm font-medium">{translateText(label)}</legend>
       {allowSelectAll && options.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-100 bg-rose-50/60 px-4 py-3">
           <label className="flex min-h-7 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
@@ -125,7 +127,7 @@ export function MasterParameterCheckboxGroup({
               ref={selectAllRef}
               type="checkbox"
               checked={allSelected}
-              aria-label={`Pilih semua ${label.toLowerCase()}`}
+              aria-label={translateText("Pilih semua {0}", { 0: label.toLowerCase() })}
               className="size-4 cursor-pointer accent-rose-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rose-500"
               onChange={(event) =>
                 setSelectedValues(
@@ -133,20 +135,21 @@ export function MasterParameterCheckboxGroup({
                 )
               }
             />
-            Pilih semua
+            {translateText("Pilih semua")}{" "}
           </label>
           <span
             aria-live="polite"
             aria-atomic="true"
             className="rounded-full border border-rose-100 bg-white px-3 py-1 text-xs font-medium tabular-nums text-rose-700"
           >
-            {selectedCount} dari {options.length} terpilih
+            {selectedCount} {translateText("dari")} {options.length}{" "}
+            {translateText("terpilih")}{" "}
           </span>
         </div>
       )}
       {options.length === 0 ? (
-        <p className="mt-2 rounded-xl border border-dashed bg-stone-50 p-4 text-sm text-stone-500">
-          {emptyMessage ?? "Belum ada pilihan aktif."}
+        <p className="mt-2 rounded-xl border border-dashed bg-stone-50 p-4 text-sm text-stone-600">
+          {emptyMessage ?? translateText("Belum ada pilihan aktif.")}
         </p>
       ) : (
         <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -174,7 +177,7 @@ export function MasterParameterCheckboxGroup({
                 type="checkbox"
                 value={option.label}
               />
-              {option.label}
+              {translateText(option.label)}
             </label>
           ))}
         </div>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import {
@@ -21,30 +24,31 @@ export function CustomerWeddingDetailsSection({
   masterParameters: ReturnType<typeof useMasterParameters>;
   profile: CustomerApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const eventTypeOptions = masterParameters.getOptions(MASTER_PARAMETER_CODES.customerEventType);
   const vendorCategoryOptions = masterParameters.getOptions(MASTER_PARAMETER_CODES.vendorCategory);
   return (
     <WeddingDetailsSection active={active}>
       <FormGroupHeader
-        description="Informasi utama mengenai waktu, tempat, dan konsep acara."
-        title="Data Pernikahan"
+        description={translateText("Informasi utama mengenai waktu, tempat, dan konsep acara.")}
+        title={translateText("Data Pernikahan")}
       />
       <AppInput
         defaultValue={profile?.weddingDate?.slice(0, 10) ?? ""}
-        label="Tanggal acara"
+        label={translateText("Tanggal acara")}
         name="weddingDate"
         type="date"
       />
       <MasterParameterSelect
         emptyMessage={
           masterParameters.loading
-            ? "Memuat pilihan jenis acara..."
+            ? translateText("Memuat pilihan jenis acara...")
             : masterParameters.emptyMessage(MASTER_PARAMETER_CODES.customerEventType)
         }
-        label="Jenis acara"
+        label={translateText("Jenis acara")}
         name="eventType"
         options={eventTypeOptions}
-        placeholder="Pilih jenis acara"
+        placeholder={translateText("Pilih jenis acara")}
         value={
           resolveEventTypeOption(profile?.eventType, eventTypeOptions) ||
           masterParameters.resolveValue(
@@ -64,44 +68,46 @@ export function CustomerWeddingDetailsSection({
       <div className="md:col-span-2">
         <AppTextarea
           defaultValue={profile?.weddingLocation ?? ""}
-          label="Lokasi atau venue acara"
+          label={translateText("Lokasi atau venue acara")}
           name="weddingLocation"
-          placeholder="Contoh: The Glass House, Jl. Gatot Subroto No. 10"
+          placeholder={translateText("Contoh: The Glass House, Jl. Gatot Subroto No. 10")}
         />
       </div>
       <div className="md:col-span-2">
         <AppTextarea
           defaultValue={profile?.weddingTheme ?? ""}
-          label="Konsep atau tema pernikahan"
+          label={translateText("Konsep atau tema pernikahan")}
           name="weddingTheme"
-          placeholder="Contoh: Modern romantic dengan nuansa putih dan dusty pink"
+          placeholder={translateText("Contoh: Modern romantic dengan nuansa putih dan dusty pink")}
         />
       </div>
       <FormGroupHeader
-        description="Bantu sistem memahami skala acara dan vendor yang sedang dicari."
-        title="Data Kebutuhan Acara"
+        description={translateText(
+          "Bantu sistem memahami skala acara dan vendor yang sedang dicari.",
+        )}
+        title={translateText("Data Kebutuhan Acara")}
       />
       <FormattedNumberInput
         defaultValue={profile?.estimatedGuests ?? ""}
-        label="Estimasi jumlah tamu"
+        label={translateText("Estimasi jumlah tamu")}
         min={1}
         name="estimatedGuests"
       />
       <AppInput
         defaultValue={profile?.preferredVendorLocation ?? ""}
-        label="Preferensi lokasi vendor"
+        label={translateText("Preferensi lokasi vendor")}
         name="preferredVendorLocation"
-        placeholder="Contoh: Jakarta dan sekitarnya"
+        placeholder={translateText("Contoh: Jakarta dan sekitarnya")}
       />
       <AppSelect
         defaultValue={profile?.packagePreference ?? ""}
-        label="Preferensi paket wedding"
+        label={translateText("Preferensi paket wedding")}
         name="packagePreference"
       >
-        <option value="">Belum ada preferensi</option>
-        <option value="FULL_SERVICE">Paket lengkap / full service</option>
-        <option value="PER_SERVICE">Paket per layanan</option>
-        <option value="CUSTOM">Paket custom</option>
+        <option value="">{translateText("Belum ada preferensi")}</option>
+        <option value="FULL_SERVICE">{translateText("Paket lengkap / full service")}</option>
+        <option value="PER_SERVICE">{translateText("Paket per layanan")}</option>
+        <option value="CUSTOM">{translateText("Paket custom")}</option>
       </AppSelect>
       <MasterParameterCheckboxGroup
         allowSelectAll
@@ -110,31 +116,33 @@ export function CustomerWeddingDetailsSection({
           MASTER_PARAMETER_CODES.vendorCategory,
           profile?.neededVendorCategories,
         )}
-        label="Kebutuhan vendor"
+        label={translateText("Kebutuhan vendor")}
         name="neededVendorCategories"
         options={vendorCategoryOptions}
       />
       <FormGroupHeader
-        description="Tentukan rencana biaya agar pengeluaran dapat dipantau sejak awal."
-        title="Data Budget"
+        description={translateText(
+          "Tentukan rencana biaya agar pengeluaran dapat dipantau sejak awal.",
+        )}
+        title={translateText("Data Budget")}
       />
       <FormattedNumberInput
         defaultValue={profile?.estimatedBudget ?? ""}
-        label="Estimasi total budget"
+        label={translateText("Estimasi total budget")}
         min={0}
         name="estimatedBudget"
-        placeholder="Contoh: 250.000.000"
+        placeholder={translateText("Contoh: 250.000.000")}
       />
       <div className="grid gap-4 md:grid-cols-2">
         <FormattedNumberInput
           defaultValue={profile?.budgetRangeMin ?? ""}
-          label="Budget minimum"
+          label={translateText("Budget minimum")}
           min={0}
           name="budgetRangeMin"
         />
         <FormattedNumberInput
           defaultValue={profile?.budgetRangeMax ?? ""}
-          label="Budget maksimum"
+          label={translateText("Budget maksimum")}
           min={0}
           name="budgetRangeMax"
         />
@@ -146,7 +154,7 @@ export function CustomerWeddingDetailsSection({
           MASTER_PARAMETER_CODES.vendorCategory,
           profile?.budgetPriorities,
         )}
-        label="Prioritas budget"
+        label={translateText("Prioritas budget")}
         name="budgetPriorities"
         options={vendorCategoryOptions}
       />

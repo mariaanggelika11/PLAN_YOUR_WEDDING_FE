@@ -1,5 +1,6 @@
+import { withRequestDeadline } from "./requestDeadline";
 import { expireSession, getSession } from "@/features/auth/api/authApi";
-import { API_BASE_URL, ApiError, apiRequest } from "@/shared/api/apiClient";
+import { API_BASE_URL, ApiError, apiRequest, requestFailure } from "@/shared/api/apiClient";
 import type { ApiResponse } from "@/shared/types/api";
 
 export function getAuthenticatedContext() {
@@ -45,17 +46,29 @@ export async function featureDataRequest<T>(
 
 export async function authenticatedFetch(path: string, init?: RequestInit) {
   const { accessToken } = getAuthenticatedContext();
-  let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      headers: withBearerToken(init?.headers, accessToken),
-    });
-  } catch {
-    throw new ApiError("Tidak dapat terhubung ke server.", 0);
+    return await withRequestDeadline(async (signal) => {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        signal,
+        headers: withBearerToken(init?.headers, accessToken),
+      });
+      if (response.status === 401) expireSession();
+      // Attachment callers consume a blob; buffer it while the deadline remains active.
+      const body =
+        response.status === 204 || response.status === 205 || response.status === 304
+          ? null
+          : await response.arrayBuffer();
+      return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }, init);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw requestFailure(error, init?.signal);
   }
-  if (response.status === 401) expireSession();
-  return response;
 }
 
 function withBearerToken(headers: HeadersInit | undefined, accessToken: string) {

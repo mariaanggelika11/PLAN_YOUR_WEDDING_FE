@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { deleteVendorContact } from "@/features/profile/api/profileApi";
 import {
@@ -26,6 +27,7 @@ export function VendorContactSection({
   onDeleted: () => void;
   profile: VendorApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const deletion = useProfileCollectionDelete();
   const initialFields = VENDOR_CONTACT_OPTIONS.filter(({ field }) =>
     Boolean(savedVendorContact(profile, field)?.contactValue),
@@ -39,7 +41,9 @@ export function VendorContactSection({
     const contact = savedVendorContact(profile, field);
     await deletion.remove({
       action: contact ? () => deleteVendorContact(contact.id) : undefined,
-      confirmMessage: `Kontak ${contact?.contactType ?? "ini"} akan dihapus dari profile vendor.`,
+      confirmMessage: translateText("Kontak {0} akan dihapus dari profile vendor.", {
+        0: contact?.contactType ?? "ini",
+      }),
       confirmTitle: "Hapus kontak?",
       errorMessage: "Kontak gagal dihapus.",
       onDeleted: () => {
@@ -63,11 +67,13 @@ export function VendorContactSection({
               type="button"
               variant="secondary"
             >
-              <Plus size={16} /> Tambah kontak
+              <Plus size={16} /> {translateText("Tambah kontak")}{" "}
             </AppButton>
           }
-          description="Tambahkan kanal resmi yang dapat digunakan customer untuk mengenal bisnis Anda."
-          title="Kontak bisnis"
+          description={translateText(
+            "Tambahkan kanal resmi yang dapat digunakan customer untuk mengenal bisnis Anda.",
+          )}
+          title={translateText("Kontak bisnis")}
         />
         {!fields.length ? (
           <EmptyCollection message="Belum ada kontak bisnis. Tambahkan setidaknya satu kanal kontak." />
@@ -81,8 +87,8 @@ export function VendorContactSection({
                   key={field}
                 >
                   <AppSelect
-                    aria-label="Jenis kontak"
-                    label="Jenis kontak"
+                    aria-label={translateText("Jenis kontak")}
+                    label={translateText("Jenis kontak")}
                     onChange={(event) => {
                       const next = event.target.value as VendorContactField;
                       setFields((current) => current.map((item) => (item === field ? next : item)));
@@ -95,20 +101,20 @@ export function VendorContactSection({
                         key={item.field}
                         value={item.field}
                       >
-                        {item.label}
+                        {translateText(item.label)}
                       </option>
                     ))}
                   </AppSelect>
                   <AppInput
                     defaultValue={savedVendorContact(profile, field)?.contactValue ?? ""}
-                    label="Detail kontak"
+                    label={translateText("Detail kontak")}
                     name={field}
                     placeholder={option.placeholder}
                     type={option.type}
                   />
                   <AppIconButton
                     disabled={deletion.deleting}
-                    label={`Hapus kontak ${option.label}`}
+                    label={translateText("Hapus kontak {0}", { 0: option.label })}
                     onClick={() => void removeContact(field)}
                     type="button"
                     variant="danger"

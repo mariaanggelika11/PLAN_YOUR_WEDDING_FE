@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { useCallback, useState } from "react";
@@ -25,20 +27,21 @@ export function StorePage({
   vendorId: string;
   role?: MarketplaceRole;
 }) {
+  const { translateText } = useTranslation();
   const loader = useCallback(() => getStore(vendorId), [vendorId]);
   const resource = useAsyncResource(loader, { initialData: null });
   if (resource.loading) return <LoadingSkeleton />;
   if (resource.error)
     return <ErrorState description={resource.error} retry={() => void resource.reload()} />;
   const store = resource.data;
-  if (!store) return <EmptyState title="Toko tidak ditemukan" />;
+  if (!store) return <EmptyState title={translateText("Toko tidak ditemukan")} />;
   return (
     <div className="grid min-w-0 gap-5">
       <Link
         href={ROUTES[role].marketplace}
-        className="flex w-fit items-center gap-2 text-sm text-stone-500 hover:text-blush"
+        className="flex w-fit items-center gap-2 text-sm text-stone-600 hover:text-blush"
       >
-        <ArrowLeft size={16} /> Kembali ke marketplace
+        <ArrowLeft size={16} /> {translateText("Kembali ke marketplace")}{" "}
       </Link>
       <section className="flex items-start gap-4 rounded-xl border bg-white p-5 sm:p-6">
         <StoreLogo attachmentId={store.logoAttachmentId} url={store.logoUrl} name={store.name} />
@@ -46,17 +49,20 @@ export function StorePage({
           <h1 className="break-words text-xl font-semibold sm:text-2xl">{store.name}</h1>
           {store.verified && (
             <p className="mt-1 flex items-center gap-1 text-xs text-emerald-700">
-              <BadgeCheck size={14} /> Terverifikasi
+              <BadgeCheck size={14} /> {translateText("Terverifikasi")}{" "}
             </p>
           )}
-          <p className="mt-2 text-sm text-stone-500">
-            {store.stats.productCount} produk ·{" "}
+          <p className="mt-2 text-sm text-stone-600">
+            {store.stats.productCount} {translateText("produk ·")}{" "}
             {store.stats.reviewCount
-              ? `${Number(store.stats.averageRating).toFixed(1)} / 5 (${store.stats.reviewCount} ulasan)`
-              : "Belum ada ulasan"}{" "}
-            · {store.stats.soldCount} terjual
+              ? translateText("{0} / 5 ({1} ulasan)", {
+                  0: Number(store.stats.averageRating).toFixed(1),
+                  1: store.stats.reviewCount,
+                })
+              : translateText("Belum ada ulasan")}{" "}
+            · {store.stats.soldCount} {translateText("terjual")}{" "}
           </p>
-          {store.location && <p className="mt-2 text-sm text-stone-500">{store.location}</p>}
+          {store.location && <p className="mt-2 text-sm text-stone-600">{store.location}</p>}
           {store.description && (
             <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-600">
               {store.description}
@@ -75,21 +81,23 @@ export function StorePage({
             content: (
               <section className="grid gap-5 rounded-xl border bg-white p-5 sm:p-6">
                 <div>
-                  <h2 className="font-semibold">Tentang {store.name}</h2>
+                  <h2 className="font-semibold">
+                    {translateText("Tentang")} {store.name}
+                  </h2>
                   <p className="mt-2 whitespace-pre-line text-sm leading-6 text-stone-600">
-                    {store.description || "Vendor belum menambahkan deskripsi toko."}
+                    {store.description || translateText("Vendor belum menambahkan deskripsi toko.")}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold">Kategori layanan</h3>
+                  <h3 className="text-sm font-semibold">{translateText("Kategori layanan")}</h3>
                   <p className="mt-1 text-sm text-stone-600">
-                    {store.categories.join(", ") || "Belum dicantumkan"}
+                    {store.categories.join(", ") || translateText("Belum dicantumkan")}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold">Area layanan</h3>
+                  <h3 className="text-sm font-semibold">{translateText("Area layanan")}</h3>
                   <p className="mt-1 text-sm text-stone-600">
-                    {store.serviceArea || "Belum dicantumkan"}
+                    {store.serviceArea || translateText("Belum dicantumkan")}
                   </p>
                 </div>
               </section>
@@ -124,20 +132,21 @@ function StoreLogo({
   return (
     <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-stone-100 sm:size-20">
       {src && !failed ? (
-        <img
+        <AttachmentImage
           src={src}
           alt={name}
           onError={() => setFailed(true)}
           className="size-full object-contain"
         />
       ) : (
-        <Store className="text-stone-400" size={28} />
+        <Store className="text-stone-600" size={28} />
       )}
     </div>
   );
 }
 
 function StoreProducts({ vendorId, role }: { vendorId: number; role: MarketplaceRole }) {
+  const { translateText } = useTranslation();
   const [page, setPage] = useState(1);
   const loader = useCallback(() => getStoreProducts(vendorId, page), [vendorId, page]);
   const resource = useAsyncResource(loader, { initialData: null });
@@ -154,14 +163,14 @@ function StoreProducts({ vendorId, role }: { vendorId: number; role: Marketplace
         </div>
       ) : (
         <EmptyState
-          title="Belum ada produk"
-          description="Belum ada paket aktif untuk ditampilkan pada halaman ini."
+          title={translateText("Belum ada produk")}
+          description={translateText("Belum ada paket aktif untuk ditampilkan pada halaman ini.")}
         />
       )}
       {result && (
         <Pagination
           className="pt-4"
-          label="Halaman hasil toko"
+          label={translateText("Halaman hasil toko")}
           page={page}
           totalPages={Math.ceil(result.total / result.pageSize)}
           onPageChange={setPage}
@@ -172,6 +181,7 @@ function StoreProducts({ vendorId, role }: { vendorId: number; role: Marketplace
 }
 
 function StoreReviews({ vendorId, role }: { vendorId: number; role: MarketplaceRole }) {
+  const { translateText, locale } = useTranslation();
   const [page, setPage] = useState(1);
   const loader = useCallback(() => getStoreReviews(vendorId, page), [vendorId, page]);
   const resource = useAsyncResource(loader, { initialData: null });
@@ -186,11 +196,14 @@ function StoreReviews({ vendorId, role }: { vendorId: number; role: MarketplaceR
     : 0;
   return (
     <section className="rounded-xl border bg-white p-5 sm:p-6">
-      <h2 className="font-semibold">Ulasan toko</h2>
-      <p className="mt-1 text-sm text-stone-500">
+      <h2 className="font-semibold">{translateText("Ulasan toko")}</h2>
+      <p className="mt-1 text-sm text-stone-600">
         {count
-          ? `${average.toFixed(1)} / 5 · ${count} penilaian seluruh produk`
-          : "Belum ada penilaian"}
+          ? translateText("{0} / 5 · {1} penilaian seluruh produk", {
+              0: average.toFixed(1),
+              1: count,
+            })
+          : translateText("Belum ada penilaian")}
       </p>
       <div className="mt-4 divide-y">
         {result?.data.map((review) => (
@@ -199,7 +212,9 @@ function StoreReviews({ vendorId, role }: { vendorId: number; role: MarketplaceR
               <div>
                 <p className="text-sm font-semibold">{review.customer?.fullName || "Customer"}</p>
                 {review.createdAt && (
-                  <p className="mt-1 text-xs text-stone-500">{formatDate(review.createdAt)}</p>
+                  <p className="mt-1 text-xs text-stone-600">
+                    {formatDate(review.createdAt, locale)}
+                  </p>
                 )}
               </div>
               <RatingStars rating={review.rating} />
@@ -232,15 +247,15 @@ function StoreReviews({ vendorId, role }: { vendorId: number; role: MarketplaceR
         ))}
         {!result?.data.length && (
           <EmptyState
-            title="Belum ada ulasan"
-            description="Ulasan akan muncul setelah customer memberikan penilaian."
+            title={translateText("Belum ada ulasan")}
+            description={translateText("Ulasan akan muncul setelah customer memberikan penilaian.")}
           />
         )}
       </div>
       {result && (
         <Pagination
           className="pt-4"
-          label="Halaman hasil toko"
+          label={translateText("Halaman hasil toko")}
           page={page}
           totalPages={Math.ceil(result.total / result.pageSize)}
           onPageChange={setPage}

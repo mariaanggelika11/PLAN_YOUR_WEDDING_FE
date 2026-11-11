@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(8_000),
       headers: {
         "Accept-Language": "id",
         "User-Agent": "PlanYourWedding/1.0 (location-picker)",

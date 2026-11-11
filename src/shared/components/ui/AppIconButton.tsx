@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { cn } from "@/shared/utils/cn";
 import { Slot } from "@radix-ui/react-slot";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
@@ -15,6 +18,7 @@ export function AppIconButton({
   label: string;
   variant?: "neutral" | "danger";
 }) {
+  const { translateText } = useTranslation();
   const styles = cn(
     "grid size-10 shrink-0 place-items-center rounded-lg border bg-white transition disabled:cursor-not-allowed disabled:opacity-50",
     variant === "danger"
@@ -24,13 +28,19 @@ export function AppIconButton({
   );
   if (asChild) {
     return (
-      <Slot aria-label={label} className={styles} title={label}>
+      <Slot aria-label={translateText(label)} className={styles} title={translateText(label)}>
         {children}
       </Slot>
     );
   }
   return (
-    <button aria-label={label} className={styles} title={label} type="button" {...props}>
+    <button
+      aria-label={translateText(label)}
+      className={styles}
+      title={translateText(label)}
+      type="button"
+      {...props}
+    >
       {children}
     </button>
   );

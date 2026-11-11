@@ -20,13 +20,14 @@ export function Pagination({
   className?: string;
   label?: string;
 }) {
-  const { t, locale } = useTranslation();
+  const { translateText, t, locale } = useTranslation();
+
   const total = Math.max(1, totalPages);
   const button =
     "flex h-8 min-w-8 items-center justify-center rounded-lg px-1 text-sm tabular-nums transition-colors hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush disabled:cursor-default disabled:opacity-40 sm:h-9 sm:min-w-9";
   return (
     <nav
-      aria-label={label}
+      aria-label={translateText(label)}
       className={cn("flex flex-wrap items-center justify-center gap-0.5", className)}
     >
       <button
@@ -44,7 +45,7 @@ export function Pagination({
           <span
             key={`gap-${index}`}
             aria-hidden="true"
-            className="w-4 text-center text-sm text-stone-400"
+            className="w-4 text-center text-sm text-stone-600"
           >
             …
           </span>

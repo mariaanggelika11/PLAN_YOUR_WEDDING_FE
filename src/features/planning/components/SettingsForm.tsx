@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
@@ -20,6 +21,7 @@ export function SettingsForm({
   autoReschedule: boolean;
   onSave: (settings: PlanSettings, shift: boolean) => Promise<void>;
 }) {
+  const { translateText, locale } = useTranslation();
   const [settings, setSettings] = useState(initial);
   const [isInitialCreation] = useState(!existing);
   const [shift, setShift] = useState(autoReschedule);
@@ -43,12 +45,13 @@ export function SettingsForm({
         <div>
           <p className="font-semibold text-ink">
             {isInitialCreation
-              ? "Sedang membuat checklist pernikahanmu…"
-              : "Sedang menyimpan pengaturan…"}
+              ? translateText("Sedang membuat checklist pernikahanmu…")
+              : translateText("Sedang menyimpan pengaturan…")}
           </p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-stone-500">
-            Kami sedang menyiapkan tugas dan tenggatnya. Proses ini bisa memerlukan beberapa saat.
-            Tunggu sampai selesai dan jangan tutup halaman ini dulu, ya.
+          <p className="mt-2 max-w-sm text-sm leading-6 text-stone-600">
+            {translateText(
+              "Kami sedang menyiapkan tugas dan tenggatnya. Proses ini bisa memerlukan beberapa saat. Tunggu sampai selesai dan jangan tutup halaman ini dulu, ya.",
+            )}{" "}
           </p>
         </div>
       </div>
@@ -62,9 +65,13 @@ export function SettingsForm({
         </p>
       )}
       <div className="rounded-xl border p-4 text-sm">
-        <p>Tanggal acara: {displayDate(initial.date)}</p>
-        <p className="mt-2 text-stone-500">
-          Tanggal, lokasi, jumlah tamu, dan anggaran mengikuti profil pernikahanmu.
+        <p>
+          {translateText("Tanggal acara:")} {displayDate(initial.date, locale)}
+        </p>
+        <p className="mt-2 text-stone-600">
+          {translateText(
+            "Tanggal, lokasi, jumlah tamu, dan anggaran mengikuti profil pernikahanmu.",
+          )}{" "}
         </p>
         <Link
           aria-disabled={mutation.busy}
@@ -74,11 +81,11 @@ export function SettingsForm({
           className="mt-3 inline-block text-blush underline"
           href={ROUTES.customer.profile}
         >
-          Ubah detail acara di profil
+          {translateText("Ubah detail acara di profil")}{" "}
         </Link>
       </div>
       <fieldset disabled={mutation.busy} className="grid gap-3 rounded-xl bg-stone-50 p-4">
-        <legend className="text-sm font-semibold">Kebutuhan tambahan</legend>
+        <legend className="text-sm font-semibold">{translateText("Kebutuhan tambahan")}</legend>
         {(
           [
             ["traditional", "Ada rangkaian acara adat"],
@@ -93,7 +100,7 @@ export function SettingsForm({
               checked={settings[key]}
               onChange={(e) => setSettings({ ...settings, [key]: e.target.checked })}
             />
-            {label}
+            {translateText(label)}
           </label>
         ))}
       </fieldset>
@@ -106,16 +113,22 @@ export function SettingsForm({
             checked={shift}
             onChange={(e) => setShift(e.target.checked)}
           />
-          Sesuaikan tenggat otomatis saat tanggal acara berubah. Tenggat yang diedit sendiri dan
-          tugas selesai tetap dipertahankan.
+          {translateText(
+            "Sesuaikan tenggat otomatis saat tanggal acara berubah. Tenggat yang diedit sendiri dan tugas selesai tetap dipertahankan.",
+          )}{" "}
         </label>
-        <p className="text-xs leading-5 text-stone-500">
-          Kebutuhan tambahan akan menambahkan tugas yang belum ada. Tugas lama tetap disimpan; pilih
-          “Tidak diperlukan” pada tugas yang tidak lagi relevan.
+        <p className="text-xs leading-5 text-stone-600">
+          {translateText(
+            "Kebutuhan tambahan akan menambahkan tugas yang belum ada. Tugas lama tetap disimpan; pilih “Tidak diperlukan” pada tugas yang tidak lagi relevan.",
+          )}{" "}
         </p>
       </>
       <AppButton type="submit" disabled={mutation.busy}>
-        {mutation.busy ? "Menyimpan…" : existing ? "Simpan pengaturan" : "Buat checklist"}
+        {mutation.busy
+          ? translateText("Menyimpan…")
+          : existing
+            ? translateText("Simpan pengaturan")
+            : translateText("Buat checklist")}
       </AppButton>
     </form>
   );

@@ -1,3 +1,4 @@
+import { withRequestDeadline } from "./requestDeadline";
 export interface RegionOption {
   code: string;
   name: string;
@@ -16,7 +17,9 @@ export function getCities(provinceCode: string) {
 }
 
 async function getRegions(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Region data failed");
-  return ((await response.json()) as RegionResponse).data;
+  return withRequestDeadline(async (signal) => {
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error("Region data failed");
+    return ((await response.json()) as RegionResponse).data;
+  });
 }

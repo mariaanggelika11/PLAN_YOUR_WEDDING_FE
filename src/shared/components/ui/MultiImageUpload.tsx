@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
@@ -35,6 +37,7 @@ export function MultiImageUpload({
   name: string;
   required?: boolean;
 }) {
+  const { translateText } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<SelectedImage[]>([]);
   const [images, setImages] = useState<SelectedImage[]>([]);
@@ -101,12 +104,12 @@ export function MultiImageUpload({
     const invalidType = selected.find((file) => !IMAGE_TYPES.has(file.type));
     const oversized = selected.find((file) => file.size > MAX_IMAGE_SIZE);
     if (invalidType) {
-      setError(`${invalidType.name}: format harus JPG, PNG, atau WebP.`);
+      setError(translateText("{0}: format harus JPG, PNG, atau WebP.", { 0: invalidType.name }));
       syncInput(images);
       return;
     }
     if (oversized) {
-      setError(`${oversized.name}: ukuran maksimal 5 MB.`);
+      setError(translateText("{0}: ukuran maksimal 5 MB.", { 0: oversized.name }));
       syncInput(images);
       return;
     }
@@ -124,7 +127,7 @@ export function MultiImageUpload({
     syncInput(next);
     setError(
       images.length + additions.length > availableSlots
-        ? `Maksimal ${maxFiles} foto dalam satu produk.`
+        ? translateText("Maksimal {0} foto dalam satu produk.", { 0: maxFiles })
         : "",
     );
   }
@@ -154,16 +157,18 @@ export function MultiImageUpload({
   return (
     <fieldset className="grid gap-3">
       <legend className="text-sm font-medium">
-        {label}
+        {translateText(label)}
         {required && <span className="ml-1 text-red-500">*</span>}
       </legend>
       <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-stone-50 px-5 py-6 text-center transition hover:border-rose-300 hover:bg-rose-50">
         <ImagePlus className="mb-2 text-blush" size={28} />
         <span className="text-sm font-semibold">
-          {images.length || existingImages.length ? "Tambah foto lainnya" : "Pilih beberapa foto"}
+          {images.length || existingImages.length
+            ? translateText("Tambah foto lainnya")
+            : translateText("Pilih beberapa foto")}
         </span>
-        <span className="mt-1 text-xs text-stone-500">
-          {existingImages.length + images.length}/{maxFiles} foto
+        <span className="mt-1 text-xs text-stone-600">
+          {existingImages.length + images.length}/{maxFiles} {translateText("foto")}{" "}
         </span>
         <input
           accept="image/jpeg,image/png,image/webp"
@@ -177,8 +182,9 @@ export function MultiImageUpload({
         />
       </label>
       {loadingExisting && (
-        <p className="flex items-center gap-2 text-xs text-stone-500">
-          <LoaderCircle className="animate-spin" size={14} /> Memuat foto tersimpan...
+        <p className="flex items-center gap-2 text-xs text-stone-600">
+          <LoaderCircle className="animate-spin" size={14} />{" "}
+          {translateText("Memuat foto tersimpan...")}{" "}
         </p>
       )}
       {existingImages.length + images.length > 0 && (
@@ -188,24 +194,24 @@ export function MultiImageUpload({
               className="group relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
               key={image.id}
             >
-              <img
-                alt={`Foto tersimpan ${index + 1}`}
+              <AttachmentImage
+                alt={translateText("Foto tersimpan {0}", { 0: index + 1 })}
                 className="size-full object-cover"
                 src={image.previewUrl}
               />
               <span className="absolute bottom-2 left-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-stone-600 shadow-sm">
-                Tersimpan
+                {translateText("Tersimpan")}{" "}
               </span>
               {index === 0 && (
                 <span className="absolute left-2 top-2 rounded-full bg-ink/80 px-2 py-1 text-[10px] font-semibold text-white">
-                  Foto utama
+                  {translateText("Foto utama")}{" "}
                 </span>
               )}
               <AppIconButton
                 className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-sm"
-                label={`Hapus foto tersimpan ${index + 1}`}
+                label={translateText("Hapus foto tersimpan {0}", { 0: index + 1 })}
                 onClick={() => removeExistingImage(image.id)}
-                title="Hapus saat perubahan disimpan"
+                title={translateText("Hapus saat perubahan disimpan")}
                 type="button"
                 variant="danger"
               >
@@ -218,19 +224,19 @@ export function MultiImageUpload({
               className="group relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
               key={image.id}
             >
-              <img
-                alt={`Preview foto ${index + 1}`}
+              <AttachmentImage
+                alt={translateText("Preview foto {0}", { 0: index + 1 })}
                 className="size-full object-cover"
                 src={image.previewUrl}
               />
               {existingImages.length === 0 && index === 0 && (
                 <span className="absolute left-2 top-2 rounded-full bg-ink/80 px-2 py-1 text-[10px] font-semibold text-white">
-                  Foto utama
+                  {translateText("Foto utama")}{" "}
                 </span>
               )}
               <AppIconButton
                 className="absolute bottom-2 right-2 size-9 rounded-full bg-white/95 shadow-sm"
-                label={`Hapus foto ${index + 1}`}
+                label={translateText("Hapus foto {0}", { 0: index + 1 })}
                 onClick={() => removeImage(image.id)}
                 type="button"
                 variant="danger"
@@ -244,10 +250,12 @@ export function MultiImageUpload({
       {removedExistingIds.map((id) => (
         <input key={id} name="removedImageIds" readOnly type="hidden" value={id} />
       ))}
-      <p className={`text-xs ${error ? "text-red-600" : "text-stone-500"}`}>
+      <p className={`text-xs ${error ? "text-red-600" : "text-stone-600"}`}>
         {error ||
           helper ||
-          `JPG, PNG, atau WebP maksimal 5 MB per foto. Maksimal ${maxFiles} foto.`}
+          translateText("JPG, PNG, atau WebP maksimal 5 MB per foto. Maksimal {0} foto.", {
+            0: maxFiles,
+          })}
       </p>
     </fieldset>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getAdminVendors } from "@/features/admin/api/adminApi";
 import type { VendorAdminProfile } from "@/features/admin/types";
@@ -14,9 +15,13 @@ import Link from "next/link";
 const PAGE_SIZE = 10;
 
 export function AdminVendorsPage() {
+  const { translateText } = useTranslation();
   const table = usePaginatedResource(getAdminVendors, { mapError: errorMessage });
   return (
-    <Page title="Manajemen Vendor" description="Tinjau seluruh akun bisnis.">
+    <Page
+      title={translateText("Manajemen Vendor")}
+      description={translateText("Tinjau seluruh akun bisnis.")}
+    >
       <ListFeedback {...table} />
       {!table.loading && !table.error && (
         <DataTable
@@ -36,7 +41,7 @@ export function AdminVendorsPage() {
               <Link href={ROUTES.admin.vendorVerification(String(vendor.id))}>Detail</Link>
             </AppButton>,
           ])}
-          title="Daftar vendor"
+          title={translateText("Daftar vendor")}
         />
       )}
     </Page>

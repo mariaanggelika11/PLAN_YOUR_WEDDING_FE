@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { AppInput } from "@/shared/components/ui/FormFields";
 import { Eye, EyeOff } from "lucide-react";
@@ -7,6 +8,7 @@ import { useState } from "react";
 type PasswordInputProps = Omit<React.ComponentProps<typeof AppInput>, "type">;
 
 export function PasswordInput({ className, ...props }: PasswordInputProps) {
+  const { translateText } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -17,9 +19,11 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
         type={isVisible ? "text" : "password"}
       />
       <button
-        aria-label={isVisible ? "Sembunyikan password" : "Tampilkan password"}
+        aria-label={
+          isVisible ? translateText("Sembunyikan password") : translateText("Tampilkan password")
+        }
         aria-pressed={isVisible}
-        className="absolute right-3 top-9 grid size-7 place-items-center text-stone-400 hover:text-blush"
+        className="absolute right-3 top-9 grid size-7 place-items-center text-stone-600 hover:text-blush"
         onClick={() => setIsVisible((current) => !current)}
         type="button"
       >

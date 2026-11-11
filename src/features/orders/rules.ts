@@ -1,3 +1,4 @@
+import { translateInterfaceText, type TranslationVariables } from "../../shared/i18n/translate.ts";
 import type { Order, OrderPayment } from "./types";
 
 const PROOF_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
@@ -7,10 +8,15 @@ export function canVendorDecide(order: Pick<Order, "status">) {
   return order.status === "WAITING_VENDOR_CONFIRMATION";
 }
 
-export function paymentInstallmentLabel(installment: OrderPayment["installment"]) {
-  if (installment === "DP") return "DP";
-  if (installment === "REMAINING") return "Pelunasan";
-  return "Pembayaran penuh";
+export function paymentInstallmentLabel(
+  installment: OrderPayment["installment"],
+  locale: "id" | "en" = "id",
+) {
+  const translateUI = (text: string, variables?: TranslationVariables) =>
+    translateInterfaceText(text, locale, variables);
+  if (installment === "DP") return locale === "en" ? "Deposit" : "DP";
+  if (installment === "REMAINING") return translateUI("Pelunasan");
+  return translateUI("Pembayaran penuh");
 }
 
 export function sortPaymentsByInstallment(payments: OrderPayment[] | undefined) {

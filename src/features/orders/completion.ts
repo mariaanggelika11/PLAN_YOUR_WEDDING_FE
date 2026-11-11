@@ -1,3 +1,4 @@
+import { translateInterfaceText, type TranslationVariables } from "../../shared/i18n/translate.ts";
 import type { Order } from "./types.ts";
 
 /** The API owns the deadline; never infer completion from a client clock. */
@@ -7,16 +8,18 @@ export function confirmationDeadline(order: Pick<Order, "status" | "autoComplete
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-export function confirmationTimeLeft(deadline: number, now: number) {
+export function confirmationTimeLeft(deadline: number, now: number, locale: "id" | "en" = "id") {
+  const translateUI = (text: string, variables?: TranslationVariables) =>
+    translateInterfaceText(text, locale, variables);
   const minutes = Math.ceil((deadline - now) / 60_000);
-  if (minutes <= 0) return "Batas waktu konfirmasi telah lewat.";
+  if (minutes <= 0) return translateUI("Batas waktu konfirmasi telah lewat.");
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
   return days > 0
-    ? `Sisa waktu ${days} hari ${hours} jam.`
+    ? translateUI("Sisa waktu {0} hari {1} jam.", { 0: days, 1: hours })
     : hours > 0
-      ? `Sisa waktu ${hours} jam ${minutes % 60} menit.`
-      : `Sisa waktu ${minutes} menit.`;
+      ? translateUI("Sisa waktu {0} jam {1} menit.", { 0: hours, 1: minutes % 60 })
+      : translateUI("Sisa waktu {0} menit.", { 0: minutes });
 }
 
 export function conversationClosedReason(status?: Order["status"]) {

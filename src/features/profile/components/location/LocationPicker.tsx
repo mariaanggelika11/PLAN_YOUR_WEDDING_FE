@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import type {
   Coordinates,
@@ -23,6 +24,7 @@ export function LocationPicker({
   initialLatitude: number | string;
   initialLongitude: number | string;
 }) {
+  const { translateText } = useTranslation();
   const initialCoordinates = parseCoordinates(initialLatitude, initialLongitude);
   const [location, setLocation] = useState<Coordinates>(
     () => initialCoordinates ?? DEFAULT_LOCATION,
@@ -63,6 +65,7 @@ export function LocationPicker({
     try {
       const response = await fetch(
         `/api/locations/search?q=${encodeURIComponent(normalizedQuery)}`,
+        { signal: AbortSignal.timeout(15_000) },
       );
       const payload = (await response.json()) as {
         data?: LocationSearchResult[];
@@ -103,8 +106,10 @@ export function LocationPicker({
     <div className="grid gap-3 md:col-span-2">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">Titik lokasi bisnis</p>
-          <p className="text-xs text-stone-500">Cari, klik peta, atau geser marker.</p>
+          <p className="text-sm font-medium">{translateText("Titik lokasi bisnis")}</p>
+          <p className="text-xs text-stone-600">
+            {translateText("Cari, klik peta, atau geser marker.")}
+          </p>
         </div>
         <AppButton
           onClick={() => setEditing((current) => !current)}
@@ -112,7 +117,7 @@ export function LocationPicker({
           variant="secondary"
         >
           {editing ? <Check size={16} /> : <Pencil size={16} />}
-          {editing ? "Selesai memilih" : "Edit lokasi"}
+          {editing ? translateText("Selesai memilih") : translateText("Edit lokasi")}
         </AppButton>
       </div>
 
@@ -121,11 +126,11 @@ export function LocationPicker({
           <div className="relative">
             <MapPin
               aria-hidden="true"
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-600"
               size={18}
             />
             <input
-              aria-label="Cari alamat atau wilayah"
+              aria-label={translateText("Cari alamat atau wilayah")}
               className="w-full rounded-xl border bg-white py-3 pl-11 pr-28 text-sm shadow-sm focus:border-blush"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
@@ -133,7 +138,7 @@ export function LocationPicker({
                 event.preventDefault();
                 void search();
               }}
-              placeholder="Cari alamat atau nama wilayah"
+              placeholder={translateText("Cari alamat atau nama wilayah")}
               value={query}
             />
             <button
@@ -142,16 +147,16 @@ export function LocationPicker({
               onClick={() => void search()}
               type="button"
             >
-              <Search size={14} /> {searching ? "Mencari" : "Cari"}
+              <Search size={14} /> {searching ? translateText("Mencari") : translateText("Cari")}
             </button>
           </div>
           <AppButton className="w-fit" onClick={useCurrentLocation} type="button" variant="ghost">
-            <LocateFixed size={16} /> Gunakan lokasi saya
+            <LocateFixed size={16} /> {translateText("Gunakan lokasi saya")}{" "}
           </AppButton>
         </>
       )}
 
-      {message && <p className="text-xs text-stone-500">{message}</p>}
+      {message && <p className="text-xs text-stone-600">{message}</p>}
       {results.length > 0 && (
         <ul className="divide-y overflow-hidden rounded-xl border bg-white shadow-sm">
           {results.map((result) => (
@@ -173,15 +178,18 @@ export function LocationPicker({
         {!editing && (
           <div className="absolute inset-0 z-[500] grid place-items-center bg-white/10 backdrop-blur-[1px]">
             <span className="rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-stone-700 shadow-sm">
-              Tekan Edit lokasi untuk memilih titik
+              {translateText("Tekan Edit lokasi untuk memilih titik")}{" "}
             </span>
           </div>
         )}
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-stone-600">
         {hasSelectedLocation
-          ? `Koordinat tersimpan: ${safeLocation.latitude}, ${safeLocation.longitude}`
-          : "Pilih titik lokasi bisnis pada peta."}
+          ? translateText("Koordinat tersimpan: {0}, {1}", {
+              0: safeLocation.latitude,
+              1: safeLocation.longitude,
+            })
+          : translateText("Pilih titik lokasi bisnis pada peta.")}
       </p>
       <input
         name="latitude"

@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { PopupMessage } from "@/shared/components/feedback/Popup";
 import { AppIconButton } from "@/shared/components/ui/AppIconButton";
@@ -33,16 +35,16 @@ export function ImageUploadPreview({
   onRemove,
   previewUrl,
 }: ImageUploadPreviewProps) {
+  const { translateText } = useTranslation();
   return (
     <div className="grid min-w-0 gap-4 md:col-span-2 md:grid-cols-[180px_1fr] md:items-center">
       <div className="grid aspect-square place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-stone-50">
         {isLoading ? (
           <div className="size-full animate-pulse bg-stone-100" />
         ) : previewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img alt={alt} className="size-full object-cover" src={previewUrl} />
+          <AttachmentImage alt={alt} className="size-full object-cover" src={previewUrl} />
         ) : (
-          <span className="px-4 text-center text-xs text-stone-400">{emptyLabel}</span>
+          <span className="px-4 text-center text-xs text-stone-600">{emptyLabel}</span>
         )}
       </div>
       <div className="grid min-w-0 gap-2">
@@ -54,10 +56,10 @@ export function ImageUploadPreview({
           onChange={onChange}
           type="file"
         />
-        <p className="text-xs leading-5 text-stone-500">{note}</p>
+        <p className="text-xs leading-5 text-stone-600">{translateText(note)}</p>
         {onRemove && previewUrl && (
           <AppIconButton
-            label={`Hapus ${inputLabel.toLowerCase()}`}
+            label={translateText("Hapus {0}", { 0: inputLabel.toLowerCase() })}
             onClick={onRemove}
             type="button"
             variant="danger"
@@ -65,7 +67,7 @@ export function ImageUploadPreview({
             <Trash2 size={17} />
           </AppIconButton>
         )}
-        {error && <PopupMessage message={error} variant="error" />}
+        {error && <PopupMessage message={translateText(error)} variant="error" />}
       </div>
     </div>
   );

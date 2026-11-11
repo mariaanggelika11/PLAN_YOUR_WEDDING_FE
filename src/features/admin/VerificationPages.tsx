@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { shouldReloadResource } from "@/shared/api/errorCodes";
 
 import { readAllPages } from "@/shared/api/readAllPages";
@@ -29,6 +30,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 const PAGE_SIZE = 10;
 
 export function AdminVendorVerificationPage() {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(async (query: { filter?: string }) => {
     const data = await readAllPages((pageNumber) =>
       getAdminVendors({ filter: query.filter, pageNumber, pageSize: 100 }),
@@ -41,7 +43,10 @@ export function AdminVendorVerificationPage() {
   const visible = pending.slice(start, start + PAGE_SIZE);
 
   return (
-    <Page title="Verifikasi Vendor" description="Periksa bisnis yang menunggu persetujuan.">
+    <Page
+      title={translateText("Verifikasi Vendor")}
+      description={translateText("Periksa bisnis yang menunggu persetujuan.")}
+    >
       <ListFeedback {...list} />
       {!list.loading && !list.error && (
         <DataTable
@@ -58,7 +63,7 @@ export function AdminVendorVerificationPage() {
             categoriesLabel(vendor.categories),
             locationLabel(vendor),
             vendor.updatedAt || vendor.createdAt
-              ? formatDate(vendor.updatedAt ?? vendor.createdAt!)
+              ? formatDate(vendor.updatedAt ?? vendor.createdAt!, locale)
               : "—",
             <StatusBadge status={vendorStatus(vendor.status)} key={`status-${vendor.id}`} />,
             <Link
@@ -66,10 +71,10 @@ export function AdminVendorVerificationPage() {
               href={ROUTES.admin.vendorVerification(String(vendor.id))}
               key={vendor.id}
             >
-              Periksa
+              {translateText("Periksa")}{" "}
             </Link>,
           ])}
-          title="Antrean verifikasi"
+          title={translateText("Antrean verifikasi")}
         />
       )}
     </Page>
@@ -77,6 +82,7 @@ export function AdminVendorVerificationPage() {
 }
 
 export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: string }) {
+  const { translateText } = useTranslation();
   const id = Number(vendorId);
   const [vendor, setVendor] = useState<VendorAdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,13 +128,19 @@ export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: stri
 
   if (loading)
     return (
-      <Page title="Detail Vendor" description="Memuat data vendor...">
+      <Page
+        title={translateText("Detail Vendor")}
+        description={translateText("Memuat data vendor...")}
+      >
         <LoadingSkeleton />
       </Page>
     );
   if (error && !vendor)
     return (
-      <Page title="Detail Vendor" description="Data vendor tidak tersedia.">
+      <Page
+        title={translateText("Detail Vendor")}
+        description={translateText("Data vendor tidak tersedia.")}
+      >
         <ErrorState retry={() => void load()} />
       </Page>
     );
@@ -136,11 +148,11 @@ export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: stri
 
   return (
     <Page
-      title={`Verifikasi ${vendor.businessName || "Vendor"}`}
-      description="Periksa profil dan dokumen bisnis."
+      title={translateText("Verifikasi {0}", { 0: vendor.businessName || "Vendor" })}
+      description={translateText("Periksa profil dan dokumen bisnis.")}
     >
       {error ? (
-        <PopupMessage message={error} variant="error" />
+        <PopupMessage message={translateText(error)} variant="error" />
       ) : (
         message && <PopupMessage message={message} />
       )}
@@ -160,16 +172,16 @@ export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: stri
       {vendor.status === 2 && (
         <div className="flex flex-wrap gap-3">
           <AppButton disabled={saving} onClick={() => void decide("approve")} variant="success">
-            Setujui vendor
+            {translateText("Setujui vendor")}{" "}
           </AppButton>
           <PopupConfirm
-            description="Masukkan alasan yang akan diterima vendor."
+            description={translateText("Masukkan alasan yang akan diterima vendor.")}
             onConfirm={(reason) => void decide("reject", reason)}
             requireReason
-            title="Tolak vendor?"
+            title={translateText("Tolak vendor?")}
             trigger={
               <AppButton disabled={saving} variant="danger">
-                Tolak vendor
+                {translateText("Tolak vendor")}{" "}
               </AppButton>
             }
           />
@@ -180,6 +192,7 @@ export function AdminVendorVerificationDetailPage({ vendorId }: { vendorId: stri
 }
 
 function VendorDocuments({ vendor }: { vendor: VendorAdminProfile }) {
+  const { translateText } = useTranslation();
   const documents = vendor.verificationDocuments ?? [];
   const [error, setError] = useState("");
   async function open(attachmentId: string) {
@@ -195,8 +208,8 @@ function VendorDocuments({ vendor }: { vendor: VendorAdminProfile }) {
   }
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm">
-      {error && <PopupMessage message={error} variant="error" />}
-      <h2 className="font-semibold">Dokumen verifikasi</h2>
+      {error && <PopupMessage message={translateText(error)} variant="error" />}
+      <h2 className="font-semibold">{translateText("Dokumen verifikasi")}</h2>
       <div className="mt-4 grid gap-3">
         {documents.length ? (
           documents.map((document) => (
@@ -206,20 +219,20 @@ function VendorDocuments({ vendor }: { vendor: VendorAdminProfile }) {
             >
               <div className="mr-auto">
                 <p className="font-medium">{document.documentType}</p>
-                <p className="text-sm text-stone-500">
-                  {document.documentNumber || "Tanpa nomor dokumen"}
+                <p className="text-sm text-stone-600">
+                  {document.documentNumber || translateText("Tanpa nomor dokumen")}
                 </p>
               </div>
               <StatusBadge status={vendorStatus(document.status)} />
               {document.attachmentId && (
                 <AppButton onClick={() => void open(document.attachmentId!)} variant="secondary">
-                  Lihat
+                  {translateText("Lihat")}{" "}
                 </AppButton>
               )}
             </div>
           ))
         ) : (
-          <p className="text-sm text-stone-500">Belum ada dokumen.</p>
+          <p className="text-sm text-stone-600">{translateText("Belum ada dokumen.")}</p>
         )}
       </div>
     </section>
@@ -283,6 +296,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Permintaan gagal diproses.";
 }
 export function PaymentVerification() {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(
     (query: { pageNumber?: number; pageSize?: number }) =>
       getPayments({
@@ -298,7 +312,10 @@ export function PaymentVerification() {
   if (payments.error) return <ErrorState retry={() => void payments.reload()} />;
 
   return (
-    <Page title="Verifikasi Pembayaran" description="Periksa bukti transfer manual dari customer.">
+    <Page
+      title={translateText("Verifikasi Pembayaran")}
+      description={translateText("Periksa bukti transfer manual dari customer.")}
+    >
       <DataTable
         columns={["Payment ID", "Order", "Tahap", "Jumlah", "Status", "Tanggal", "Aksi"]}
         onPageChange={payments.setPage}
@@ -309,11 +326,15 @@ export function PaymentVerification() {
         rows={payments.data.map((p) => [
           p.id,
           p.order?.orderNumber ?? "—",
-          paymentInstallmentLabel(p.installment),
-          formatCurrency(p.amount),
-          <StatusBadge status={p.status} />,
-          p.paidAt ? formatDate(p.paidAt) : "—",
-          <Link className="font-semibold text-blush" href={ROUTES.admin.paymentVerification(p.id)}>
+          paymentInstallmentLabel(p.installment, locale),
+          formatCurrency(p.amount, locale),
+          <StatusBadge key="status" status={p.status} />,
+          p.paidAt ? formatDate(p.paidAt, locale) : "—",
+          <Link
+            key="detail"
+            className="font-semibold text-blush"
+            href={ROUTES.admin.paymentVerification(p.id)}
+          >
             Detail
           </Link>,
         ])}
@@ -322,6 +343,7 @@ export function PaymentVerification() {
   );
 }
 export function PaymentDetail({ paymentId }: { paymentId: string }) {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(() => getPayment(paymentId), [paymentId]);
   const payment = useAsyncResource(loader, { initialData: null });
   const action = useAsyncAction();
@@ -348,8 +370,8 @@ export function PaymentDetail({ paymentId }: { paymentId: string }) {
 
   return (
     <Page
-      title={`Verifikasi ${p.id}`}
-      description="Bandingkan bukti transfer dengan informasi pesanan."
+      title={translateText("Verifikasi {0}", { 0: p.id })}
+      description={translateText("Bandingkan bukti transfer dengan informasi pesanan.")}
     >
       <div className="grid gap-6 lg:grid-cols-2">
         {p.proofAttachmentId ? (
@@ -359,35 +381,37 @@ export function PaymentDetail({ paymentId }: { paymentId: string }) {
           </div>
         ) : (
           <PlaceholderPanel
-            title="Bukti belum tersedia"
-            description="Customer belum mengunggah bukti pembayaran."
+            title={translateText("Bukti belum tersedia")}
+            description={translateText("Customer belum mengunggah bukti pembayaran.")}
           />
         )}
         <DetailGrid
           items={[
             ["Order", p.order?.orderNumber ?? "—"],
-            ["Tahap", paymentInstallmentLabel(p.installment)],
-            ["Jumlah tagihan", formatCurrency(p.amount)],
-            ["Status", <StatusBadge status={p.status} />],
-            ["Diunggah", p.paidAt ? formatDate(p.paidAt) : "—"],
+            ["Tahap", paymentInstallmentLabel(p.installment, locale)],
+            ["Jumlah tagihan", formatCurrency(p.amount, locale)],
+            ["Status", <StatusBadge key="status" status={p.status} />],
+            ["Diunggah", p.paidAt ? formatDate(p.paidAt, locale) : "—"],
           ]}
         />
       </div>
       {p.status === "WAITING_VERIFICATION" && (
         <div className="flex gap-3">
           <AppButton loading={action.loading} onClick={() => void approve()}>
-            Approve pembayaran
+            {translateText("Approve pembayaran")}{" "}
           </AppButton>
           <PopupConfirm
             requireReason
             onConfirm={(reason) => void reject(reason)}
             trigger={
               <AppButton disabled={action.loading} variant="danger">
-                Reject pembayaran
+                {translateText("Reject pembayaran")}{" "}
               </AppButton>
             }
-            title="Tolak pembayaran?"
-            description="Alasan penolakan wajib diisi. Customer dapat mengunggah ulang bukti."
+            title={translateText("Tolak pembayaran?")}
+            description={translateText(
+              "Alasan penolakan wajib diisi. Customer dapat mengunggah ulang bukti.",
+            )}
           />
         </div>
       )}

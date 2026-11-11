@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import type { ParameterDetail, SystemParameter } from "@/features/parameters/types";
 import { AppButton } from "@/shared/components/ui/AppButton";
 import { AppIconButton } from "@/shared/components/ui/AppIconButton";
@@ -32,6 +35,7 @@ export function ParameterForm({
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const { translateText } = useTranslation();
   function updateDetail(index: number, patch: Partial<ParameterDetail>) {
     onDetailsChange(
       details.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
@@ -41,29 +45,31 @@ export function ParameterForm({
     <form className="grid gap-5 rounded-xl border bg-white p-5 shadow-sm" onSubmit={onSubmit}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-semibold">{editing ? "Edit Parameter" : "Tambah Parameter"}</h2>
-          <p className="mt-1 text-xs text-stone-500">
-            Satu parameter dapat memiliki banyak detail pilihan.
+          <h2 className="font-semibold">
+            {editing ? translateText("Edit Parameter") : translateText("Tambah Parameter")}
+          </h2>
+          <p className="mt-1 text-xs text-stone-600">
+            {translateText("Satu parameter dapat memiliki banyak detail pilihan.")}{" "}
           </p>
         </div>
-        <button aria-label="Tutup" onClick={onClose} type="button">
+        <button aria-label={translateText("Tutup")} onClick={onClose} type="button">
           <X size={18} />
         </button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <AppInput
           defaultValue={editing?.code ?? ""}
-          label="Kode parameter"
+          label={translateText("Kode parameter")}
           maxLength={200}
           name="code"
-          placeholder="Contoh: GENDER"
+          placeholder={translateText("Contoh: GENDER")}
           required
         />
         <div className="flex items-center justify-between self-end rounded-xl border px-4 py-3 text-sm">
-          <span>Parameter aktif</span>
+          <span>{translateText("Parameter aktif")}</span>
           <ParameterStatusToggle
             active={parameterActive}
-            label="Status parameter"
+            label={translateText("Status parameter")}
             onChange={onParameterActiveChange}
             showText={false}
           />
@@ -71,25 +77,25 @@ export function ParameterForm({
         <div className="md:col-span-2">
           <AppTextarea
             defaultValue={editing?.description ?? ""}
-            label="Deskripsi"
+            label={translateText("Deskripsi")}
             name="description"
           />
         </div>
       </div>
       <div className="grid gap-3 border-t pt-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Detail Parameter</h3>
+          <h3 className="text-sm font-semibold">{translateText("Detail Parameter")}</h3>
           <AppButton
             onClick={() => onDetailsChange([...details, emptyDetail()])}
             type="button"
             variant="secondary"
           >
-            <Plus size={15} /> Tambah detail
+            <Plus size={15} /> {translateText("Tambah detail")}{" "}
           </AppButton>
         </div>
         {details.length === 0 && (
-          <p className="rounded-xl border border-dashed p-4 text-center text-sm text-stone-500">
-            Detail bersifat opsional.
+          <p className="rounded-xl border border-dashed p-4 text-center text-sm text-stone-600">
+            {translateText("Detail bersifat opsional.")}{" "}
           </p>
         )}
         {details.map((detail, index) => (
@@ -97,17 +103,17 @@ export function ParameterForm({
             className="grid gap-3 rounded-xl border bg-stone-50 p-3 md:grid-cols-[44px_1fr_1fr_auto_auto] md:items-end"
             key={detail.id ?? index}
           >
-            <span className="pb-3 text-center text-sm font-semibold text-stone-400">
+            <span className="pb-3 text-center text-sm font-semibold text-stone-600">
               {index + 1}
             </span>
             <AppInput
-              label="Kode detail"
+              label={translateText("Kode detail")}
               maxLength={200}
               value={detail.code}
               onChange={(event) => updateDetail(index, { code: event.target.value })}
             />
             <AppTextarea
-              label="Deskripsi"
+              label={translateText("Deskripsi")}
               rows={1}
               wrap="off"
               className="min-h-0 resize-none overflow-x-auto whitespace-pre"
@@ -117,13 +123,13 @@ export function ParameterForm({
             <div className="flex min-h-11 items-center rounded-xl border bg-white px-3">
               <ParameterStatusToggle
                 active={detail.active}
-                label={`Status detail ${index + 1}`}
+                label={translateText("Status detail {0}", { 0: index + 1 })}
                 onChange={(active) => updateDetail(index, { active })}
                 showText
               />
             </div>
             <AppIconButton
-              label="Hapus detail"
+              label={translateText("Hapus detail")}
               onClick={() => onDetailsChange(details.filter((_, itemIndex) => itemIndex !== index))}
               type="button"
               variant="danger"
@@ -135,10 +141,10 @@ export function ParameterForm({
       </div>
       <div className="flex justify-end gap-2 border-t pt-4">
         <AppButton onClick={onClose} type="button" variant="secondary">
-          Batal
+          {translateText("Batal")}{" "}
         </AppButton>
         <AppButton loading={isSaving} type="submit">
-          Simpan parameter
+          {translateText("Simpan parameter")}{" "}
         </AppButton>
       </div>
     </form>

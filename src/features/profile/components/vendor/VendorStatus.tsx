@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import type { VendorApiProfile } from "@/features/profile/types";
 import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 
@@ -29,15 +32,20 @@ export function vendorStatusDetails(status?: number | null) {
 }
 
 export function VendorProfileStatus({ profile }: { profile: VendorApiProfile | null }) {
+  const { translateText } = useTranslation();
   if (!profile?.status) return null;
   const status = vendorStatusDetails(profile.status);
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-stone-50 p-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <p className="font-semibold text-ink">Status profile: {status.label}</p>
+        <p className="font-semibold text-ink">
+          {translateText("Status profile:")} {status.label}
+        </p>
         <p className="mt-1 text-sm text-stone-600">{status.description}</p>
         {profile.rejectReason && (
-          <p className="mt-2 text-sm font-medium text-red-700">Alasan: {profile.rejectReason}</p>
+          <p className="mt-2 text-sm font-medium text-red-700">
+            {translateText("Alasan:")} {profile.rejectReason}
+          </p>
         )}
       </div>
       <StatusBadge status={status.key} />

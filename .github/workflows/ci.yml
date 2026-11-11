@@ -1,0 +1,48 @@
+name: Frontend checks
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # The fixture server fails closed: CI cannot make accidental production transactions.
+      BACKEND_API_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_API_URL: /backend-api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm run lint
+      - run: npm run test:i18n
+      - run: npm test
+      # Build generates Next route types; typecheck then validates those types too.
+      - run: npm run build:e2e
+      - run: npm run typecheck
+      - run: npm run test:performance
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      # Fake DSN; Playwright intercepts ingestion locally. No account or external events.
+      - run: npm run build:e2e:monitoring
+      - run: npm run test:monitoring
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: browser-test-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

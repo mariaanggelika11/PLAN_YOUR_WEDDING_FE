@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { VerificationDocumentSection } from "@/features/profile/components/shared/StepSectionLayouts";
@@ -21,6 +22,7 @@ export function VendorVerificationDocumentSection({
   canEdit: boolean;
   profile: VendorApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const document = primaryVerificationDocument(profile);
   return (
     <VerificationDocumentSection active={active}>
@@ -28,26 +30,28 @@ export function VendorVerificationDocumentSection({
       <fieldset className="contents" disabled={!canEdit}>
         <AppSelect
           defaultValue={document?.documentType ?? ""}
-          label="Jenis dokumen"
+          label={translateText("Jenis dokumen")}
           name="legalDocumentType"
         >
-          <option value="">Pilih jenis dokumen</option>
-          <option value="KTP">KTP pemilik</option>
+          <option value="">{translateText("Pilih jenis dokumen")}</option>
+          <option value="KTP">{translateText("KTP pemilik")}</option>
           <option value="NIB">NIB</option>
           <option value="NPWP">NPWP</option>
           <option value="SIUP">SIUP</option>
-          <option value="OTHER">Dokumen lainnya</option>
+          <option value="OTHER">{translateText("Dokumen lainnya")}</option>
         </AppSelect>
         <AppInput
           defaultValue={document?.documentNumber ?? ""}
-          label="Nomor dokumen"
+          label={translateText("Nomor dokumen")}
           name="legalDocumentNumber"
         />
         <div className="md:col-span-2">
           <AppInput
             accept=".jpg,.jpeg,.png,.pdf"
-            helper="JPG, PNG, atau PDF · Maks. 5 MB"
-            label={document?.attachmentId ? "Ganti file" : "File dokumen"}
+            helper={translateText("JPG, PNG, atau PDF · Maks. 5 MB")}
+            label={
+              document?.attachmentId ? translateText("Ganti file") : translateText("File dokumen")
+            }
             name="legalDocumentFile"
             type="file"
           />
@@ -58,6 +62,7 @@ export function VendorVerificationDocumentSection({
 }
 
 function VendorDocumentSummary({ document }: { document: VendorVerificationDocument }) {
+  const { translateText } = useTranslation();
   const [isOpening, setIsOpening] = useState(false);
   const [error, setError] = useState("");
   const status = vendorStatusDetails(document.status);
@@ -108,14 +113,14 @@ function VendorDocumentSummary({ document }: { document: VendorVerificationDocum
             variant="secondary"
           >
             <Eye aria-hidden="true" size={17} />
-            Lihat dokumen
+            {translateText("Lihat dokumen")}{" "}
           </AppButton>
         )}
       </div>
       {document.rejectReason && (
         <p className="mt-3 border-t pt-3 text-sm text-red-700">{document.rejectReason}</p>
       )}
-      {error && <PopupMessage message={error} variant="error" />}
+      {error && <PopupMessage message={translateText(error)} variant="error" />}
     </div>
   );
 }

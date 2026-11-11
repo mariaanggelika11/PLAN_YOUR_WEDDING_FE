@@ -1,0 +1,12 @@
+{
+  "errors": {
+    "title": "Halaman belum dapat ditampilkan",
+    "description": "Terjadi masalah saat memuat halaman. Coba muat ulang. Jika sebelumnya mengirim pesanan atau pembayaran, periksa statusnya sebelum mengulangi tindakan.",
+    "reference": "Kode referensi:",
+    "retry": "Coba lagi",
+    "home": "Kembali ke beranda",
+    "notFoundTitle": "Halaman tidak ditemukan",
+    "notFoundDescription": "Halaman yang Anda cari tidak tersedia atau sudah dipindahkan.",
+    "loading": "Memuat halaman…"
+  }
+}

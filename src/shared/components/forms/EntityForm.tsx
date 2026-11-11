@@ -63,7 +63,8 @@ export function EntityForm({
   steps?: string[];
   children?: ReactNode;
 }) {
-  const { locale, translateText } = useTranslation();
+  const { translateText, locale } = useTranslation();
+
   const [activeStep, setActiveStep] = useState(0);
   const lastStep = (steps?.length ?? 1) - 1;
 
@@ -125,11 +126,13 @@ export function EntityForm({
                   disabled={!options?.length}
                 >
                   <option value="">
-                    {locale === "en" ? "Select" : "Pilih"}{" "}
+                    {locale === "en" ? "Select" : translateText("Pilih")}{" "}
                     {translateText(field.label).toLowerCase()}
                   </option>
                   {options?.map((option) => (
-                    <option key={option}>{option}</option>
+                    <option key={option} value={option}>
+                      {translateText(option)}
+                    </option>
                   ))}
                 </AppSelect>
               ) : field.type === "file" ? (
@@ -138,7 +141,7 @@ export function EntityForm({
                 <MultiImageUpload
                   helper={field.helper}
                   existingImageIds={field.existingImageIds}
-                  label={field.label}
+                  label={translateText(field.label)}
                   loadExistingImage={field.loadExistingImage}
                   name={field.name}
                   required={field.required}
@@ -153,7 +156,7 @@ export function EntityForm({
                 <FormattedNumberInput
                   defaultValue={initialValues[field.name]}
                   helper={field.helper}
-                  label={field.label}
+                  label={translateText(field.label)}
                   max={field.max}
                   min={field.min}
                   name={field.name}
@@ -176,7 +179,7 @@ export function EntityForm({
             type="button"
             variant="secondary"
           >
-            Kembali
+            {translateText("Kembali")}{" "}
           </AppButton>
         ) : (
           <span />
@@ -189,7 +192,7 @@ export function EntityForm({
               type="button"
               variant="outline"
             >
-              Simpan draft
+              {translateText("Simpan draft")}{" "}
             </AppButton>
           )}
           {steps && activeStep < lastStep ? (
@@ -203,7 +206,7 @@ export function EntityForm({
               }}
               type="button"
             >
-              Lanjutkan
+              {translateText("Lanjutkan")}{" "}
             </AppButton>
           ) : (
             <AppButton loading={loading} type="submit" disabled={submitDisabled}>

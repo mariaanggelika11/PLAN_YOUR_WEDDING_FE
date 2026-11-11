@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { TermsDialogContent } from "@/features/terms/components/TermsDialogContent";
 import type { TermsDocument } from "@/features/terms/types";
@@ -14,6 +15,7 @@ export function RegistrationTerms({
   type: "customer" | "vendor";
   terms: TermsDocument;
 }) {
+  const { translateText } = useTranslation();
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -23,7 +25,8 @@ export function RegistrationTerms({
         >
           <FileText size={20} className="shrink-0" aria-hidden="true" />
           <span className="flex-1 font-semibold">
-            Syarat dan ketentuan {type === "vendor" ? "mitra vendor" : "pengguna"}
+            {translateText("Syarat dan ketentuan")}{" "}
+            {type === "vendor" ? translateText("mitra vendor") : translateText("pengguna")}
           </span>
           <ArrowUpRight size={18} className="shrink-0" aria-hidden="true" />
         </button>
@@ -31,15 +34,19 @@ export function RegistrationTerms({
       <TermsDialogContent
         document={terms}
         idPrefix={`terms-${type}`}
-        description="Baca ketentuan berikut sebelum menyetujui dan melanjutkan pendaftaran."
+        description={translateText(
+          "Baca ketentuan berikut sebelum menyetujui dan melanjutkan pendaftaran.",
+        )}
         footer={
           <>
-            <p className="max-w-md text-xs leading-5 text-stone-500">
-              Persetujuan diberikan melalui checkbox pada formulir pendaftaran.
+            <p className="max-w-md text-xs leading-5 text-stone-600">
+              {translateText(
+                "Persetujuan diberikan melalui checkbox pada formulir pendaftaran.",
+              )}{" "}
             </p>
             <Dialog.Close asChild>
               <AppButton type="button" variant="secondary">
-                Kembali ke pendaftaran
+                {translateText("Kembali ke pendaftaran")}{" "}
               </AppButton>
             </Dialog.Close>
           </>

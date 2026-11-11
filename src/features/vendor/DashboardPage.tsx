@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { useVendorProfile } from "@/features/profile/hooks/useVendorProfile";
 import { canVendorSell, vendorDisplayStatus } from "@/features/profile/rules";
@@ -13,16 +14,20 @@ import Link from "next/link";
 import { OrderDashboard } from "@/features/dashboard/OrderDashboard";
 
 export function VendorDashboard() {
+  const { translateText } = useTranslation();
   const vendor = useVendorProfile();
   if (vendor.loading)
     return (
-      <Page title="Seller Center" description="Memuat informasi bisnis Anda...">
+      <Page title="Seller Center" description={translateText("Memuat informasi bisnis Anda...")}>
         <LoadingSkeleton />
       </Page>
     );
   if (vendor.error)
     return (
-      <Page title="Seller Center" description="Informasi bisnis tidak dapat dimuat.">
+      <Page
+        title="Seller Center"
+        description={translateText("Informasi bisnis tidak dapat dimuat.")}
+      >
         <ErrorState retry={() => void vendor.reload()} />
       </Page>
     );
@@ -36,7 +41,10 @@ export function VendorDashboard() {
     "Vendor";
 
   return (
-    <Page title="Seller Center" description="Pantau performa bisnis dan pesanan terbaru.">
+    <Page
+      title="Seller Center"
+      description={translateText("Pantau performa bisnis dan pesanan terbaru.")}
+    >
       <section
         className={cn(
           "rounded-xl border p-5 sm:p-6",
@@ -46,12 +54,18 @@ export function VendorDashboard() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <StatusBadge status={vendorDisplayStatus(profile)} />
-            <h2 className="mt-3 text-2xl font-semibold">Selamat datang, {businessName}</h2>
-            <p className="mt-1 text-sm text-stone-500">{vendorDashboardMessage(profile)}</p>
+            <h2 className="mt-3 text-2xl font-semibold">
+              {translateText("Selamat datang,")} {businessName}
+            </h2>
+            <p className="mt-1 text-sm text-stone-600">
+              {profile?.status === 4 && profile.rejectReason?.trim()
+                ? translateText("Verifikasi ditolak: {0}", { 0: profile.rejectReason })
+                : translateText(vendorDashboardMessage(profile))}
+            </p>
           </div>
           <AppButton asChild variant={canSell ? "primary" : "secondary"}>
             <Link href={canSell ? ROUTES.vendor.createProduct : ROUTES.vendor.profile}>
-              {canSell ? "Buat paket baru" : "Lengkapi profil"}
+              {canSell ? translateText("Buat paket baru") : translateText("Lengkapi profil")}
             </Link>
           </AppButton>
         </div>

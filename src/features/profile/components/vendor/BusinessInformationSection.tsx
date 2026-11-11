@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { MASTER_PARAMETER_CODES } from "@/features/parameters/constants";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
@@ -32,6 +33,7 @@ export function VendorBusinessInformationSection({
   masterParameters: ReturnType<typeof useMasterParameters>;
   profile: VendorApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const values = vendorProfileToForm(profile);
   const options = masterParameters.getOptions(MASTER_PARAMETER_CODES.vendorCategory);
   return (
@@ -39,14 +41,14 @@ export function VendorBusinessInformationSection({
       <fieldset className="contents" disabled={!canEditBusiness}>
         <AppInput
           defaultValue={values.businessName}
-          label="Nama bisnis"
+          label={translateText("Nama bisnis")}
           maxLength={100}
           name="businessName"
           required
         />
         <AppInput
           defaultValue={values.businessEmail}
-          label="Email bisnis"
+          label={translateText("Email bisnis")}
           maxLength={100}
           name="businessEmail"
           required
@@ -54,7 +56,7 @@ export function VendorBusinessInformationSection({
         />
         <AppInput
           defaultValue={values.businessPhone}
-          label="Nomor telepon bisnis"
+          label={translateText("Nomor telepon bisnis")}
           maxLength={100}
           name="businessPhone"
           required
@@ -63,13 +65,15 @@ export function VendorBusinessInformationSection({
         <div className="md:col-span-2">
           <AppTextarea
             defaultValue={values.description}
-            label="Deskripsi bisnis"
+            label={translateText("Deskripsi bisnis")}
             name="description"
           />
         </div>
         <FormGroupHeader
-          description="Alamat kantor atau tempat usaha Anda. Wilayah yang dilayani dipilih secara terpisah di bawah."
-          title="Lokasi bisnis"
+          description={translateText(
+            "Alamat kantor atau tempat usaha Anda. Wilayah yang dilayani dipilih secara terpisah di bawah.",
+          )}
+          title={translateText("Lokasi bisnis")}
         />
         <RegionFields initialCity={values.city} initialProvince={values.province} />
         <LocationPicker initialLatitude={values.latitude} initialLongitude={values.longitude} />
@@ -83,7 +87,7 @@ export function VendorBusinessInformationSection({
         <div className="md:col-span-2">
           <AppTextarea
             defaultValue={values.businessAddress}
-            label="Alamat bisnis"
+            label={translateText("Alamat bisnis")}
             name="businessAddress"
             required
           />
@@ -91,8 +95,10 @@ export function VendorBusinessInformationSection({
       </fieldset>
       <fieldset className="contents" disabled={!canEditBusiness}>
         <FormGroupHeader
-          description="Pilih satu atau beberapa kategori layanan yang disediakan bisnis Anda."
-          title="Kategori layanan"
+          description={translateText(
+            "Pilih satu atau beberapa kategori layanan yang disediakan bisnis Anda.",
+          )}
+          title={translateText("Kategori layanan")}
         />
         <MasterParameterCheckboxGroup
           emptyMessage={masterParameters.emptyMessage(MASTER_PARAMETER_CODES.vendorCategory)}
@@ -100,14 +106,14 @@ export function VendorBusinessInformationSection({
             MASTER_PARAMETER_CODES.vendorCategory,
             profile?.categories,
           )}
-          label="Kategori layanan"
+          label={translateText("Kategori layanan")}
           name="categories"
           options={options}
         />
       </fieldset>
       <FormGroupHeader
-        description="Gunakan logo yang mudah dikenali customer."
-        title="Logo brand"
+        description={translateText("Gunakan logo yang mudah dikenali customer.")}
+        title={translateText("Logo brand")}
       />
       <fieldset className="contents" disabled={!canEditOperations}>
         <VendorLogoUpload profileId={profile?.id ?? null} />
@@ -117,6 +123,7 @@ export function VendorBusinessInformationSection({
 }
 
 function VendorLogoUpload({ profileId }: { profileId: number | null }) {
+  const { translateText } = useTranslation();
   const { confirm } = usePopup();
   const load = useCallback(async () => {
     if (!profileId) return null;
@@ -148,17 +155,23 @@ function VendorLogoUpload({ profileId }: { profileId: number | null }) {
   return (
     <>
       <ImageUploadPreview
-        alt="Logo bisnis"
-        emptyLabel={image.error ? "Logo gagal dimuat" : "Belum ada logo"}
+        alt={translateText("Logo bisnis")}
+        emptyLabel={
+          image.error ? translateText("Logo gagal dimuat") : translateText("Belum ada logo")
+        }
         error={image.error}
-        helper="JPG, PNG, atau WebP maksimal 5 MB. Disarankan gambar persegi."
-        inputLabel={image.previewUrl ? "Ganti logo bisnis" : "Upload logo bisnis"}
+        helper={translateText("JPG, PNG, atau WebP maksimal 5 MB. Disarankan gambar persegi.")}
+        inputLabel={
+          image.previewUrl
+            ? translateText("Ganti logo bisnis")
+            : translateText("Upload logo bisnis")
+        }
         inputName="logoFile"
         isLoading={image.loading}
         note={
           removePending
-            ? "Logo akan dihapus saat perubahan disimpan."
-            : "Logo akan diunggah saat profile vendor disimpan."
+            ? translateText("Logo akan dihapus saat perubahan disimpan.")
+            : translateText("Logo akan diunggah saat profile vendor disimpan.")
         }
         onChange={selectLogo}
         onRemove={profileId ? () => void removeLogo() : undefined}

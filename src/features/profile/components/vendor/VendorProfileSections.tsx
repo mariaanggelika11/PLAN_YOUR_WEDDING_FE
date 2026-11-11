@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useMasterParameters } from "@/features/parameters/useMasterParameters";
 import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
 import { VendorBankAccountSection } from "@/features/profile/components/vendor/BankAccountSection";
@@ -24,18 +27,19 @@ export function VendorProfileSections({
   onDataChanged: () => void;
   profile: VendorApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   return (
     <>
       <FormSection
         active={activeStep === 0}
-        description="Data pemilik utama bisnis."
+        description={translateText("Data pemilik utama bisnis.")}
         step={0}
-        title="Pemilik"
+        title={translateText("Pemilik")}
       >
         <fieldset className="contents" disabled={!canEditCore}>
           <AppInput
             defaultValue={profile?.ownerName ?? ""}
-            label="Nama pemilik"
+            label={translateText("Nama pemilik")}
             maxLength={100}
             name="ownerName"
             required
@@ -51,9 +55,11 @@ export function VendorProfileSections({
       />
       <FormSection
         active={activeStep === 2}
-        description="Kelola kanal kontak bisnis dan rekening pencairan dalam satu tempat."
+        description={translateText(
+          "Kelola kanal kontak bisnis dan rekening pencairan dalam satu tempat.",
+        )}
         step={2}
-        title="Kontak dan rekening"
+        title={translateText("Kontak dan rekening")}
       >
         <fieldset className="contents" disabled={!canEditOperations}>
           <VendorContactSection onDeleted={onDataChanged} profile={profile} />

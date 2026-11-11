@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import {
   AuthError,
   EmailVerificationRequiredError,
@@ -17,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 export function LoginForm() {
+  const { translateText } = useTranslation();
   const router = useRouter();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -68,7 +70,9 @@ export function LoginForm() {
     return (
       <div className="grid gap-4">
         <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Email Anda belum diverifikasi. Kode OTP baru telah dikirim secara otomatis ke email Anda.
+          {translateText(
+            "Email Anda belum diverifikasi. Kode OTP baru telah dikirim secara otomatis ke email Anda.",
+          )}{" "}
         </p>
         <OtpVerificationForm
           email={unverifiedEmail}
@@ -92,30 +96,31 @@ export function LoginForm() {
         label="Email"
         name="email"
         type="email"
-        placeholder="nama@email.com"
+        placeholder={translateText("nama@email.com")}
         autoComplete="email"
         required
       />
       <PasswordInput
         label="Password"
         name="password"
-        placeholder="Masukkan password"
-        helper="Minimal 8 karakter."
+        placeholder={translateText("Masukkan password")}
+        helper={translateText("Minimal 8 karakter.")}
         autoComplete="current-password"
         required
       />
       <div className="flex justify-between text-sm">
         <label className="flex gap-2">
-          <input name="rememberMe" type="checkbox" className="accent-rose-600" /> Ingat saya
+          <input name="rememberMe" type="checkbox" className="accent-rose-600" />{" "}
+          {translateText("Ingat saya")}{" "}
         </label>
         <Link className="text-blush" href={ROUTES.forgotPassword}>
-          Lupa password?
+          {translateText("Lupa password?")}{" "}
         </Link>
       </div>
-      {error && <PopupMessage message={error} variant="error" />}
+      {error && <PopupMessage message={translateText(error)} variant="error" />}
       {success && <PopupMessage message={success} />}
       <AppButton loading={isLoading} type="submit">
-        Masuk
+        {translateText("Masuk")}{" "}
       </AppButton>
     </form>
   );

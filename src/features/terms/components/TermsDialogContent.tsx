@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { TermsDocumentView } from "@/features/terms/components/TermsDocumentView";
 import type { TermsBlock } from "@/features/terms/types";
@@ -32,6 +33,7 @@ export function TermsDialogContent({
   footer: ReactNode;
   dismissible?: boolean;
 }) {
+  const { translateText } = useTranslation();
   const block = (event: Event) => {
     if (!dismissible) event.preventDefault();
   };
@@ -51,19 +53,20 @@ export function TermsDialogContent({
           <Dialog.Title className="text-lg font-semibold leading-snug text-ink sm:text-2xl">
             {document.title}
           </Dialog.Title>
-          <p className="mt-1 text-xs text-stone-500">
-            Versi {document.version}
-            {document.effectiveAt && ` · berlaku sejak ${formatDate(document.effectiveAt)}`}
+          <p className="mt-1 text-xs text-stone-600">
+            {translateText("Versi")} {document.version}
+            {document.effectiveAt &&
+              translateText(" · berlaku sejak {0}", { 0: formatDate(document.effectiveAt) })}
           </p>
-          <Dialog.Description className="mt-2 text-sm leading-6 text-stone-500">
-            {description}
+          <Dialog.Description className="mt-2 text-sm leading-6 text-stone-600">
+            {translateText(description)}
           </Dialog.Description>
           {dismissible && (
             <Dialog.Close asChild>
               <button
                 type="button"
-                aria-label="Tutup syarat dan ketentuan"
-                className="absolute right-3 top-4 grid size-11 place-items-center rounded-full text-stone-500 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush sm:right-5"
+                aria-label={translateText("Tutup syarat dan ketentuan")}
+                className="absolute right-3 top-4 grid size-11 place-items-center rounded-full text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush sm:right-5"
               >
                 <X size={20} />
               </button>
@@ -74,7 +77,7 @@ export function TermsDialogContent({
           className="min-h-0 overflow-y-auto overscroll-contain px-5 py-6 sm:px-8"
           tabIndex={0}
           role="region"
-          aria-label="Dokumen syarat dan ketentuan"
+          aria-label={translateText("Dokumen syarat dan ketentuan")}
         >
           <TermsDocumentView blocks={document.content} idPrefix={idPrefix} />
         </div>

@@ -20,10 +20,11 @@ import { useCallback } from "react";
 
 export function useVendorProfileEditor(enabled = true) {
   const resource = useProfileData("vendor", enabled);
+  const { reload, setData } = resource;
 
   const reloadAndNotify = useCallback(async () => {
-    return resource.reload();
-  }, [resource.reload]);
+    return reload();
+  }, [reload]);
 
   const saveProfile = useCallback(
     async (
@@ -39,7 +40,7 @@ export function useVendorProfileEditor(enabled = true) {
       const related = vendorFormToRelatedData(form, currentProfile);
       const savedWithRelations = await saveVendorRelatedData(related);
       let profile = savedWithRelations ?? saved;
-      resource.setData(profile);
+      setData(profile);
 
       let logoUploadFailed = false;
       const logoFile = formFile(form, "logoFile");
@@ -56,15 +57,15 @@ export function useVendorProfileEditor(enabled = true) {
           logoUploadFailed = true;
         }
       }
-      profile = (await resource.reload()) ?? profile;
-      resource.setData(profile);
+      profile = (await reload()) ?? profile;
+      setData(profile);
       return {
         logoUploadFailed,
         profile,
         uploadedDocument: Boolean(related.verificationDocument),
       };
     },
-    [resource.reload, resource.setData],
+    [reload, setData],
   );
 
   const saveVerifiedProfile = useCallback(
@@ -83,11 +84,11 @@ export function useVendorProfileEditor(enabled = true) {
           await deleteVendorLogo(currentProfile.id);
         }
       }
-      const profile = (await resource.reload()) ?? currentProfile;
-      resource.setData(profile);
+      const profile = (await reload()) ?? currentProfile;
+      setData(profile);
       return profile;
     },
-    [resource.reload, resource.setData],
+    [reload, setData],
   );
 
   return { ...resource, reloadAndNotify, saveProfile, saveVerifiedProfile };

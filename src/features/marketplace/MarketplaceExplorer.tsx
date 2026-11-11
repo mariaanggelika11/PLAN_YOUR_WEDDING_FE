@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { Pagination } from "@/shared/components/navigation/Pagination";
 import Link from "next/link";
 import { useDebounce } from "@/shared/hooks/useDebounce";
@@ -23,6 +25,7 @@ import { ROUTES } from "@/shared/config/routes";
 import { formatCurrency } from "@/shared/utils/formatCurrency";
 
 export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" | "vendor" }) {
+  const { translateText } = useTranslation();
   const [filters, setFilters] = useState<VendorProductQuery>({ sortBy: "newest" });
   const applied = useDebounce(filters);
   const options = useAsyncResource(getMarketplaceOptions, { initialData: null });
@@ -39,29 +42,31 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
   return (
     <div className="grid gap-5">
       <AppInput
-        label="Cari paket, kategori, atau toko"
-        placeholder="Contoh: fotografi atau catering"
+        label={translateText("Cari paket, kategori, atau toko")}
+        placeholder={translateText("Contoh: fotografi atau catering")}
         value={list.search}
         onChange={(event) => list.changeSearch(event.target.value)}
       />
       <details className="rounded-xl border bg-white p-4">
-        <summary className="cursor-pointer text-sm font-semibold">Filter dan urutan</summary>
+        <summary className="cursor-pointer text-sm font-semibold">
+          {translateText("Filter dan urutan")}
+        </summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <AppSelect
-            label="Kategori"
+            label={translateText("Kategori")}
             value={filters.category ?? ""}
             onChange={(e) => changeFilter("category", e.target.value || undefined)}
           >
-            <option value="">Semua kategori</option>
+            <option value="">{translateText("Semua kategori")}</option>
             {categories.getOptions(MASTER_PARAMETER_CODES.vendorCategory).map((option) => (
               <option key={option.value} value={option.label}>
-                {option.label}
+                {translateText(option.label)}
               </option>
             ))}
           </AppSelect>
           <SearchableSelect
-            label="Lokasi acara / area layanan"
-            placeholder="Semua lokasi"
+            label={translateText("Lokasi acara / area layanan")}
+            placeholder={translateText("Semua lokasi")}
             loading={options.loading}
             disabled={Boolean(options.error)}
             options={marketplaceLocations(options.data?.locations ?? []).map((location) => ({
@@ -72,7 +77,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
             onChange={(value) => changeFilter("location", value || undefined)}
           />
           <AppSelect
-            label="Urutkan"
+            label={translateText("Urutkan")}
             value={filters.sortBy ?? "newest"}
             onChange={(e) => changeFilter("sortBy", e.target.value)}
           >
@@ -86,20 +91,20 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
               ]
             ).map((value) => (
               <option key={value} value={value}>
-                {
+                {translateText(
                   {
                     newest: "Terbaru",
                     price_asc: "Harga terendah",
                     price_desc: "Harga tertinggi",
                     rating: "Rating tertinggi",
                     popular: "Terlaris",
-                  }[value]
-                }
+                  }[value] ?? value,
+                )}
               </option>
             ))}
           </AppSelect>
           <AppInput
-            label="Harga minimum"
+            label={translateText("Harga minimum")}
             placeholder={options.data ? String(options.data.priceRange.min) : undefined}
             type="number"
             min={0}
@@ -109,7 +114,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
             }
           />
           <AppInput
-            label="Harga maksimum"
+            label={translateText("Harga maksimum")}
             placeholder={options.data ? String(options.data.priceRange.max) : undefined}
             type="number"
             min={0}
@@ -119,10 +124,12 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
             }
           />
           <AppInput
-            label="Minimal kapasitas tamu"
+            label={translateText("Minimal kapasitas tamu")}
             helper={
               options.data?.maxCapacity
-                ? `Kapasitas terbesar tersedia: ${options.data.maxCapacity} tamu`
+                ? translateText("Kapasitas terbesar tersedia: {0} tamu", {
+                    0: options.data.maxCapacity,
+                  })
                 : undefined
             }
             type="number"
@@ -135,7 +142,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
         </div>
         {(options.error || categories.error) && (
           <p className="mt-3 text-sm text-amber-700">
-            Opsi filter belum berhasil dimuat.{" "}
+            {translateText("Opsi filter belum berhasil dimuat.")}{" "}
             <button
               type="button"
               onClick={() => {
@@ -143,7 +150,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
                 categories.reload();
               }}
             >
-              Coba lagi
+              {translateText("Coba lagi")}{" "}
             </button>
           </p>
         )}
@@ -156,7 +163,7 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
             list.setPage(1);
           }}
         >
-          Reset filter
+          {translateText("Reset filter")}{" "}
         </AppButton>
       </details>
       {list.loading ? (
@@ -165,7 +172,9 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
         <ErrorState description={list.error} retry={() => void list.reload()} />
       ) : (
         <>
-          <p className="text-sm text-stone-500">{list.total} paket ditemukan</p>
+          <p className="text-sm text-stone-600">
+            {list.total} {translateText("paket ditemukan")}
+          </p>
           {list.data.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {list.data
@@ -175,10 +184,13 @@ export function MarketplaceExplorer({ role = "customer" }: { role?: "customer" |
                 ))}
             </div>
           ) : (
-            <EmptyState title="Paket tidak ditemukan" description="Coba kata pencarian lain." />
+            <EmptyState
+              title={translateText("Paket tidak ditemukan")}
+              description={translateText("Coba kata pencarian lain.")}
+            />
           )}
           <Pagination
-            label="Halaman marketplace"
+            label={translateText("Halaman marketplace")}
             page={list.page}
             totalPages={Math.ceil(list.total / list.pageSize)}
             disabled={filters !== applied}
@@ -197,6 +209,7 @@ export function MarketplaceProductCard({
   product: VendorProduct;
   role: "customer" | "vendor";
 }) {
+  const { translateText, locale } = useTranslation();
   const attachmentId = product.imageAttachmentIds[0];
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
@@ -211,7 +224,7 @@ export function MarketplaceProductCard({
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-white transition-colors hover:border-stone-300">
       <div className="grid h-48 place-items-center overflow-hidden bg-stone-100">
         {image.previewUrl ? (
-          <img
+          <AttachmentImage
             alt={product.name}
             className="size-full object-cover transition duration-500 "
             src={image.previewUrl}
@@ -222,37 +235,39 @@ export function MarketplaceProductCard({
       </div>
       <div className="flex flex-1 flex-col p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-blush">
-          {product.category ?? "Layanan Wedding"}
+          {product.category ?? translateText("Layanan Wedding")}
         </p>
         <h3 className="mt-1 font-semibold text-ink">{product.name}</h3>
-        <p className="mt-1 text-xs text-stone-500">oleh {product.vendor.businessName}</p>
+        <p className="mt-1 text-xs text-stone-600">
+          {translateText("oleh")} {product.vendor.businessName}
+        </p>
         <div className="mt-2 flex items-center gap-1.5 text-xs">
           <Star
             className={product.reviewCount ? "fill-amber-400 text-amber-400" : "text-stone-300"}
             size={15}
           />
-          <strong className="text-amber-600">
-            {product.reviewCount ? product.averageRating.toFixed(1) : "Baru"}
+          <strong className="text-amber-800">
+            {product.reviewCount ? product.averageRating.toFixed(1) : translateText("Baru")}
           </strong>
-          <span className="text-stone-400">·</span>
-          <span className="text-stone-500">
+          <span className="text-stone-600">·</span>
+          <span className="text-stone-600">
             {product.reviewCount
-              ? `${compactCount(product.reviewCount)} penilaian`
-              : "Belum ada penilaian"}
+              ? translateText("{0} penilaian", { 0: compactCount(product.reviewCount) })
+              : translateText("Belum ada penilaian")}
           </span>
         </div>
-        <p className="mt-1 text-xs text-stone-500">
-          {compactCount(product.soldCount ?? 0)} terjual
+        <p className="mt-1 text-xs text-stone-600">
+          {compactCount(product.soldCount ?? 0)} {translateText("terjual")}{" "}
         </p>
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">
-          {product.description ?? "Detail layanan tersedia pada halaman produk."}
+          {product.description ?? translateText("Detail layanan tersedia pada halaman produk.")}
         </p>
-        <p className="mt-3 text-lg font-semibold">{formatCurrency(product.price)}</p>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">
+        <p className="mt-3 text-lg font-semibold">{formatCurrency(product.price, locale)}</p>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-stone-600">
           {product.guestCapacity && (
             <span className="flex items-center gap-1">
               <Users size={13} />
-              {product.guestCapacity} tamu
+              {product.guestCapacity} {translateText("tamu")}{" "}
             </span>
           )}
           {product.duration && (
@@ -270,7 +285,7 @@ export function MarketplaceProductCard({
                 : ROUTES.customer.product(product.id)
             }
           >
-            Lihat paket
+            {translateText("Lihat paket")}{" "}
           </Link>
         </AppButton>
       </div>

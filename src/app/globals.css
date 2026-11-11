@@ -1,5 +1,3 @@
-@import "leaflet/dist/leaflet.css";
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -40,7 +38,7 @@
 
 @layer components {
   .field-control {
-    @apply min-h-11 w-full min-w-0 rounded-lg border border-stone-300 bg-white px-3 py-2.5 font-normal text-ink placeholder:text-stone-400 hover:border-stone-400 focus:border-blush focus:ring-2 focus:ring-rose-100;
+    @apply min-h-11 w-full min-w-0 rounded-lg border border-stone-300 bg-white px-3 py-2.5 font-normal text-ink placeholder:text-stone-600 hover:border-stone-400 focus:border-blush focus:ring-2 focus:ring-rose-100;
   }
   .page-stack {
     @apply grid min-w-0 gap-6 lg:gap-8;
@@ -53,7 +51,7 @@
     @apply text-2xl font-semibold leading-tight tracking-tight text-ink sm:text-3xl;
   }
   .page-description {
-    @apply mt-2 max-w-3xl text-sm leading-6 text-stone-500;
+    @apply mt-2 max-w-3xl text-sm leading-6 text-stone-600;
   }
   .pagination-button {
     @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg border bg-white text-stone-600 hover:border-rose-200 hover:bg-rose-50 hover:text-blush disabled:cursor-not-allowed disabled:opacity-40;
@@ -103,4 +101,20 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1000;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: white;
+  color: #292524;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 0 0 2px #945565;
+}
+.skip-link:focus {
+  transform: translateY(0);
 }

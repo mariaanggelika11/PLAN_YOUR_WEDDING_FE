@@ -1,4 +1,5 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
 
 import { useAuth } from "@/features/auth/useAuth";
 import { NotificationProvider } from "@/features/notifications/NotificationProvider";
@@ -47,7 +48,8 @@ export function AppShell(props: AppShellProps) {
   );
 }
 function AppShellContent({ role, label, nav, children }: AppShellProps) {
-  const { t } = useTranslation();
+  const { translateText, t } = useTranslation();
+
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
@@ -77,9 +79,11 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="grid min-h-screen place-items-center bg-canvas p-6">
-        <p role="status" className="flex items-center gap-2 text-sm text-stone-500">
+        <p role="status" className="flex items-center gap-2 text-sm text-stone-600">
           <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />
-          {isLoading ? "Memeriksa sesi…" : "Mengalihkan ke halaman masuk…"}
+          {isLoading
+            ? translateText("Memeriksa sesi…")
+            : translateText("Mengalihkan ke halaman masuk…")}
         </p>
       </div>
     );
@@ -93,7 +97,7 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
         <DesktopSidebar
           collapsed={sidebarCollapsed}
           dark={dark}
-          label={translatedLabel || label}
+          label={translatedLabel || translateText(label)}
           nav={nav}
           pathname={pathname}
         />
@@ -117,13 +121,13 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
             </button>
             <MobileSidebar
               dark={dark}
-              label={translatedLabel || label}
+              label={translatedLabel || translateText(label)}
               nav={nav}
               pathname={pathname}
             />
             <div className="hidden min-w-0 items-center gap-3 border-l pl-4 text-sm sm:flex">
-              <span className="hidden shrink-0 text-stone-500 md:inline">
-                {translatedLabel || label}
+              <span className="hidden shrink-0 text-stone-600 md:inline">
+                {translatedLabel || translateText(label)}
               </span>
               <ChevronRight
                 aria-hidden="true"
@@ -131,7 +135,9 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
                 className="hidden shrink-0 text-stone-300 md:block"
               />
               <span className="truncate font-medium text-ink">
-                {activeNavigation ? t(activeNavigation.translationKey) : translatedLabel || label}
+                {activeNavigation
+                  ? t(activeNavigation.translationKey)
+                  : translatedLabel || translateText(label)}
               </span>
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
@@ -140,7 +146,11 @@ function AppShellContent({ role, label, nav, children }: AppShellProps) {
               <UserMenu role={role} />
             </div>
           </header>
-          <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8"
+          >
             {pageHeader && (
               <div className="mb-6 min-w-0 lg:mb-8">
                 <h1 className="page-heading break-words">{pageHeader.title}</h1>
@@ -171,7 +181,8 @@ function DesktopSidebar({
   nav: NavigationItem[];
   pathname: string;
 }) {
-  const { t } = useTranslation();
+  const { translateText, t } = useTranslation();
+
   return (
     <aside
       id="desktop-sidebar"
@@ -188,10 +199,10 @@ function DesktopSidebar({
         <p
           className={cn(
             "mt-8 px-3 text-[11px] font-semibold uppercase tracking-[.2em]",
-            dark ? "text-slate-500" : "text-stone-400",
+            dark ? "text-slate-500" : "text-stone-600",
           )}
         >
-          {label}
+          {translateText(label)}
         </p>
       )}
       <NavList collapsed={collapsed} dark={dark} nav={nav} pathname={pathname} />
@@ -203,7 +214,7 @@ function DesktopSidebar({
           )}
         >
           <p className="font-semibold">{t("shell.helpTitle")}</p>
-          <p className="mt-1 opacity-70">{t("shell.helpDescription")}</p>
+          <p className="mt-1">{t("shell.helpDescription")}</p>
         </div>
       )}
     </aside>
@@ -230,7 +241,10 @@ function NavList({
       .map((item) => item.href),
   );
   return (
-    <nav className={cn("grid gap-1 pb-8", collapsed ? "mt-8" : "mt-3")}>
+    <nav
+      aria-label={t("accessibility.primaryNavigation")}
+      className={cn("grid gap-1 pb-8", collapsed ? "mt-8" : "mt-3")}
+    >
       {nav.map((item) => {
         const childActive = item.children?.some(
           (child) => pathname === child.href || pathname.startsWith(`${child.href}/`),
@@ -274,7 +288,7 @@ function NavList({
                           "rounded-lg px-3 py-2 text-xs transition",
                           selected
                             ? "bg-rose-50 font-semibold text-blush"
-                            : "text-stone-500 hover:bg-stone-50 hover:text-ink",
+                            : "text-stone-600 hover:bg-stone-50 hover:text-ink",
                         )}
                         href={child.href}
                         onClick={onNavigate}
@@ -360,12 +374,12 @@ function MobileSidebar(props: {
             <BrandMark dark={props.dark} />
             <Dialog.Close
               aria-label={t("shell.closeMenu")}
-              className="grid size-10 shrink-0 place-items-center rounded-lg text-stone-500 hover:bg-stone-100"
+              className="grid size-10 shrink-0 place-items-center rounded-lg text-stone-600 hover:bg-stone-100"
             >
               <X size={18} />
             </Dialog.Close>
           </div>
-          <p className="mt-8 text-xs uppercase tracking-widest opacity-50">{props.label}</p>
+          <p className="mt-8 text-xs uppercase tracking-widest text-stone-600">{props.label}</p>
           <NavList {...props} onNavigate={() => setOpen(false)} />
         </Dialog.Content>
       </Dialog.Portal>
@@ -375,6 +389,7 @@ function MobileSidebar(props: {
 
 function UserMenu({ role }: { role: AppShellProps["role"] }) {
   const { t } = useTranslation();
+
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -443,19 +458,18 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
     <div className="relative" ref={containerRef}>
       <button
         aria-expanded={open}
-        aria-label={`${t("account.user")}: ${name}`}
         onClick={() => setOpen((current) => !current)}
         type="button"
         className="flex h-10 items-center gap-2 rounded-lg p-1.5 text-stone-600 hover:bg-stone-100 sm:ml-1 sm:gap-2.5"
       >
+        <span className="sr-only">{t("account.user")}: </span>
         <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-cream text-xs font-semibold text-ink">
           {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt={`Foto ${name}`} className="size-full object-cover" src={avatarUrl} />
+            <AttachmentImage alt="" className="size-full object-cover" src={avatarUrl} />
           ) : (
             initials
           )}
-        </span>
+        </span>{" "}
         <span className="hidden max-w-36 text-left md:block">
           <span className="block truncate text-sm font-medium">{name}</span>
         </span>
@@ -465,7 +479,7 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
         <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border bg-white p-2 shadow-overlay">
           <div className="mb-1 border-b px-3 py-2">
             <p className="truncate text-xs font-semibold">{name}</p>
-            <p className="truncate text-[11px] text-stone-400">{currentUser?.email}</p>
+            <p className="truncate text-[11px] text-stone-600">{currentUser?.email}</p>
           </div>
           {USER_MENU_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -499,16 +513,20 @@ function UserMenu({ role }: { role: AppShellProps["role"] }) {
 function BottomNav({ nav, pathname }: { nav: NavigationItem[]; pathname: string }) {
   const { t } = useTranslation();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-white px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] lg:hidden">
+    <nav
+      aria-label={t("accessibility.mobileNavigation")}
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-white px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] lg:hidden"
+    >
       {nav.map((item) => {
         const Icon = item.icon;
         return (
           <Link
             className={cn(
               "grid place-items-center gap-1 rounded-xl px-1 py-2 text-center text-[10px] font-semibold",
-              pathname.startsWith(item.href) ? "bg-rose-50 text-blush" : "text-stone-500",
+              pathname.startsWith(item.href) ? "bg-rose-50 text-blush" : "text-stone-600",
             )}
             href={item.href}
+            aria-current={pathname.startsWith(item.href) ? "page" : undefined}
             key={item.href}
           >
             <Icon size={15} />

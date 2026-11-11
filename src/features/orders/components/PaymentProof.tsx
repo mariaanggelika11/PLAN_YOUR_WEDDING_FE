@@ -1,10 +1,13 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function PaymentProof({ attachmentId }: { attachmentId: string }) {
+  const { translateText } = useTranslation();
   const [url, setUrl] = useState("");
   const [mimeType, setMimeType] = useState("");
   const [error, setError] = useState("");
@@ -34,20 +37,21 @@ export function PaymentProof({ attachmentId }: { attachmentId: string }) {
     };
   }, [attachmentId]);
 
-  if (error) return <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>;
+  if (error)
+    return <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{translateText(error)}</p>;
   if (!url) return <div className="h-48 animate-pulse rounded-xl bg-stone-100" />;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-stone-50">
       {mimeType.startsWith("image/") ? (
-        <img
-          alt="Bukti pembayaran customer"
+        <AttachmentImage
+          alt={translateText("Bukti pembayaran customer")}
           className="max-h-[520px] w-full object-contain"
           src={url}
         />
       ) : (
         <div className="grid min-h-48 place-items-center p-6 text-center text-sm text-stone-600">
-          Bukti pembayaran tersedia dalam format dokumen.
+          {translateText("Bukti pembayaran tersedia dalam format dokumen.")}{" "}
         </div>
       )}
       <div className="border-t bg-white p-3">
@@ -57,7 +61,7 @@ export function PaymentProof({ attachmentId }: { attachmentId: string }) {
           rel="noreferrer"
           target="_blank"
         >
-          <ExternalLink size={16} /> Buka bukti ukuran penuh
+          <ExternalLink size={16} /> {translateText("Buka bukti ukuran penuh")}{" "}
         </a>
       </div>
     </div>

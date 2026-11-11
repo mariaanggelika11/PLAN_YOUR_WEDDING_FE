@@ -1,5 +1,7 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
+
 import { isValidCoordinates, type Coordinates } from "@/features/profile/components/location/types";
 import { divIcon, type LeafletMouseEvent, type Marker as LeafletMarker } from "leaflet";
 import { useEffect } from "react";
@@ -49,6 +51,7 @@ function MapInteraction({
   onChange: (value: Coordinates) => void;
 }) {
   const map = useMap();
+  const { latitude, longitude } = value;
 
   useEffect(() => {
     const action = editable ? "enable" : "disable";
@@ -61,24 +64,24 @@ function MapInteraction({
   }, [editable, map]);
 
   useEffect(() => {
-    if (!isValidCoordinates(value)) return;
+    if (!isValidCoordinates({ latitude, longitude })) return;
     const container = map.getContainer();
     if (container.clientWidth === 0 || container.clientHeight === 0) return;
-    map.setView([value.latitude, value.longitude], 15, { animate: false });
-  }, [map, value.latitude, value.longitude]);
+    map.setView([latitude, longitude], 15, { animate: false });
+  }, [map, latitude, longitude]);
 
   useEffect(() => {
     const container = map.getContainer();
     const resizeObserver = new ResizeObserver(([entry]) => {
       if (!entry || entry.contentRect.width === 0 || entry.contentRect.height === 0) return;
       map.invalidateSize({ animate: false });
-      if (isValidCoordinates(value)) {
-        map.setView([value.latitude, value.longitude], 15, { animate: false });
+      if (isValidCoordinates({ latitude, longitude })) {
+        map.setView([latitude, longitude], 15, { animate: false });
       }
     });
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
-  }, [map, value.latitude, value.longitude]);
+  }, [map, latitude, longitude]);
 
   useMapEvents({
     click(event: LeafletMouseEvent) {
@@ -98,7 +101,7 @@ function MapInteraction({
         },
       }}
       icon={markerIcon}
-      position={[value.latitude, value.longitude]}
+      position={[latitude, longitude]}
     />
   );
 }

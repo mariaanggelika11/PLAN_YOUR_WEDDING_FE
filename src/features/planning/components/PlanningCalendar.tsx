@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -24,6 +25,7 @@ export function PlanningCalendar({
   onUpdate: (task: WeddingTask) => Promise<void>;
   onAdd: (date: string) => void;
 }) {
+  const { translateText, locale } = useTranslation();
   const [month, setMonth] = useState(today.slice(0, 7));
   const [selectedDate, setSelectedDate] = useState(today);
   const year = month.slice(0, 4);
@@ -33,10 +35,14 @@ export function PlanningCalendar({
     const entries = tasks.filter((task) => task.due.startsWith(`${value}-`));
     return {
       value,
-      label: new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" }).format(date),
-      shortLabel: new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(
-        date,
-      ),
+      label: new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", {
+        month: "long",
+        timeZone: "UTC",
+      }).format(date),
+      shortLabel: new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", {
+        month: "short",
+        timeZone: "UTC",
+      }).format(date),
       count: entries.length,
       counts: calendarStatusCounts(entries, today),
     };
@@ -44,7 +50,7 @@ export function PlanningCalendar({
   const grouped = tasksByDate(tasks);
   const undated = tasks.filter((task) => !task.due);
   const selectedTasks = grouped.get(selectedDate) ?? [];
-  const title = new Intl.DateTimeFormat("id-ID", {
+  const title = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
@@ -68,18 +74,18 @@ export function PlanningCalendar({
               setSelectedDate(today);
             }}
           >
-            Hari ini
+            {translateText("Hari ini")}{" "}
           </AppButton>
           <button
             className="rounded-lg p-3 hover:bg-rose-50"
-            aria-label="Tahun sebelumnya"
+            aria-label={translateText("Tahun sebelumnya")}
             onClick={() => navigate(-12)}
           >
             <ChevronLeft size={18} />
           </button>
           <button
             className="rounded-lg p-3 hover:bg-rose-50"
-            aria-label="Tahun berikutnya"
+            aria-label={translateText("Tahun berikutnya")}
             onClick={() => navigate(12)}
           >
             <ChevronRight size={18} />
@@ -89,12 +95,16 @@ export function PlanningCalendar({
       <div
         className="grid grid-cols-4 gap-2 px-4 pb-4 sm:grid-cols-6 sm:px-6"
         role="group"
-        aria-label={`Semua bulan tahun ${year}`}
+        aria-label={translateText("Semua bulan tahun {0}", { 0: year })}
       >
         {months.map((item) => (
           <button
             key={item.value}
-            aria-label={`${item.label} ${year}, ${item.count} tugas`}
+            aria-label={translateText("{0} {1}, {2} tugas", {
+              0: item.label,
+              1: year,
+              2: item.count,
+            })}
             aria-pressed={month === item.value}
             onClick={() => {
               setMonth(item.value);
@@ -108,8 +118,10 @@ export function PlanningCalendar({
             )}
           >
             <span className="capitalize sm:hidden">{item.shortLabel}</span>
-            <span className="hidden capitalize sm:inline">{item.label}</span>
-            <span className="text-[10px] font-normal text-stone-500">{item.count} tugas</span>
+            <span className="hidden capitalize sm:inline">{translateText(item.label)}</span>
+            <span className="text-[10px] font-normal text-stone-600">
+              {item.count} {translateText("tugas")}
+            </span>
             {item.count > 0 && (
               <span className="flex gap-1" aria-hidden="true">
                 {item.counts.overdue > 0 && <span className="size-1.5 rounded-full bg-red-500" />}
@@ -130,8 +142,11 @@ export function PlanningCalendar({
         {title}
       </h3>
       <div className="px-2 sm:px-5">
-        <div className="grid grid-cols-7 text-center text-[11px] font-medium text-stone-500">
-          {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((day) => (
+        <div className="grid grid-cols-7 text-center text-[11px] font-medium text-stone-600">
+          {(locale === "en"
+            ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            : ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+          ).map((day) => (
             <div className="py-2" key={day}>
               {day}
             </div>
@@ -141,11 +156,18 @@ export function PlanningCalendar({
           {calendarDays(month).map((date) => {
             const entries = grouped.get(date) ?? [];
             const counts = calendarStatusCounts(entries, today);
-            const statusText = `${counts.overdue} terlambat, ${counts.pending} belum selesai, ${counts.completed} selesai, ${counts.skipped} tidak diperlukan`;
+            const statusText = translateText(
+              "{0} terlambat, {1} belum selesai, {2} selesai, {3} tidak diperlukan",
+              { 0: counts.overdue, 1: counts.pending, 2: counts.completed, 3: counts.skipped },
+            );
             return (
               <button
                 key={date}
-                aria-label={`${displayDate(date)}, ${entries.length} tugas, ${statusText}`}
+                aria-label={translateText("{0}, {1} tugas, {2}", {
+                  0: displayDate(date),
+                  1: entries.length,
+                  2: statusText,
+                })}
                 aria-pressed={date === selectedDate}
                 aria-current={date === today ? "date" : undefined}
                 onClick={() => {
@@ -154,7 +176,7 @@ export function PlanningCalendar({
                 }}
                 className={cn(
                   "flex min-h-16 min-w-0 flex-col items-center gap-1 border-b border-r border-stone-100 p-1.5 text-xs transition-colors hover:bg-rose-50 focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush sm:min-h-20 sm:items-start sm:p-2",
-                  !date.startsWith(month) && "bg-stone-50 text-stone-400",
+                  !date.startsWith(month) && "bg-stone-50 text-stone-600",
                   date === selectedDate && "bg-rose-50 ring-1 ring-inset ring-rose-300",
                 )}
               >
@@ -170,7 +192,7 @@ export function PlanningCalendar({
                   <>
                     <span className="text-[10px] text-stone-600 sm:text-xs">
                       {entries.length}
-                      <span className="hidden sm:inline"> tugas</span>
+                      <span className="hidden sm:inline"> {translateText("tugas")}</span>
                     </span>
                     <span className="flex flex-wrap justify-center gap-1" aria-hidden="true">
                       {counts.overdue > 0 && <span className="size-1.5 rounded-full bg-red-500" />}
@@ -190,40 +212,45 @@ export function PlanningCalendar({
         </div>
       </div>
       <div
-        className="flex flex-wrap gap-x-4 gap-y-2 px-4 pt-4 text-[11px] text-stone-500 sm:px-6"
-        aria-label="Keterangan warna kalender"
+        className="flex flex-wrap gap-x-4 gap-y-2 px-4 pt-4 text-[11px] text-stone-600 sm:px-6"
+        aria-label={translateText("Keterangan warna kalender")}
       >
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-red-500" />
-          Terlambat
+          {translateText("Terlambat")}{" "}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-pink-400" />
-          Belum selesai
+          {translateText("Belum selesai")}{" "}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-emerald-500" />
-          Sudah selesai
+          {translateText("Sudah selesai")}{" "}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-stone-400" />
-          Tidak diperlukan
+          {translateText("Tidak diperlukan")}{" "}
         </span>
       </div>
-      <section className="mt-5 border-t" aria-label={`Tugas ${displayDate(selectedDate)}`}>
+      <section
+        className="mt-5 border-t"
+        aria-label={translateText("Tugas {0}", { 0: displayDate(selectedDate) })}
+      >
         <h3 className="px-4 pt-5 text-sm font-semibold text-ink sm:px-6">
-          {displayDate(selectedDate)}{" "}
-          <span className="font-normal text-stone-500">· {selectedTasks.length} tugas</span>
+          {displayDate(selectedDate, locale)}{" "}
+          <span className="font-normal text-stone-600">
+            · {selectedTasks.length} {translateText("tugas")}
+          </span>
         </h3>
         <div className="px-4 pt-3 sm:px-6">
           <AppButton variant="ghost" disabled={busy} onClick={() => onAdd(selectedDate)}>
-            Tambah tugas pada tanggal ini
+            {translateText("Tambah tugas pada tanggal ini")}{" "}
           </AppButton>
         </div>
         <div
           className="max-h-96 divide-y overflow-y-auto"
           tabIndex={0}
-          aria-label="Tugas pada tanggal terpilih"
+          aria-label={translateText("Tugas pada tanggal terpilih")}
         >
           {selectedTasks.map((task) => (
             <PlanningTaskRow
@@ -237,23 +264,25 @@ export function PlanningCalendar({
           ))}
         </div>
         {!selectedTasks.length && (
-          <p className="px-4 py-6 text-sm text-stone-500 sm:px-6">
-            Tidak ada tugas pada tanggal ini. Pilih tanggal lain untuk melihat persiapanmu.
+          <p className="px-4 py-6 text-sm text-stone-600 sm:px-6">
+            {translateText(
+              "Tidak ada tugas pada tanggal ini. Pilih tanggal lain untuk melihat persiapanmu.",
+            )}{" "}
           </p>
         )}
       </section>
       {undated.length > 0 && (
         <details className="mx-4 mb-5 rounded-xl border border-stone-100 bg-stone-50 sm:mx-6">
           <summary className="cursor-pointer p-4 text-sm font-medium text-stone-700">
-            Belum dijadwalkan — {undated.length} tugas
+            {translateText("Belum dijadwalkan —")} {undated.length} {translateText("tugas")}{" "}
           </summary>
-          <p className="px-4 pb-2 text-xs text-stone-500">
-            Buka tugas untuk mengatur tanggal sesuai kebutuhanmu.
+          <p className="px-4 pb-2 text-xs text-stone-600">
+            {translateText("Buka tugas untuk mengatur tanggal sesuai kebutuhanmu.")}{" "}
           </p>
           <div
             className="max-h-80 divide-y overflow-y-auto"
             tabIndex={0}
-            aria-label="Tugas belum dijadwalkan"
+            aria-label={translateText("Tugas belum dijadwalkan")}
           >
             {undated.map((task) => (
               <PlanningTaskRow

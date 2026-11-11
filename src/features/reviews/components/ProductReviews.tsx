@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
@@ -12,6 +14,7 @@ import { Star } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function ProductReviews({ product }: { product: VendorProduct }) {
+  const { translateText, locale } = useTranslation();
   const productId = product.id;
   const [pageNumber, setPageNumber] = useState(1);
   const loader = useCallback(
@@ -24,8 +27,10 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
   if (!reviews.data?.data.length)
     return (
       <EmptyState
-        title="Belum ada ulasan"
-        description="Ulasan akan muncul setelah customer menyelesaikan pesanan untuk produk ini."
+        title={translateText("Belum ada ulasan")}
+        description={translateText(
+          "Ulasan akan muncul setelah customer menyelesaikan pesanan untuk produk ini.",
+        )}
       />
     );
   const metrics = {
@@ -37,17 +42,22 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
     <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-5">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Penilaian produk</h2>
-          <p className="text-xs text-stone-500">{compactCount(product.soldCount ?? 0)} terjual</p>
-          <p className="mt-1 text-sm text-stone-500">
-            <strong className="text-amber-600">{metrics.average.toFixed(1)}</strong> bintang dari{" "}
-            {compactCount(metrics.count)} penilaian produk
+          <h2 className="text-lg font-semibold text-ink">{translateText("Penilaian produk")}</h2>
+          <p className="text-xs text-stone-600">
+            {compactCount(product.soldCount ?? 0)} {translateText("terjual")}
+          </p>
+          <p className="mt-1 text-sm text-stone-600">
+            <strong className="text-amber-800">{metrics.average.toFixed(1)}</strong>{" "}
+            {translateText("bintang dari")} {compactCount(metrics.count)}{" "}
+            {translateText("penilaian produk")}{" "}
           </p>
         </div>
         <div className="rounded-xl bg-amber-50 px-5 py-3 text-center">
-          <strong className="text-2xl text-amber-600">{metrics.average.toFixed(1)}</strong>
+          <strong className="text-2xl text-amber-800">{metrics.average.toFixed(1)}</strong>
           <RatingStars rating={Math.round(metrics.average)} />
-          <p className="text-xs text-stone-500">{compactCount(metrics.count)} penilaian</p>
+          <p className="text-xs text-stone-600">
+            {compactCount(metrics.count)} {translateText("penilaian")}
+          </p>
         </div>
       </div>
       <div className="grid gap-2 border-b py-5 sm:max-w-xl">
@@ -65,7 +75,7 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
                 }}
               />
             </div>
-            <span className="text-right text-stone-500">{metrics.distribution[rating]}</span>
+            <span className="text-right text-stone-600">{metrics.distribution[rating]}</span>
           </div>
         ))}
       </div>
@@ -79,16 +89,18 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
                   <p className="font-semibold text-ink">
                     {review.customer?.fullName ?? "Customer"}
                   </p>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-600">
                     {review.order?.orderNumber
-                      ? `Pesanan ${review.order.orderNumber}`
-                      : "Pembelian terverifikasi"}
+                      ? translateText("Pesanan {0}", { 0: review.order.orderNumber })
+                      : translateText("Pembelian terverifikasi")}
                   </p>
                 </div>
                 <div className="text-right">
                   <RatingStars rating={review.rating} />
                   {review.createdAt && (
-                    <p className="mt-1 text-xs text-stone-400">{formatDate(review.createdAt)}</p>
+                    <p className="mt-1 text-xs text-stone-600">
+                      {formatDate(review.createdAt, locale)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -109,7 +121,7 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
       </div>
       <Pagination
         className="mt-4"
-        label="Halaman ulasan produk"
+        label={translateText("Halaman ulasan produk")}
         page={pageNumber}
         totalPages={Math.ceil(reviews.data.total / reviews.data.pageSize)}
         onPageChange={setPageNumber}
@@ -120,8 +132,12 @@ export function ProductReviews({ product }: { product: VendorProduct }) {
 }
 
 export function RatingStars({ rating }: { rating: number }) {
+  const { translateText } = useTranslation();
   return (
-    <div aria-label={`${rating} dari 5 bintang`} className="flex justify-end gap-0.5">
+    <div
+      aria-label={translateText("{0} dari 5 bintang", { 0: rating })}
+      className="flex justify-end gap-0.5"
+    >
       {[1, 2, 3, 4, 5].map((value) => (
         <Star
           className={value <= rating ? "fill-amber-400 text-amber-400" : "text-stone-300"}
@@ -134,6 +150,7 @@ export function RatingStars({ rating }: { rating: number }) {
 }
 
 export function ReviewImage({ attachmentId }: { attachmentId: string }) {
+  const { translateText } = useTranslation();
   const [url, setUrl] = useState("");
   useEffect(() => {
     let active = true;
@@ -153,8 +170,8 @@ export function ReviewImage({ attachmentId }: { attachmentId: string }) {
   if (!url) return <div className="aspect-square animate-pulse rounded-xl bg-stone-100" />;
   return (
     <a href={url} rel="noreferrer" target="_blank">
-      <img
-        alt="Foto ulasan customer"
+      <AttachmentImage
+        alt={translateText("Foto ulasan customer")}
         className="aspect-square w-full rounded-xl border object-cover"
         src={url}
       />

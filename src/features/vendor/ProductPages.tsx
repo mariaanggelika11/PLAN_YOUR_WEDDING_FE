@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges";
 import { ServiceAreaField } from "@/features/locations/ServiceAreaField";
 
@@ -87,6 +89,7 @@ export function VendorProductForm({
   productId?: string;
   submitLabel: string;
 }) {
+  const { translateText } = useTranslation();
   const vendor = useVendorProfile();
   const masterParameters = useMasterParameters([MASTER_PARAMETER_CODES.vendorCategory]);
   const router = useRouter();
@@ -173,7 +176,11 @@ export function VendorProductForm({
         ) : undefined
       }
       loading={saving}
-      note={categories.length ? note : "Tambahkan kategori melalui Profil Bisnis terlebih dahulu."}
+      note={
+        categories.length
+          ? translateText(note)
+          : translateText("Tambahkan kategori melalui Profil Bisnis terlebih dahulu.")
+      }
       onSave={save}
       onDirty={unsaved.markDirty}
       showDraft={!productId || product?.status === "DRAFT"}
@@ -184,37 +191,46 @@ export function VendorProductForm({
 }
 
 export function ProductAccessGate({ children }: { children: ReactNode }) {
+  const { translateText } = useTranslation();
   const vendor = useVendorProfile();
   if (vendor.loading)
     return (
-      <Page title="Produk" description="Memeriksa status vendor...">
+      <Page
+        title={translateText("Produk")}
+        description={translateText("Memeriksa status vendor...")}
+      >
         <LoadingSkeleton />
       </Page>
     );
   if (vendor.error)
     return (
-      <Page title="Produk" description="Status vendor tidak dapat dimuat.">
+      <Page
+        title={translateText("Produk")}
+        description={translateText("Status vendor tidak dapat dimuat.")}
+      >
         <ErrorState retry={() => void vendor.reload()} />
       </Page>
     );
   if (!canVendorSell(vendor.profile))
     return (
       <Page
-        title="Produk belum tersedia"
-        description="Selesaikan verifikasi bisnis untuk mulai berjualan."
+        title={translateText("Produk belum tersedia")}
+        description={translateText("Selesaikan verifikasi bisnis untuk mulai berjualan.")}
       >
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-7">
           <StatusBadge status={vendorProfileStatus(vendor.profile?.status)} />
           <h2 className="mt-4 text-xl font-semibold text-ink">
             {vendor.profile?.isVerified
-              ? "Akses produk sedang tidak aktif"
-              : "Bisnis belum diverifikasi"}
+              ? translateText("Akses produk sedang tidak aktif")
+              : translateText("Bisnis belum diverifikasi")}
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-stone-600">
-            Lengkapi profil dan pastikan akun vendor aktif untuk mengelola produk.
+            {translateText(
+              "Lengkapi profil dan pastikan akun vendor aktif untuk mengelola produk.",
+            )}{" "}
           </p>
           <AppButton asChild className="mt-5">
-            <Link href={ROUTES.vendor.profile}>Buka profil bisnis</Link>
+            <Link href={ROUTES.vendor.profile}>{translateText("Buka profil bisnis")}</Link>
           </AppButton>
         </div>
       </Page>
@@ -223,6 +239,7 @@ export function ProductAccessGate({ children }: { children: ReactNode }) {
 }
 
 export function ProductsPage() {
+  const { translateText, locale } = useTranslation();
   const vendor = useVendorProfile();
   const masterParameters = useMasterParameters([MASTER_PARAMETER_CODES.vendorCategory]);
   const popup = usePopup();
@@ -270,7 +287,9 @@ export function ProductsPage() {
   async function changeStatus(product: VendorProduct) {
     const nextStatus = product.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     const confirmation = await popup.confirm({
-      title: `${nextStatus === "ACTIVE" ? "Aktifkan" : "Nonaktifkan"} produk?`,
+      title: translateText("{0} produk?", {
+        0: nextStatus === "ACTIVE" ? "Aktifkan" : "Nonaktifkan",
+      }),
       message: "Status produk akan langsung diperbarui.",
       confirmLabel: "Lanjutkan",
     });
@@ -291,7 +310,7 @@ export function ProductsPage() {
   async function remove(product: VendorProduct) {
     const confirmation = await popup.confirm({
       title: "Hapus produk?",
-      message: `Produk ${product.name} akan dihapus dari sistem.`,
+      message: translateText("Produk {0} akan dihapus dari sistem.", { 0: product.name }),
       confirmLabel: "Hapus",
       variant: "error",
     });
@@ -307,69 +326,87 @@ export function ProductsPage() {
 
   if (loading || masterParameters.loading)
     return (
-      <Page title="Kelola Produk" description="Memuat produk...">
+      <Page title={translateText("Kelola Produk")} description={translateText("Memuat produk...")}>
         <LoadingSkeleton />
       </Page>
     );
   if (error)
     return (
-      <Page title="Kelola Produk" description="Produk gagal dimuat.">
+      <Page
+        title={translateText("Kelola Produk")}
+        description={translateText("Produk gagal dimuat.")}
+      >
         <ErrorState retry={() => void load()} />
       </Page>
     );
   if (masterParameters.error)
     return (
-      <Page title="Kelola Produk" description="Kategori produk gagal dimuat.">
+      <Page
+        title={translateText("Kelola Produk")}
+        description={translateText("Kategori produk gagal dimuat.")}
+      >
         <ErrorState retry={() => window.location.reload()} />
       </Page>
     );
   return (
-    <Page title="Kelola Produk" description="Kelola paket layanan, publikasi, dan status produk.">
+    <Page
+      title={translateText("Kelola Produk")}
+      description={translateText("Kelola paket layanan, publikasi, dan status produk.")}
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard label="Total produk" value={`${products.length} produk`} />
         <DashboardCard
-          label="Produk aktif"
-          value={`${products.filter((p) => p.status === "ACTIVE").length} produk`}
+          label={translateText("Total produk")}
+          value={translateText("{0} produk", { 0: products.length })}
+        />
+        <DashboardCard
+          label={translateText("Produk aktif")}
+          value={translateText("{0} produk", {
+            0: products.filter((p) => p.status === "ACTIVE").length,
+          })}
         />
         <DashboardCard
           label="Draft"
-          value={`${products.filter((p) => p.status === "DRAFT").length} produk`}
+          value={translateText("{0} produk", {
+            0: products.filter((p) => p.status === "DRAFT").length,
+          })}
         />
         <DashboardCard
-          label="Nonaktif"
-          value={`${products.filter((p) => p.status === "INACTIVE").length} produk`}
+          label={translateText("Nonaktif")}
+          value={translateText("{0} produk", {
+            0: products.filter((p) => p.status === "INACTIVE").length,
+          })}
         />
       </div>
       <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <AppInput
-            label="Cari produk"
+            label={translateText("Cari produk")}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Nama produk atau paket"
+            placeholder={translateText("Nama produk atau paket")}
             value={search}
           />
         </div>
         <AppSelect
-          label="Kategori"
+          label={translateText("Kategori")}
           onChange={(event) => setCategory(event.target.value)}
           value={category}
         >
-          <option value="">Semua kategori</option>
+          <option value="">{translateText("Semua kategori")}</option>
           {categoryOptions.map((option) => (
             <option key={option.value} value={option.label}>
-              {option.label}
+              {translateText(option.label)}
             </option>
           ))}
         </AppSelect>
         <AppButton asChild>
-          <Link href={ROUTES.vendor.createProduct}>Buat paket baru</Link>
+          <Link href={ROUTES.vendor.createProduct}>{translateText("Buat paket baru")}</Link>
         </AppButton>
       </div>
       {visible.length ? (
         <DataTable
           itemLabel="produk"
           showToolbar={false}
-          title="Daftar produk"
+          title={translateText("Daftar produk")}
           columns={["Produk", "Kategori", "Harga", "Kapasitas", "Area", "Status", "Aksi"]}
           page={page}
           pageSize={PRODUCT_PAGE_SIZE}
@@ -385,17 +422,19 @@ export function ProductsPage() {
               {p.name}
             </Link>,
             p.category ?? "-",
-            formatCurrency(p.price),
+            formatCurrency(p.price, locale),
             p.guestCapacity ? (
-              `${p.guestCapacity} tamu`
+              translateText("{0} tamu", { 0: p.guestCapacity })
             ) : (
-              <span className="text-stone-400">Belum diatur</span>
+              <span className="text-stone-600">{translateText("Belum diatur")}</span>
             ),
-            p.serviceArea || <span className="text-stone-400">Belum diatur</span>,
+            p.serviceArea || (
+              <span className="text-stone-600">{translateText("Belum diatur")}</span>
+            ),
             p.status === "ACTIVE" || p.status === "INACTIVE" ? (
               <StatusToggle
                 active={p.status === "ACTIVE"}
-                label={`Status produk ${p.name}`}
+                label={translateText("Status produk {0}", { 0: p.name })}
                 onChange={() => void changeStatus(p)}
                 showText
               />
@@ -403,13 +442,13 @@ export function ProductsPage() {
               <StatusBadge status={p.status} />
             ),
             <div className="flex items-center gap-2" key={p.id}>
-              <AppIconButton asChild label={`Edit ${p.name}`}>
+              <AppIconButton asChild label={translateText("Edit {0}", { 0: p.name })}>
                 <Link href={ROUTES.vendor.editProduct(p.id)}>
                   <Pencil size={16} />
                 </Link>
               </AppIconButton>
               <AppIconButton
-                label={`Hapus ${p.name}`}
+                label={translateText("Hapus {0}", { 0: p.name })}
                 onClick={() => void remove(p)}
                 variant="danger"
               >
@@ -419,7 +458,7 @@ export function ProductsPage() {
           ])}
         />
       ) : (
-        <EmptyState title="Belum ada produk yang sesuai." />
+        <EmptyState title={translateText("Belum ada produk yang sesuai.")} />
       )}
     </Page>
   );
@@ -430,6 +469,7 @@ function normalizeCategory(value: string | null | undefined) {
 }
 
 export function ProductDetailPage({ productId }: { productId: string }) {
+  const { translateText, locale } = useTranslation();
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -443,7 +483,10 @@ export function ProductDetailPage({ productId }: { productId: string }) {
   useEffect(() => void load(), [load]);
   if (error)
     return (
-      <Page title="Detail Produk" description="Produk gagal dimuat.">
+      <Page
+        title={translateText("Detail Produk")}
+        description={translateText("Produk gagal dimuat.")}
+      >
         <ErrorState retry={() => void load()} />
       </Page>
     );
@@ -451,12 +494,14 @@ export function ProductDetailPage({ productId }: { productId: string }) {
   return (
     <Page
       title={product.name}
-      description="Detail produk atau paket layanan yang ditampilkan kepada customer."
+      description={translateText(
+        "Detail produk atau paket layanan yang ditampilkan kepada customer.",
+      )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
-        <StatusBadge status={product.status} />
+        <StatusBadge key="status" status={product.status} />
         <AppButton asChild variant="secondary">
-          <Link href={ROUTES.vendor.editProduct(product.id)}>Edit produk</Link>
+          <Link href={ROUTES.vendor.editProduct(product.id)}>{translateText("Edit produk")}</Link>
         </AppButton>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
@@ -465,12 +510,15 @@ export function ProductDetailPage({ productId }: { productId: string }) {
           items={[
             ["Nama paket", product.name],
             ["Kategori", product.category ?? "-"],
-            ["Harga", formatCurrency(product.price)],
-            ["Minimal DP", formatCurrency(product.minimumDp ?? 0)],
+            ["Harga", formatCurrency(product.price, locale)],
+            ["Minimal DP", formatCurrency(product.minimumDp ?? 0, locale)],
             ["Durasi layanan", product.duration ?? "-"],
-            ["Kapasitas", product.guestCapacity ? `${product.guestCapacity} tamu` : "-"],
+            [
+              "Kapasitas",
+              product.guestCapacity ? translateText("{0} tamu", { 0: product.guestCapacity }) : "-",
+            ],
             ["Area layanan", product.serviceArea ?? "-"],
-            ["Status", <StatusBadge status={product.status} />],
+            ["Status", <StatusBadge key="status" status={product.status} />],
             ["Deskripsi", product.description ?? "-"],
             ["Syarat dan ketentuan", product.terms ?? "-"],
           ]}
@@ -482,6 +530,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
 }
 
 function ProductImage({ attachmentId, name }: { attachmentId?: string; name: string }) {
+  const { translateText } = useTranslation();
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
     [attachmentId],
@@ -494,9 +543,9 @@ function ProductImage({ attachmentId, name }: { attachmentId?: string; name: str
   return (
     <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border bg-stone-50">
       {image.previewUrl ? (
-        <img alt={name} className="size-full object-cover" src={image.previewUrl} />
+        <AttachmentImage alt={name} className="size-full object-cover" src={image.previewUrl} />
       ) : (
-        <span className="text-sm text-stone-400">Belum ada gambar</span>
+        <span className="text-sm text-stone-600">{translateText("Belum ada gambar")}</span>
       )}
     </div>
   );

@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { isTermsHeading } from "@/features/terms/content";
 import type { TermsBlock } from "@/features/terms/types";
 
@@ -9,15 +12,18 @@ export function TermsDocumentView({
   blocks: TermsBlock[];
   idPrefix: string;
 }) {
+  const { translateText } = useTranslation();
   const sectionId = (index: number) => `${idPrefix}-${index}`;
   return (
     <>
       <nav
-        aria-label="Daftar isi syarat dan ketentuan"
+        aria-label={translateText("Daftar isi syarat dan ketentuan")}
         className="mb-8 rounded-xl border bg-stone-50 px-4 py-3"
       >
         <details>
-          <summary className="cursor-pointer text-sm font-semibold text-ink">Daftar isi</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-ink">
+            {translateText("Daftar isi")}
+          </summary>
           <ol className="mt-3 grid gap-2 sm:grid-cols-2">
             {blocks.map((block, index) =>
               block.text && isTermsHeading(block.text.trim()) ? (
@@ -43,7 +49,7 @@ export function TermsDocumentView({
                 className="overflow-x-auto rounded-lg border"
                 tabIndex={0}
                 role="region"
-                aria-label={`Tabel ketentuan ${index + 1}`}
+                aria-label={translateText("Tabel ketentuan {0}", { 0: index + 1 })}
               >
                 <table className="w-full border-collapse text-left text-xs leading-6">
                   <thead className="bg-stone-100 text-ink">
@@ -97,7 +103,7 @@ export function TermsDocumentView({
               key={index}
               className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2 sm:grid-cols-[3.25rem_minmax(0,1fr)]"
             >
-              <span className="font-medium tabular-nums text-stone-500">{clause[1]}</span>
+              <span className="font-medium tabular-nums text-stone-600">{clause[1]}</span>
               <span className="whitespace-pre-line break-words">{clause[2]}</span>
             </p>
           ) : (

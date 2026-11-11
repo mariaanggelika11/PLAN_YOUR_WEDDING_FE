@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { deleteVendorBankAccount } from "@/features/profile/api/profileApi";
 import {
@@ -22,6 +23,7 @@ export function VendorBankAccountSection({
   onDeleted: () => void;
   profile: VendorApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const deletion = useProfileCollectionDelete();
   const savedAccount = primaryBankAccount(profile);
   const [hasAccount, setHasAccount] = useState(Boolean(savedAccount));
@@ -48,11 +50,13 @@ export function VendorBankAccountSection({
               type="button"
               variant="secondary"
             >
-              <Plus size={16} /> Tambah rekening
+              <Plus size={16} /> {translateText("Tambah rekening")}{" "}
             </AppButton>
           }
-          description="Rekening digunakan untuk pencairan transaksi dan tidak ditampilkan pada profil publik."
-          title="Rekening pencairan"
+          description={translateText(
+            "Rekening digunakan untuk pencairan transaksi dan tidak ditampilkan pada profil publik.",
+          )}
+          title={translateText("Rekening pencairan")}
         />
         {hasAccount ? (
           <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -62,13 +66,15 @@ export function VendorBankAccountSection({
                   <Landmark size={19} />
                 </span>
                 <div>
-                  <p className="font-semibold text-ink">Rekening utama</p>
-                  <p className="text-xs text-stone-500">Digunakan sebagai tujuan pencairan dana</p>
+                  <p className="font-semibold text-ink">{translateText("Rekening utama")}</p>
+                  <p className="text-xs text-stone-600">
+                    {translateText("Digunakan sebagai tujuan pencairan dana")}
+                  </p>
                 </div>
               </div>
               <AppIconButton
                 disabled={deletion.deleting}
-                label="Hapus rekening"
+                label={translateText("Hapus rekening")}
                 onClick={() => void removeAccount()}
                 type="button"
                 variant="danger"
@@ -79,24 +85,24 @@ export function VendorBankAccountSection({
             <div className="grid gap-4 p-4 md:grid-cols-2">
               <AppInput
                 defaultValue={savedAccount?.bankName ?? ""}
-                label="Nama bank"
+                label={translateText("Nama bank")}
                 name="bankName"
-                placeholder="Contoh: BCA"
+                placeholder={translateText("Contoh: BCA")}
               />
               <AppInput
                 defaultValue={savedAccount?.accountNumber ?? ""}
                 inputMode="numeric"
-                label="Nomor rekening"
+                label={translateText("Nomor rekening")}
                 name="bankAccountNumber"
                 pattern="[0-9]+"
-                placeholder="Masukkan nomor rekening"
+                placeholder={translateText("Masukkan nomor rekening")}
               />
               <div className="md:col-span-2">
                 <AppInput
                   defaultValue={savedAccount?.accountHolderName ?? ""}
-                  label="Nama pemilik rekening"
+                  label={translateText("Nama pemilik rekening")}
                   name="bankAccountHolder"
-                  placeholder="Sesuai dengan nama pada rekening"
+                  placeholder={translateText("Sesuai dengan nama pada rekening")}
                 />
               </div>
             </div>
@@ -105,8 +111,9 @@ export function VendorBankAccountSection({
           <EmptyCollection message="Belum ada rekening pencairan. Tambahkan rekening ketika Anda siap menerima pembayaran." />
         )}
         <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-          Untuk keamanan, data rekening hanya dapat dilihat oleh pemilik akun dan admin yang
-          berwenang. API saat ini mendukung satu rekening utama.
+          {translateText(
+            "Untuk keamanan, data rekening hanya dapat dilihat oleh pemilik akun dan admin yang berwenang. API saat ini mendukung satu rekening utama.",
+          )}{" "}
         </p>
       </div>
     </BankAccountSection>

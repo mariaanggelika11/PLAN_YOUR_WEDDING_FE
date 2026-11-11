@@ -84,7 +84,7 @@ const VARIANT_STYLE: Record<
   warning: {
     Icon: AlertTriangle,
     defaultTitle: "Perhatian",
-    icon: "text-amber-600",
+    icon: "text-amber-800",
     iconBackground: "bg-amber-50",
     ring: "ring-amber-100",
   },
@@ -233,7 +233,7 @@ function PopupView({
           <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border bg-white p-5 text-left shadow-overlay sm:p-6">
             <button
               aria-label={translateText("Tutup popup")}
-              className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+              className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-stone-600 transition hover:bg-stone-100 hover:text-stone-700"
               onClick={onCancel}
               type="button"
             >
@@ -272,7 +272,7 @@ function PopupView({
                 </label>
                 <textarea
                   autoFocus
-                  className="min-h-28 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  className="min-h-28 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition placeholder:text-stone-600 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100"
                   id={`popup-reason-${popup.id}`}
                   onChange={(event) => onReasonChange(event.target.value)}
                   placeholder={translateText("Tuliskan alasan secara singkat...")}

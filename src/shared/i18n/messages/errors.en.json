@@ -1,0 +1,12 @@
+{
+  "errors": {
+    "title": "This page could not be displayed",
+    "description": "Something went wrong while loading this page. Try loading it again. If you submitted an order or payment, check its status before repeating the action.",
+    "reference": "Reference code:",
+    "retry": "Try again",
+    "home": "Back to home",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for is unavailable or has moved.",
+    "loading": "Loading page…"
+  }
+}

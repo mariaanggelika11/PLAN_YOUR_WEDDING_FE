@@ -13,7 +13,12 @@ export function useDismissibleLayer<T extends HTMLElement>(open: boolean, onDism
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onDismiss();
+      if (event.key === "Escape") {
+        ref.current
+          ?.querySelector<HTMLElement>('[aria-expanded="true"]')
+          ?.focus({ preventScroll: true });
+        onDismiss();
+      }
     }
 
     document.addEventListener("pointerdown", handlePointerDown);

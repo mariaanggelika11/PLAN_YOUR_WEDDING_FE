@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import type { ParameterDetail, SystemParameter } from "@/features/parameters/types";
 import { AppIconButton } from "@/shared/components/ui/AppIconButton";
 import { StatusToggle } from "@/shared/components/ui/StatusToggle";
@@ -23,12 +26,13 @@ export function ParameterRow({
   onDetailStatusChange: (detail: ParameterDetail, active: boolean) => void;
   statusUpdating: boolean;
 }) {
+  const { translateText } = useTranslation();
   return (
     <>
       <tr className="border-t">
         <td className="p-4">
           <button
-            aria-label="Tampilkan detail"
+            aria-label={translateText("Tampilkan detail")}
             className="rounded-lg p-2 hover:bg-stone-100"
             onClick={onToggle}
             type="button"
@@ -43,16 +47,20 @@ export function ParameterRow({
           <ParameterStatusToggle
             active={parameter.active}
             disabled={statusUpdating}
-            label={`Status parameter ${parameter.code}`}
+            label={translateText("Status parameter {0}", { 0: parameter.code })}
             onChange={onStatusChange}
           />
         </td>
         <td className="p-4">
           <div className="flex justify-end gap-2">
-            <AppIconButton label="Edit parameter" onClick={onEdit}>
+            <AppIconButton label={translateText("Edit parameter")} onClick={onEdit}>
               <Pencil size={15} />
             </AppIconButton>
-            <AppIconButton label="Hapus parameter" onClick={onRemove} variant="danger">
+            <AppIconButton
+              label={translateText("Hapus parameter")}
+              onClick={onRemove}
+              variant="danger"
+            >
               <Trash2 size={15} />
             </AppIconButton>
           </div>
@@ -63,7 +71,7 @@ export function ParameterRow({
           <td colSpan={6} className="p-4">
             <div className="ml-10 grid gap-2">
               {parameter.details.length === 0 ? (
-                <p className="text-sm text-stone-500">Belum ada detail.</p>
+                <p className="text-sm text-stone-600">{translateText("Belum ada detail.")}</p>
               ) : (
                 [...parameter.details]
                   .sort((a, b) => a.ordering - b.ordering)
@@ -72,13 +80,13 @@ export function ParameterRow({
                       className="grid grid-cols-[40px_1fr_1fr_auto] gap-3 rounded-xl border bg-white px-3 py-2 text-xs"
                       key={detail.id}
                     >
-                      <span className="text-stone-400">{detail.ordering}</span>
+                      <span className="text-stone-600">{detail.ordering}</span>
                       <strong>{detail.code}</strong>
                       <span className="text-stone-600">{detail.description || "-"}</span>
                       <ParameterStatusToggle
                         active={detail.active}
                         disabled={statusUpdating}
-                        label={`Status detail ${detail.code}`}
+                        label={translateText("Status detail {0}", { 0: detail.code })}
                         onChange={(active) => onDetailStatusChange(detail, active)}
                       />
                     </div>
@@ -95,7 +103,7 @@ export function ParameterRow({
 export function ParameterTableMessage({ message }: { message: string }) {
   return (
     <tr>
-      <td className="p-8 text-center text-stone-500" colSpan={6}>
+      <td className="p-8 text-center text-stone-600" colSpan={6}>
         {message}
       </td>
     </tr>

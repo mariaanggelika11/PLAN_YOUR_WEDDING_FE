@@ -16,7 +16,8 @@ export function StatusToggle({
   onChange: (active: boolean) => void;
   showText?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { translateText, t } = useTranslation();
+
   return (
     <label
       className={cn(
@@ -26,7 +27,7 @@ export function StatusToggle({
       title={active ? t("status.inactive") : t("status.active")}
     >
       <input
-        aria-label={label}
+        aria-label={translateText(label)}
         checked={active}
         className="peer sr-only"
         disabled={disabled}
@@ -36,7 +37,7 @@ export function StatusToggle({
       <span className="relative h-6 w-11 rounded-full bg-stone-300 transition peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-rose-400 peer-focus-visible:ring-offset-2 after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
       {showText && (
         <span
-          className={cn("text-xs font-semibold", active ? "text-emerald-700" : "text-stone-500")}
+          className={cn("text-xs font-semibold", active ? "text-emerald-700" : "text-stone-600")}
         >
           {active ? t("status.active") : t("status.inactive")}
         </span>

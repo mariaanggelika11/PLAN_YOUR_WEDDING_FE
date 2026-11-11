@@ -37,7 +37,7 @@ export function BrandMark({
           <span
             className={cn(
               "block truncate text-[9px] uppercase tracking-[.18em]",
-              dark ? "text-slate-400" : "text-stone-500",
+              dark ? "text-slate-400" : "text-stone-600",
             )}
           >
             {APP_BRAND.tagline}

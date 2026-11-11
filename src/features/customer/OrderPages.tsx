@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { ConfirmationDeadline } from "@/features/orders/components/ConfirmationDeadline";
 import { useOrderRefresh } from "@/features/orders/useOrderRefresh";
 import { OrderConversation } from "@/features/orders/components/OrderConversation";
@@ -66,14 +68,16 @@ function Page({
   description: string;
   children: ReactNode;
 }) {
+  const { translateText } = useTranslation();
   return (
-    <FeaturePage title={title} description={description} showHeader={false}>
+    <FeaturePage title={title} description={translateText(description)} showHeader={false}>
       {children}
     </FeaturePage>
   );
 }
 
 export function Orders() {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(
     (query: { filter?: string; pageNumber?: number; pageSize?: number }) =>
       getOrdersWithPayments(query),
@@ -86,14 +90,17 @@ export function Orders() {
   if (!orders.data.length)
     return (
       <EmptyState
-        title="Belum ada pesanan"
-        description="Pesanan yang Anda buat dari marketplace akan muncul di sini."
+        title={translateText("Belum ada pesanan")}
+        description={translateText("Pesanan yang Anda buat dari marketplace akan muncul di sini.")}
       />
     );
   return (
-    <Page title="Pesanan Saya" description="Pantau status booking dan pembayaran vendor.">
+    <Page
+      title={translateText("Pesanan Saya")}
+      description={translateText("Pantau status booking dan pembayaran vendor.")}
+    >
       <DataTable
-        title="Pesanan terbaru"
+        title={translateText("Pesanan terbaru")}
         itemLabel="pesanan"
         total={orders.total}
         page={orders.page}
@@ -116,8 +123,8 @@ export function Orders() {
           order.orderNumber,
           order.vendor.businessName,
           order.productName,
-          formatDate(order.eventDate),
-          formatCurrency(order.totalAmount),
+          formatDate(order.eventDate, locale),
+          formatCurrency(order.totalAmount, locale),
           <PaymentStagesCompact key="payment" payments={order.payments} />,
           <StatusBadge key="status" status={order.status} />,
           <Link
@@ -134,6 +141,7 @@ export function Orders() {
 }
 
 export function OrderDetail({ orderId }: { orderId: string }) {
+  const { translateText, locale } = useTranslation();
   const action = useAsyncAction();
   const popup = usePopup();
   async function completeCurrentOrder() {
@@ -187,12 +195,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   }
   return (
     <Page
-      title={`Pesanan ${order.orderNumber}`}
-      description="Detail acara, pembayaran, dan perkembangan pesanan."
+      title={translateText("Pesanan {0}", { 0: order.orderNumber })}
+      description={translateText("Detail acara, pembayaran, dan perkembangan pesanan.")}
     >
       {order.rejectReason && (
         <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Pesanan ditolak:</strong> {order.rejectReason}
+          <strong>{translateText("Pesanan ditolak:")}</strong> {order.rejectReason}
         </p>
       )}
       <ConfirmationDeadline order={order} />
@@ -201,22 +209,27 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         details={[
           ["Vendor", order.vendor.businessName],
           ["Paket", order.productName],
-          ["Tanggal acara", formatDate(order.eventDate)],
+          ["Tanggal acara", formatDate(order.eventDate, locale)],
           ["Lokasi", order.eventLocation],
-          ["Jumlah tamu", order.guestCount ? `${order.guestCount} tamu` : "-"],
-          ["Total", formatCurrency(order.totalAmount)],
+          [
+            "Jumlah tamu",
+            order.guestCount ? translateText("{0} tamu", { 0: order.guestCount }) : "-",
+          ],
+          ["Total", formatCurrency(order.totalAmount, locale)],
           ["Status pesanan", <StatusBadge key="order" status={order.status} />],
           ["Pembayaran", payment ? <StatusBadge key="payment" status={payment.status} /> : "-"],
         ]}
-        timeline={buildOrderTimeline(order)}
+        timeline={buildOrderTimeline(order, locale)}
         paymentSummary={<PaymentSummary order={order} />}
       />
       <OrderConversation key={order.id} orderId={order.id} status={order.status} />
       {!!order.payments?.length && (
         <section className="grid gap-4">
           <SectionHeader
-            title="Bukti pembayaran per tahap"
-            description="Anda dapat melihat kembali bukti DP, pembayaran penuh, maupun pelunasan yang pernah dikirim."
+            title={translateText("Bukti pembayaran per tahap")}
+            description={translateText(
+              "Anda dapat melihat kembali bukti DP, pembayaran penuh, maupun pelunasan yang pernah dikirim.",
+            )}
           />
           {sortPaymentsByInstallment(order.payments).map((item) => (
             <CustomerPaymentPanel
@@ -231,15 +244,18 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       )}
       {order.status === "WAITING_CUSTOMER_CONFIRMATION" && (
         <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold text-ink">Konfirmasi layanan</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Vendor telah menandai layanan selesai. Periksa hasilnya sebelum menyelesaikan pesanan.
+          <h2 className="text-lg font-semibold text-ink">{translateText("Konfirmasi layanan")}</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            {translateText(
+              "Vendor telah menandai layanan selesai. Periksa hasilnya sebelum menyelesaikan pesanan.",
+            )}{" "}
           </p>
           {!paymentSummary.isFullyPaid && (
             <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
               <p className="font-medium">
-                Lunasi sisa tagihan {formatCurrency(paymentSummary.remainingAmount)} sebelum
-                menyelesaikan pesanan.
+                {translateText("Lunasi sisa tagihan")}{" "}
+                {formatCurrency(paymentSummary.remainingAmount, locale)}{" "}
+                {translateText("sebelum menyelesaikan pesanan.")}{" "}
               </p>
               {!remainingPayment ? (
                 <AppButton
@@ -247,15 +263,19 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                   loading={action.loading}
                   onClick={() => void createSettlement()}
                 >
-                  Buat tagihan pelunasan
+                  {translateText("Buat tagihan pelunasan")}{" "}
                 </AppButton>
               ) : remainingPayment.status === "WAITING_PAYMENT" ||
                 remainingPayment.status === "REJECTED" ? (
                 <AppButton asChild className="mt-4">
-                  <Link href={ROUTES.customer.payment(order.id)}>Bayar pelunasan</Link>
+                  <Link href={ROUTES.customer.payment(order.id)}>
+                    {translateText("Bayar pelunasan")}
+                  </Link>
                 </AppButton>
               ) : remainingPayment.status === "WAITING_VERIFICATION" ? (
-                <p className="mt-3">Bukti pelunasan sedang menunggu verifikasi vendor.</p>
+                <p className="mt-3">
+                  {translateText("Bukti pelunasan sedang menunggu verifikasi vendor.")}
+                </p>
               ) : null}
             </div>
           )}
@@ -265,7 +285,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
             loading={action.loading}
             onClick={() => void completeCurrentOrder()}
           >
-            Konfirmasi pesanan selesai
+            {translateText("Konfirmasi pesanan selesai")}{" "}
           </AppButton>
         </section>
       )}
@@ -273,7 +293,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       {order.status === "COMPLETED" && <CustomerReviewSection order={order} />}
       {order.status === "PENDING_PAYMENT" && payment?.status === "WAITING_PAYMENT" && (
         <Link className="font-semibold text-blush" href={ROUTES.customer.payment(order.id)}>
-          Lanjutkan pembayaran →
+          {translateText("Lanjutkan pembayaran →")}{" "}
         </Link>
       )}
     </Page>
@@ -281,6 +301,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 }
 
 export function ReviewPage({ orderId }: { orderId: string }) {
+  const { translateText } = useTranslation();
   const router = useRouter();
   const action = useAsyncAction();
   const loader = useCallback(async () => {
@@ -307,14 +328,17 @@ export function ReviewPage({ orderId }: { orderId: string }) {
   if (order.status !== "COMPLETED") {
     return (
       <EmptyState
-        title="Ulasan belum tersedia"
-        description="Ulasan baru dapat dibuat setelah pesanan selesai."
+        title={translateText("Ulasan belum tersedia")}
+        description={translateText("Ulasan baru dapat dibuat setelah pesanan selesai.")}
       />
     );
   }
   if (review) {
     return (
-      <Page title="Ulasan Anda" description="Pesanan ini sudah pernah Anda ulas.">
+      <Page
+        title={translateText("Ulasan Anda")}
+        description={translateText("Pesanan ini sudah pernah Anda ulas.")}
+      >
         <ReviewCard review={review} />
       </Page>
     );
@@ -322,8 +346,10 @@ export function ReviewPage({ orderId }: { orderId: string }) {
 
   return (
     <Page
-      title={`Ulas ${order.productName}`}
-      description={`Bagikan pengalaman Anda bersama ${order.vendor.businessName}.`}
+      title={translateText("Ulas {0}", { 0: order.productName })}
+      description={translateText("Bagikan pengalaman Anda bersama {0}.", {
+        0: order.vendor.businessName,
+      })}
     >
       <ReviewForm
         loading={action.loading}
@@ -340,20 +366,20 @@ export function ReviewPage({ orderId }: { orderId: string }) {
 }
 
 function CustomerReviewSection({ order }: { order: Order }) {
-  const loader = useCallback(
-    () => getReviewForOrder(order),
-    [order.id, order.customer.id, order.vendorProduct.id],
-  );
+  const { translateText } = useTranslation();
+  const loader = useCallback(() => getReviewForOrder(order), [order]);
   const review = useAsyncResource<VendorProductReview | null>(loader, { initialData: null });
 
   if (review.loading) return <div className="h-36 animate-pulse rounded-xl bg-stone-100" />;
   if (review.error) {
     return (
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
-        <h2 className="font-semibold text-amber-900">Pesanan telah selesai</h2>
-        <p className="mt-1 text-sm text-amber-700">Status ulasan belum dapat diperiksa.</p>
+        <h2 className="font-semibold text-amber-900">{translateText("Pesanan telah selesai")}</h2>
+        <p className="mt-1 text-sm text-amber-700">
+          {translateText("Status ulasan belum dapat diperiksa.")}
+        </p>
         <AppButton className="mt-4" onClick={() => void review.reload()} variant="secondary">
-          Coba lagi
+          {translateText("Coba lagi")}{" "}
         </AppButton>
       </section>
     );
@@ -362,30 +388,34 @@ function CustomerReviewSection({ order }: { order: Order }) {
 
   return (
     <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-      <h2 className="font-semibold text-emerald-900">Pesanan telah selesai</h2>
+      <h2 className="font-semibold text-emerald-900">{translateText("Pesanan telah selesai")}</h2>
       <p className="mt-1 text-sm text-emerald-700">
-        Bagikan pengalaman Anda untuk membantu customer lain memilih vendor.
+        {translateText("Bagikan pengalaman Anda untuk membantu customer lain memilih vendor.")}{" "}
       </p>
       <AppButton asChild className="mt-4">
-        <Link href={ROUTES.customer.review(order.id)}>Beri ulasan</Link>
+        <Link href={ROUTES.customer.review(order.id)}>{translateText("Beri ulasan")}</Link>
       </AppButton>
     </section>
   );
 }
 
 function ReviewCard({ review }: { review: VendorProductReview }) {
+  const { translateText } = useTranslation();
   return (
     <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-            Ulasan Anda
+            {translateText("Ulasan Anda")}{" "}
           </p>
           <h2 className="mt-1 text-lg font-semibold text-ink">
-            Terima kasih sudah berbagi pengalaman
+            {translateText("Terima kasih sudah berbagi pengalaman")}{" "}
           </h2>
         </div>
-        <div aria-label={`${review.rating} dari 5 bintang`} className="flex gap-0.5">
+        <div
+          aria-label={translateText("{0} dari 5 bintang", { 0: review.rating })}
+          className="flex gap-0.5"
+        >
           {[1, 2, 3, 4, 5].map((value) => (
             <Star
               className={
@@ -409,14 +439,17 @@ function ReviewCard({ review }: { review: VendorProductReview }) {
           ))}
         </div>
       )}
-      <p className="mt-5 text-xs text-stone-500">
-        Ulasan telah dikirim dan tidak dapat dikirim ulang untuk pesanan ini.
+      <p className="mt-5 text-xs text-stone-600">
+        {translateText(
+          "Ulasan telah dikirim dan tidak dapat dikirim ulang untuk pesanan ini.",
+        )}{" "}
       </p>
     </section>
   );
 }
 
 function ReviewPhoto({ attachmentId }: { attachmentId: string }) {
+  const { translateText } = useTranslation();
   const [url, setUrl] = useState("");
 
   useEffect(() => {
@@ -438,8 +471,8 @@ function ReviewPhoto({ attachmentId }: { attachmentId: string }) {
   if (!url) return <div className="aspect-square animate-pulse rounded-xl bg-stone-100" />;
   return (
     <a href={url} rel="noreferrer" target="_blank">
-      <img
-        alt="Foto ulasan Anda"
+      <AttachmentImage
+        alt={translateText("Foto ulasan Anda")}
         className="aspect-square w-full rounded-xl border object-cover transition hover:opacity-90"
         src={url}
       />
@@ -465,6 +498,7 @@ function ReviewForm({
   loading: boolean;
   onSubmit: (form: HTMLFormElement) => void | Promise<void>;
 }) {
+  const { translateText } = useTranslation();
   const popup = usePopup();
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -491,13 +525,20 @@ function ReviewForm({
   return (
     <form className="grid gap-7 rounded-xl border bg-white p-5 shadow-sm sm:p-8" onSubmit={submit}>
       <section className="text-center">
-        <h2 className="text-lg font-semibold text-ink">Bagaimana pengalaman Anda?</h2>
-        <p className="mt-1 text-sm text-stone-500">Ketuk bintang untuk memberikan penilaian.</p>
+        <h2 className="text-lg font-semibold text-ink">
+          {translateText("Bagaimana pengalaman Anda?")}
+        </h2>
+        <p className="mt-1 text-sm text-stone-600">
+          {translateText("Ketuk bintang untuk memberikan penilaian.")}
+        </p>
         <input name="rating" type="hidden" value={rating} />
         <div className="mt-5 flex justify-center gap-2" onMouseLeave={() => setHoveredRating(0)}>
           {[1, 2, 3, 4, 5].map((value) => (
             <button
-              aria-label={`${value} bintang — ${RATING_LABELS[value]}`}
+              aria-label={translateText("{0} bintang — {1}", {
+                0: value,
+                1: translateText(RATING_LABELS[value]),
+              })}
               className="rounded-full p-1 transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
               key={value}
               onClick={() => setRating(value)}
@@ -514,15 +555,17 @@ function ReviewForm({
             </button>
           ))}
         </div>
-        <p className="mt-2 min-h-5 text-sm font-semibold text-amber-600">
-          {RATING_LABELS[visibleRating]}
+        <p className="mt-2 min-h-5 text-sm font-semibold text-amber-800">
+          {translateText(RATING_LABELS[visibleRating])}
         </p>
       </section>
 
       <section className="border-t pt-6">
-        <h3 className="font-semibold text-ink">Apa yang paling berkesan?</h3>
-        <p className="mt-1 text-sm text-stone-500">
-          Pilih satu atau beberapa. Pilihan ini akan ikut tersimpan dalam ulasan.
+        <h3 className="font-semibold text-ink">{translateText("Apa yang paling berkesan?")}</h3>
+        <p className="mt-1 text-sm text-stone-600">
+          {translateText(
+            "Pilih satu atau beberapa. Pilihan ini akan ikut tersimpan dalam ulasan.",
+          )}{" "}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {REVIEW_TAGS.map((tag) => {
@@ -536,7 +579,7 @@ function ReviewForm({
                 type="button"
               >
                 {selected ? "✓ " : "+ "}
-                {tag}
+                {translateText(tag)}
               </button>
             );
           })}
@@ -545,27 +588,33 @@ function ReviewForm({
 
       <input name="comment" type="hidden" value={combinedComment} />
       <AppTextarea
-        helper="Ceritakan kualitas hasil, komunikasi vendor, atau hal lain yang membantu customer berikutnya."
-        label="Tulis ulasan"
+        helper={translateText(
+          "Ceritakan kualitas hasil, komunikasi vendor, atau hal lain yang membantu customer berikutnya.",
+        )}
+        label={translateText("Tulis ulasan")}
         maxLength={1000}
         onChange={(event) => setComment(event.target.value)}
-        placeholder="Contoh: Vendor responsif, datang tepat waktu, dan hasil dekorasinya sesuai ekspektasi."
+        placeholder={translateText(
+          "Contoh: Vendor responsif, datang tepat waktu, dan hasil dekorasinya sesuai ekspektasi.",
+        )}
         value={comment}
       />
 
       <MultiImageUpload
-        helper="Tambahkan maksimal 5 foto hasil layanan. JPG, PNG, atau WebP maksimal 5 MB per foto."
-        label="Tambahkan foto (opsional)"
+        helper={translateText(
+          "Tambahkan maksimal 5 foto hasil layanan. JPG, PNG, atau WebP maksimal 5 MB per foto.",
+        )}
+        label={translateText("Tambahkan foto (opsional)")}
         maxFiles={5}
         name="images"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
-        <p className="text-xs text-stone-500">
-          Ulasan hanya dapat dikirim satu kali untuk pesanan ini.
+        <p className="text-xs text-stone-600">
+          {translateText("Ulasan hanya dapat dikirim satu kali untuk pesanan ini.")}{" "}
         </p>
         <AppButton disabled={!rating} loading={loading} type="submit">
-          Kirim ulasan
+          {translateText("Kirim ulasan")}{" "}
         </AppButton>
       </div>
     </form>
@@ -583,6 +632,7 @@ function CustomerPaymentPanel({
   onUpload: (file: File) => void;
   payment: OrderPayment;
 }) {
+  const { translateText, locale } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const canUploadAgain = allowUpload && payment.active !== false && payment.status === "REJECTED";
 
@@ -590,9 +640,12 @@ function CustomerPaymentPanel({
     <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Bukti pembayaran Anda</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            {paymentInstallmentLabel(payment.installment)} sebesar {formatCurrency(payment.amount)}
+          <h2 className="text-lg font-semibold text-ink">
+            {translateText("Bukti pembayaran Anda")}
+          </h2>
+          <p className="mt-1 text-sm text-stone-600">
+            {paymentInstallmentLabel(payment.installment, locale)} {translateText("sebesar")}{" "}
+            {formatCurrency(payment.amount, locale)}
           </p>
         </div>
         <StatusBadge status={payment.status} />
@@ -600,7 +653,7 @@ function CustomerPaymentPanel({
 
       {payment.rejectReason && (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Bukti ditolak:</strong> {payment.rejectReason}
+          <strong>{translateText("Bukti ditolak:")}</strong> {payment.rejectReason}
         </p>
       )}
 
@@ -611,18 +664,19 @@ function CustomerPaymentPanel({
             <PaymentProofHistory proofs={payment.proofs} />
           </>
         ) : (
-          <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-500">
-            Bukti pembayaran belum diunggah.
+          <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-600">
+            {translateText("Bukti pembayaran belum diunggah.")}{" "}
           </p>
         )}
       </div>
 
       {canUploadAgain && (
         <div className="mt-5 border-t pt-5">
-          <h3 className="font-semibold text-ink">Upload ulang bukti</h3>
-          <p className="mt-1 text-sm text-stone-500">
-            Perbaiki bukti sesuai alasan penolakan vendor. Bukti sebelumnya tetap tersimpan dalam
-            riwayat.
+          <h3 className="font-semibold text-ink">{translateText("Upload ulang bukti")}</h3>
+          <p className="mt-1 text-sm text-stone-600">
+            {translateText(
+              "Perbaiki bukti sesuai alasan penolakan vendor. Bukti sebelumnya tetap tersimpan dalam riwayat.",
+            )}{" "}
           </p>
           <label className="mt-4 grid cursor-pointer place-items-center rounded-xl border-2 border-dashed bg-stone-50 p-6 text-center hover:border-blush hover:bg-rose-50">
             <input
@@ -633,9 +687,11 @@ function CustomerPaymentPanel({
               type="file"
             />
             <span className="text-sm font-semibold">
-              {file?.name ?? "Pilih bukti pembayaran baru"}
+              {file?.name ?? translateText("Pilih bukti pembayaran baru")}
             </span>
-            <span className="mt-1 text-xs text-stone-500">JPG, PNG, atau PDF maksimal 5 MB</span>
+            <span className="mt-1 text-xs text-stone-600">
+              {translateText("JPG, PNG, atau PDF maksimal 5 MB")}
+            </span>
           </label>
           <AppButton
             className="mt-4"
@@ -643,7 +699,7 @@ function CustomerPaymentPanel({
             loading={loading}
             onClick={() => file && onUpload(file)}
           >
-            Upload ulang bukti
+            {translateText("Upload ulang bukti")}{" "}
           </AppButton>
         </div>
       )}
@@ -660,21 +716,29 @@ function OrderAccessError({
   cause: unknown;
   retry: () => Promise<unknown>;
 }) {
+  const { translateText } = useTranslation();
   const forbidden = isForbiddenResource(cause);
   const missing = apiErrorStatus(cause) === 404;
   if (forbidden || missing)
     return (
       <EmptyState
-        title={forbidden ? "Anda tidak memiliki akses" : "Order tidak ditemukan"}
+        title={
+          forbidden
+            ? translateText("Anda tidak memiliki akses")
+            : translateText("Order tidak ditemukan")
+        }
         description={
-          forbidden ? "Order ini bukan milik akun Anda." : "Order mungkin sudah tidak tersedia."
+          forbidden
+            ? translateText("Order ini bukan milik akun Anda.")
+            : translateText("Order mungkin sudah tidak tersedia.")
         }
       />
     );
-  return <ErrorState description={error} retry={() => void retry()} />;
+  return <ErrorState description={translateText(error)} retry={() => void retry()} />;
 }
 
 export function ReviewList() {
+  const { translateText } = useTranslation();
   const loader = useCallback(() => getVendorProductReviews({ pageNumber: 1, pageSize: 20 }), []);
   const reviews = useAsyncResource(loader, { initialData: null });
   if (reviews.loading) return <LoadingSkeleton />;
@@ -682,28 +746,33 @@ export function ReviewList() {
   if (!reviews.data?.data.length)
     return (
       <EmptyState
-        title="Belum ada ulasan"
-        description="Ulasan customer akan tampil setelah pesanan selesai."
+        title={translateText("Belum ada ulasan")}
+        description={translateText("Ulasan customer akan tampil setelah pesanan selesai.")}
       />
     );
   return (
     <section className="grid gap-4">
       <SectionHeader
-        title="Ulasan customer"
-        description={`${reviews.data.total} pengalaman customer terverifikasi.`}
+        title={translateText("Ulasan customer")}
+        description={translateText("{0} pengalaman customer terverifikasi.", {
+          0: reviews.data.total,
+        })}
       />
       {reviews.data.data.map((review) => (
         <article className="rounded-xl border bg-white p-5" key={review.id}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-semibold text-ink">{review.customer?.fullName ?? "Customer"}</p>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-600">
                 {review.vendorProduct?.name ??
                   review.order?.orderNumber ??
-                  "Pembelian terverifikasi"}
+                  translateText("Pembelian terverifikasi")}
               </p>
             </div>
-            <div aria-label={`${review.rating} dari 5 bintang`} className="flex">
+            <div
+              aria-label={translateText("{0} dari 5 bintang", { 0: review.rating })}
+              className="flex"
+            >
               {[1, 2, 3, 4, 5].map((value) => (
                 <Star
                   className={

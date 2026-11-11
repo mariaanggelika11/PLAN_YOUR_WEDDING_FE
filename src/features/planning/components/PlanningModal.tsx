@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -25,6 +26,7 @@ export function PlanningModal({
   children: ReactNode;
   dismissible?: boolean;
 }) {
+  const { translateText } = useTranslation();
   const [busy, setBusy] = useState(false);
   return (
     <BusyContext.Provider value={setBusy}>
@@ -47,15 +49,15 @@ export function PlanningModal({
           >
             <div className="mb-6 border-b pb-5 pr-9">
               <Dialog.Title className="text-xl font-semibold text-ink">{title}</Dialog.Title>
-              <Dialog.Description className="mt-2 text-sm leading-6 text-stone-500">
-                {description}
+              <Dialog.Description className="mt-2 text-sm leading-6 text-stone-600">
+                {translateText(description)}
               </Dialog.Description>
             </div>
             {dismissible && (
               <Dialog.Close
                 disabled={busy}
-                aria-label="Tutup"
-                className="absolute right-4 top-4 rounded-full p-2 text-stone-500 hover:bg-stone-100"
+                aria-label={translateText("Tutup")}
+                className="absolute right-4 top-4 rounded-full p-2 text-stone-600 hover:bg-stone-100"
               >
                 <X size={20} />
               </Dialog.Close>

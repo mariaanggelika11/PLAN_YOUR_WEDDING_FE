@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import {
@@ -23,6 +24,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 const PAGE_SIZE = 10;
 export function ParameterManager() {
+  const { translateText } = useTranslation();
   const { confirm, success } = usePopup();
   const [parameters, setParameters] = useState<SystemParameter[]>([]);
   const [filter, setFilter] = useState("");
@@ -80,7 +82,9 @@ export function ParameterManager() {
       .map((item) => item.code.trim().toUpperCase())
       .filter((item, index, items) => item && items.indexOf(item) !== index);
     if (duplicateCodes.length)
-      return setError(`Kode detail tidak boleh duplikat: ${duplicateCodes.join(", ")}.`);
+      return setError(
+        translateText("Kode detail tidak boleh duplikat: {0}.", { 0: duplicateCodes.join(", ") }),
+      );
 
     const payload: ParameterPayload = {
       code,
@@ -120,7 +124,9 @@ export function ParameterManager() {
   async function remove(parameter: SystemParameter) {
     const result = await confirm({
       confirmLabel: "Hapus",
-      message: `Parameter ${parameter.code} beserta seluruh detailnya akan dihapus permanen.`,
+      message: translateText("Parameter {0} beserta seluruh detailnya akan dihapus permanen.", {
+        0: parameter.code,
+      }),
       title: "Hapus parameter?",
       variant: "error",
     });
@@ -146,7 +152,12 @@ export function ParameterManager() {
 
     try {
       await updateParameter(parameter.id, { active });
-      success(`Parameter ${parameter.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`);
+      success(
+        translateText("Parameter {0} berhasil {1}.", {
+          0: parameter.code,
+          1: active ? "diaktifkan" : "dinonaktifkan",
+        }),
+      );
     } catch (statusError) {
       setParameters((current) =>
         current.map((item) =>
@@ -182,7 +193,12 @@ export function ParameterManager() {
 
     try {
       await updateParameter(parameter.id, { details: updatedDetails });
-      success(`Detail ${detail.code} berhasil ${active ? "diaktifkan" : "dinonaktifkan"}.`);
+      success(
+        translateText("Detail {0} berhasil {1}.", {
+          0: detail.code,
+          1: active ? "diaktifkan" : "dinonaktifkan",
+        }),
+      );
     } catch (statusError) {
       setParameters((current) =>
         current.map((item) => (item.id === parameter.id ? parameter : item)),
@@ -203,21 +219,21 @@ export function ParameterManager() {
         <form className="flex flex-1 items-end gap-2" onSubmit={search}>
           <div className="max-w-md flex-1">
             <AppInput
-              label="Cari kode parameter"
+              label={translateText("Cari kode parameter")}
               name="filter"
-              placeholder="Contoh: GENDER, SMTP, OTP"
+              placeholder={translateText("Contoh: GENDER, SMTP, OTP")}
             />
           </div>
           <AppButton type="submit" variant="secondary">
-            <Search size={16} /> Cari
+            <Search size={16} /> {translateText("Cari")}{" "}
           </AppButton>
         </form>
         <AppButton onClick={() => openForm()} type="button">
-          <Plus size={16} /> Tambah parameter
+          <Plus size={16} /> {translateText("Tambah parameter")}{" "}
         </AppButton>
       </div>
 
-      {error && <PopupMessage message={error} variant="error" />}
+      {error && <PopupMessage message={translateText(error)} variant="error" />}
 
       {formOpen && (
         <ParameterForm
@@ -234,19 +250,21 @@ export function ParameterManager() {
 
       <section className="overflow-hidden rounded-xl border bg-white shadow-sm">
         <div className="border-b px-5 py-4">
-          <h2 className="font-semibold">Daftar Parameter</h2>
-          <p className="mt-1 text-xs text-stone-500">{total} parameter ditemukan</p>
+          <h2 className="font-semibold">{translateText("Daftar Parameter")}</h2>
+          <p className="mt-1 text-xs text-stone-600">
+            {total} {translateText("parameter ditemukan")}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-stone-50 text-xs font-medium text-stone-600 [&_th]:font-medium">
               <tr>
                 <th className="w-12 p-4" />
-                <th className="p-4">Kode</th>
-                <th className="p-4">Deskripsi</th>
+                <th className="p-4">{translateText("Kode")}</th>
+                <th className="p-4">{translateText("Deskripsi")}</th>
                 <th className="p-4">Detail</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Aksi</th>
+                <th className="p-4">{translateText("Status")}</th>
+                <th className="p-4 text-right">{translateText("Aksi")}</th>
               </tr>
             </thead>
             <tbody>
@@ -287,7 +305,7 @@ export function ParameterManager() {
         </div>
         <Pagination
           className="border-t px-5 py-4"
-          label="Halaman parameter"
+          label={translateText("Halaman parameter")}
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}

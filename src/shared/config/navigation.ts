@@ -1,5 +1,5 @@
 import { ROUTES } from "@/shared/config/routes";
-import type { TranslationKey } from "@/shared/i18n/dictionaries/id";
+import type { TranslationKey } from "@/shared/i18n/catalog";
 import type { LucideIcon } from "lucide-react";
 import {
   Bell,
@@ -38,11 +38,11 @@ export const APP_BRAND = {
 } as const;
 
 export const PUBLIC_NAVIGATION = [
-  { label: "Home", href: ROUTES.home },
+  { label: "Beranda", href: ROUTES.home },
   { label: "Marketplace", href: ROUTES.customer.marketplace },
   { label: "Vendor", href: ROUTES.registerVendor },
-  { label: "How It Works", href: ROUTES.howItWorks },
-  { label: "About", href: ROUTES.about },
+  { label: "Cara Kerja", href: ROUTES.howItWorks },
+  { label: "Tentang", href: ROUTES.about },
 ] as const;
 
 export const CUSTOMER_NAVIGATION: NavigationItem[] = [

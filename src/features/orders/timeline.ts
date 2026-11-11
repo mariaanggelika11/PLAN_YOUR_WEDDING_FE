@@ -1,3 +1,4 @@
+import { translateInterfaceText, type TranslationVariables } from "../../shared/i18n/translate.ts";
 import type { Order } from "@/features/orders/types";
 import { paymentInstallmentLabel } from "@/features/orders/rules";
 import type { OrderTimelineItem } from "@/shared/components/data-display/Commerce";
@@ -11,31 +12,43 @@ const ACTIVE_EXECUTION_STATUSES: Order["status"][] = [
 
 const CONFIRMED_STATUSES: Order["status"][] = ["CONFIRMED", ...ACTIVE_EXECUTION_STATUSES];
 
-export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
+export function buildOrderTimeline(order: Order, locale: "id" | "en" = "id"): OrderTimelineItem[] {
+  const translateUI = (text: string, variables?: TranslationVariables) =>
+    translateInterfaceText(text, locale, variables);
   const events: Array<OrderTimelineItem & { timestamp?: string | null }> = [
-    { label: "Pesanan dibuat", date: timelineDate(order.createdAt), timestamp: order.createdAt },
+    {
+      label: translateUI("Pesanan dibuat"),
+      date: timelineDate(order.createdAt, locale),
+      timestamp: order.createdAt,
+    },
   ];
 
   for (const payment of order.payments ?? []) {
-    const installment = paymentInstallmentLabel(payment.installment);
+    const installment = paymentInstallmentLabel(payment.installment, locale);
     if (payment.paidAt) {
       events.push({
-        label: `Bukti ${installment} diunggah${payment.status === "WAITING_VERIFICATION" ? " — menunggu verifikasi vendor" : ""}`,
-        date: timelineDate(payment.paidAt),
+        label: translateUI("Bukti {0} diunggah{1}", {
+          0: installment,
+          1:
+            payment.status === "WAITING_VERIFICATION"
+              ? translateUI(" — menunggu verifikasi vendor")
+              : "",
+        }),
+        date: timelineDate(payment.paidAt, locale),
         timestamp: payment.paidAt,
       });
     }
     if (payment.status === "REJECTED") {
       events.push({
-        label: `${installment} ditolak vendor`,
-        date: timelineDate(payment.modifiedAt),
+        label: translateUI("{0} ditolak vendor", { 0: installment }),
+        date: timelineDate(payment.modifiedAt, locale),
         timestamp: payment.modifiedAt,
       });
     }
     if (payment.status === "PAID") {
       events.push({
-        label: `${installment} diverifikasi vendor`,
-        date: timelineDate(payment.verifiedAt),
+        label: translateUI("{0} diverifikasi vendor", { 0: installment }),
+        date: timelineDate(payment.verifiedAt, locale),
         timestamp: payment.verifiedAt,
       });
     }
@@ -43,44 +56,47 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
 
   if (CONFIRMED_STATUSES.includes(order.status)) {
     events.push({
-      label: "Vendor mengonfirmasi pesanan",
-      date: timelineDate(order.confirmedAt),
+      label: translateUI("Vendor mengonfirmasi pesanan"),
+      date: timelineDate(order.confirmedAt, locale),
       timestamp: order.confirmedAt,
     });
   }
   if (ACTIVE_EXECUTION_STATUSES.includes(order.status)) {
     if (order.status === "IN_PROGRESS")
       events.push({
-        label: "Vendor memulai pengerjaan",
-        date: timelineDate(order.modifiedAt),
+        label: translateUI("Vendor memulai pengerjaan"),
+        date: timelineDate(order.modifiedAt, locale),
         timestamp: order.modifiedAt,
       });
   }
   if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
     events.push({
-      label: "Layanan selesai, menunggu konfirmasi customer",
-      date: timelineDate(order.deliveredAt ?? order.modifiedAt),
+      label: translateUI("Layanan selesai, menunggu konfirmasi customer"),
+      date: timelineDate(order.deliveredAt ?? order.modifiedAt, locale),
       timestamp: order.deliveredAt ?? order.modifiedAt,
     });
   }
   if (order.status === "REJECTED_BY_VENDOR") {
     events.push({
-      label: "Pesanan ditolak vendor",
-      date: timelineDate(order.modifiedAt),
+      label: translateUI("Pesanan ditolak vendor"),
+      date: timelineDate(order.modifiedAt, locale),
       timestamp: order.modifiedAt,
     });
   }
   if (order.status === "COMPLETED") {
     events.push({
-      label: "Pesanan selesai",
-      date: timelineDate(order.completedAt),
+      label: translateUI("Pesanan selesai"),
+      date: timelineDate(order.completedAt, locale),
       timestamp: order.completedAt,
     });
   }
   if (order.status === "CANCELLED" || order.status === "DISPUTED") {
     events.push({
-      label: order.status === "CANCELLED" ? "Pesanan dibatalkan" : "Pesanan dalam sengketa",
-      date: timelineDate(order.modifiedAt),
+      label:
+        order.status === "CANCELLED"
+          ? translateUI("Pesanan dibatalkan")
+          : translateUI("Pesanan dalam sengketa"),
+      date: timelineDate(order.modifiedAt, locale),
       timestamp: order.modifiedAt,
     });
   }
@@ -93,6 +109,6 @@ export function buildOrderTimeline(order: Order): OrderTimelineItem[] {
     .map(({ label, date }) => ({ label, date }));
 }
 
-function timelineDate(value?: string | null) {
-  return value ? formatDateTime(value) : null;
+function timelineDate(value: string | null | undefined, locale: "id" | "en") {
+  return value ? formatDateTime(value, locale) : null;
 }

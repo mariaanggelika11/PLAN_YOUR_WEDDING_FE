@@ -1,4 +1,6 @@
 "use client";
+import { planningTaskText } from "../taskCopy";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
@@ -39,6 +41,7 @@ export function TaskEditor({
   onCancel: () => void;
   onDelete?: () => Promise<void>;
 }) {
+  const { translateText, locale } = useTranslation();
   const [draft, setDraft] = useState(task);
   const mutation = usePlanningMutation();
   const { confirm } = usePopup();
@@ -57,7 +60,10 @@ export function TaskEditor({
     await mutation.run(async () => {
       const result = await confirm({
         title: "Hapus tugas ini?",
-        message: `“${task.title}” beserta subtugasnya akan dihapus. Pesanan terkait tetap tersimpan. Tugas template dapat muncul kembali jika template diterapkan ulang melalui Atur rencana.`,
+        message: translateText(
+          "“{0}” beserta subtugasnya akan dihapus. Pesanan terkait tetap tersimpan. Tugas template dapat muncul kembali jika template diterapkan ulang melalui Atur rencana.",
+          { 0: task.title },
+        ),
         variant: "warning",
         confirmLabel: "Ya, hapus tugas",
         cancelLabel: "Kembali",
@@ -81,7 +87,7 @@ export function TaskEditor({
       <fieldset disabled={mutation.busy} className="contents">
         <AppInput
           className="h-12 min-w-0 w-full"
-          label="Nama tugas"
+          label={translateText("Nama tugas")}
           required
           maxLength={200}
           value={draft.title}
@@ -89,45 +95,47 @@ export function TaskEditor({
         />
         {draft.guide && (
           <p className="rounded-xl bg-rose-50 p-4 text-sm leading-6 text-stone-700">
-            {draft.guide}
+            {planningTaskText(draft, draft.guide, locale)}
           </p>
         )}
         <div className="grid items-start gap-4 sm:grid-cols-2 [&>label]:min-w-0">
           <AppSelect
             className="h-12 min-w-0 w-full"
-            label="Kategori"
+            label={translateText("Kategori")}
             value={draft.category}
             onChange={(e) => setDraft({ ...draft, category: e.target.value })}
           >
             {categories.map((item) => (
-              <option key={item}>{item}</option>
+              <option key={item} value={item}>
+                {translateText(item)}
+              </option>
             ))}
           </AppSelect>
           <AppSelect
             className="h-12 min-w-0 w-full"
-            label="Status"
+            label={translateText("Status")}
             value={draft.status}
             onChange={(e) => setDraft(setTaskStatus(draft, e.target.value as TaskStatus))}
           >
             {Object.entries(statuses).map(([value, label]) => (
               <option key={value} value={value}>
-                {label}
+                {translateText(label)}
               </option>
             ))}
           </AppSelect>
           <AppDatePicker
             className="h-12 min-w-0 w-full"
-            label="Tenggat"
+            label={translateText("Tenggat")}
             value={draft.due}
             onChange={(e) => setDraft({ ...draft, due: e.target.value, customDue: true })}
-            helper={dueGuidance(draft, weddingDate, today)}
+            helper={dueGuidance(draft, weddingDate, today, locale)}
           />
           <AppInput
             className="h-12 min-w-0 w-full"
-            label="Penanggung jawab"
+            label={translateText("Penanggung jawab")}
             value={draft.assignee}
             maxLength={100}
-            placeholder="Saya, pasangan, keluarga, atau WO"
+            placeholder={translateText("Saya, pasangan, keluarga, atau WO")}
             onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
           />
         </div>
@@ -138,10 +146,10 @@ export function TaskEditor({
             checked={draft.important}
             onChange={(e) => setDraft({ ...draft, important: e.target.checked })}
           />
-          Tandai sebagai tugas penting
+          {translateText("Tandai sebagai tugas penting")}{" "}
         </label>
         <section className="rounded-xl border p-4">
-          <h3 className="text-sm font-semibold">Langkah yang perlu disiapkan</h3>
+          <h3 className="text-sm font-semibold">{translateText("Langkah yang perlu disiapkan")}</h3>
           <div className="mt-3 grid gap-3">
             {draft.subtasks.map((item, index) => (
               <label key={index} className="flex items-start gap-3 text-sm leading-6">
@@ -151,7 +159,7 @@ export function TaskEditor({
                   checked={item.done}
                   onChange={() => setDraft(toggleSubtask(draft, index))}
                 />
-                <span className={item.done ? "text-stone-400 line-through" : ""}>{item.title}</span>
+                <span className={item.done ? "text-stone-600 line-through" : ""}>{item.title}</span>
               </label>
             ))}
           </div>
@@ -159,7 +167,7 @@ export function TaskEditor({
             <div className="min-w-0 flex-1">
               <AppInput
                 className="h-12 min-w-0 w-full"
-                label="Langkah tambahan"
+                label={translateText("Langkah tambahan")}
                 value={subtask}
                 maxLength={200}
                 onChange={(e) => setSubtask(e.target.value)}
@@ -169,7 +177,7 @@ export function TaskEditor({
               type="button"
               variant="secondary"
               disabled={!subtask.trim()}
-              aria-label="Tambahkan langkah"
+              aria-label={translateText("Tambahkan langkah")}
               onClick={() => {
                 setDraft({
                   ...draft,
@@ -184,27 +192,29 @@ export function TaskEditor({
           </div>
         </section>
         <AppTextarea
-          label="Catatan dan kesepakatan"
+          label={translateText("Catatan dan kesepakatan")}
           value={draft.notes}
           maxLength={5000}
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />
         <AppInput
           className="h-12 min-w-0 w-full"
-          label="Vendor / kontak di luar aplikasi"
+          label={translateText("Vendor / kontak di luar aplikasi")}
           value={draft.vendor}
           maxLength={300}
           onChange={(e) => setDraft({ ...draft, vendor: e.target.value })}
         />
         <AppSelect
           className="h-12 min-w-0 w-full"
-          label="Pesanan terkait"
+          label={translateText("Pesanan terkait")}
           value={draft.orderId}
           onChange={(e) => setDraft({ ...draft, orderId: e.target.value })}
         >
-          <option value="">Tidak ditautkan</option>
+          <option value="">{translateText("Tidak ditautkan")}</option>
           {draft.orderId && !linked && (
-            <option value={draft.orderId}>Pesanan tersimpan · {draft.orderId}</option>
+            <option value={draft.orderId}>
+              {translateText("Pesanan tersimpan ·")} {draft.orderId}
+            </option>
           )}
           {orders.data?.data.map((order) => (
             <option key={order.id} value={order.id}>
@@ -212,20 +222,22 @@ export function TaskEditor({
             </option>
           ))}
         </AppSelect>
-        {orders.loading && <p className="text-xs text-stone-500">Memuat pesanan…</p>}
+        {orders.loading && (
+          <p className="text-xs text-stone-600">{translateText("Memuat pesanan…")}</p>
+        )}
         {orders.error && (
           <div role="status" className="text-sm text-amber-700">
-            Pesanan belum dapat dimuat. Catatan tugas tetap bisa disimpan.{" "}
+            {translateText("Pesanan belum dapat dimuat. Catatan tugas tetap bisa disimpan.")}{" "}
             <button type="button" className="underline" onClick={() => void orders.reload()}>
-              Coba lagi
+              {translateText("Coba lagi")}{" "}
             </button>
           </div>
         )}
         {orders.data && orders.data.total > orders.data.data.length && (
-          <p className="text-xs text-stone-500">
-            Menampilkan 100 pesanan pertama.{" "}
+          <p className="text-xs text-stone-600">
+            {translateText("Menampilkan 100 pesanan pertama.")}{" "}
             <Link className="underline" href={ROUTES.customer.orders}>
-              Lihat semua pesanan
+              {translateText("Lihat semua pesanan")}{" "}
             </Link>
             .
           </p>
@@ -236,12 +248,13 @@ export function TaskEditor({
             className="text-sm text-blush underline"
             href={ROUTES.customer.order(draft.orderId)}
           >
-            Buka pesanan terkait
+            {translateText("Buka pesanan terkait")}{" "}
           </Link>
         )}
-        <p className="text-xs leading-5 text-stone-500">
-          Penanggung jawab dicatat untuk koordinasi; belum mengirim undangan atau notifikasi.
-          Menautkan pesanan tidak otomatis menyelesaikan tugas.
+        <p className="text-xs leading-5 text-stone-600">
+          {translateText(
+            "Penanggung jawab dicatat untuk koordinasi; belum mengirim undangan atau notifikasi. Menautkan pesanan tidak otomatis menyelesaikan tugas.",
+          )}{" "}
         </p>
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-white py-4">
           {onDelete && task.id && (
@@ -251,15 +264,16 @@ export function TaskEditor({
               disabled={mutation.busy}
               onClick={() => void remove()}
             >
-              <Trash2 size={16} /> {deleting ? "Menghapus…" : "Hapus tugas"}
+              <Trash2 size={16} />{" "}
+              {deleting ? translateText("Menghapus…") : translateText("Hapus tugas")}
             </AppButton>
           )}
           <div className="ml-auto flex flex-wrap justify-end gap-3">
             <AppButton type="button" variant="secondary" onClick={onCancel}>
-              Batal
+              {translateText("Batal")}{" "}
             </AppButton>
             <AppButton type="submit" disabled={mutation.busy}>
-              {mutation.busy ? "Menyimpan…" : "Simpan tugas"}
+              {mutation.busy ? translateText("Menyimpan…") : translateText("Simpan tugas")}
             </AppButton>
           </div>
         </div>
@@ -268,6 +282,7 @@ export function TaskEditor({
   );
 }
 function OrderReference({ order }: { order: Order }) {
+  const { translateText, locale } = useTranslation();
   return (
     <div className="rounded-xl border bg-stone-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -275,18 +290,18 @@ function OrderReference({ order }: { order: Order }) {
         <StatusBadge status={order.status} />
       </div>
       <p className="mt-2 text-sm text-stone-600">
-        Nilai pesanan: {formatCurrency(order.totalAmount)}
+        {translateText("Nilai pesanan:")} {formatCurrency(order.totalAmount, locale)}
       </p>
       {["CANCELLED", "REJECTED_BY_VENDOR"].includes(order.status) && (
         <p className="mt-2 text-sm text-amber-700">
-          Periksa kembali kebutuhan vendor pengganti untuk tugas ini.
+          {translateText("Periksa kembali kebutuhan vendor pengganti untuk tugas ini.")}{" "}
         </p>
       )}
       <Link
         className="mt-3 inline-block text-sm font-medium text-blush"
         href={ROUTES.customer.order(order.id)}
       >
-        Lihat detail dan pembayaran →
+        {translateText("Lihat detail dan pembayaran →")}{" "}
       </Link>
     </div>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { ConfirmationDeadline } from "@/features/orders/components/ConfirmationDeadline";
 import { useOrderRefresh } from "@/features/orders/useOrderRefresh";
 import { OrderConversation } from "@/features/orders/components/OrderConversation";
@@ -45,6 +46,7 @@ import Link from "next/link";
 import { useCallback } from "react";
 
 export function OrdersPage() {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(
     (query: { filter?: string; pageNumber?: number; pageSize?: number }) =>
       getOrdersWithPayments(query),
@@ -58,14 +60,17 @@ export function OrdersPage() {
   if (!orders.data.length) {
     return (
       <EmptyState
-        title="Belum ada pesanan masuk"
-        description="Order untuk produk vendor Anda akan muncul di sini."
+        title={translateText("Belum ada pesanan masuk")}
+        description={translateText("Order untuk produk vendor Anda akan muncul di sini.")}
       />
     );
   }
 
   return (
-    <Page title="Pesanan Vendor" description="Tinjau pesanan masuk dan status pelaksanaan.">
+    <Page
+      title={translateText("Pesanan Vendor")}
+      description={translateText("Tinjau pesanan masuk dan status pelaksanaan.")}
+    >
       <DataTable
         columns={[
           "Nomor",
@@ -86,7 +91,7 @@ export function OrdersPage() {
           order.orderNumber,
           order.customer.fullName,
           order.productName,
-          formatDate(order.eventDate),
+          formatDate(order.eventDate, locale),
           order.eventLocation,
           <PaymentStagesCompact key="payment" payments={order.payments} />,
           <StatusBadge key="order" status={order.status} />,
@@ -107,6 +112,7 @@ export function OrdersPage() {
 }
 
 export function OrderDetail({ orderId }: { orderId: string }) {
+  const { translateText, locale } = useTranslation();
   const popup = usePopup();
   const action = useAsyncAction();
   const loader = useCallback(() => getOrder(orderId), [orderId]);
@@ -183,13 +189,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     if (isForbiddenResource(resource.errorCause)) {
       return (
         <EmptyState
-          title="Anda tidak memiliki akses"
-          description="Order ini bukan milik vendor Anda."
+          title={translateText("Anda tidak memiliki akses")}
+          description={translateText("Order ini bukan milik vendor Anda.")}
         />
       );
     }
     if (apiErrorStatus(resource.errorCause) === 404)
-      return <EmptyState title="Order tidak ditemukan" />;
+      return <EmptyState title={translateText("Order tidak ditemukan")} />;
     return <ErrorState retry={() => void resource.reload()} />;
   }
 
@@ -199,12 +205,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
   return (
     <Page
-      title={`Pesanan ${order.orderNumber}`}
-      description="Verifikasi pembayaran dan tinjau kebutuhan customer."
+      title={translateText("Pesanan {0}", { 0: order.orderNumber })}
+      description={translateText("Verifikasi pembayaran dan tinjau kebutuhan customer.")}
     >
       {order.rejectReason && (
         <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Alasan penolakan pesanan:</strong> {order.rejectReason}
+          <strong>{translateText("Alasan penolakan pesanan:")}</strong> {order.rejectReason}
         </p>
       )}
       <ConfirmationDeadline order={order} />
@@ -213,15 +219,18 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         details={[
           ["Customer", order.customer.fullName],
           ["Paket", order.productName],
-          ["Tanggal", formatDate(order.eventDate)],
+          ["Tanggal", formatDate(order.eventDate, locale)],
           ["Lokasi", order.eventLocation],
-          ["Jumlah tamu", order.guestCount ? `${order.guestCount} tamu` : "-"],
-          ["Total", formatCurrency(order.totalAmount)],
+          [
+            "Jumlah tamu",
+            order.guestCount ? translateText("{0} tamu", { 0: order.guestCount }) : "-",
+          ],
+          ["Total", formatCurrency(order.totalAmount, locale)],
           ["Pembayaran", payment ? <StatusBadge key="payment" status={payment.status} /> : "-"],
           ["Status", <StatusBadge key="status" status={order.status} />],
           ["Catatan customer", order.notes || "-"],
         ]}
-        timeline={buildOrderTimeline(order)}
+        timeline={buildOrderTimeline(order, locale)}
         paymentSummary={<PaymentSummary order={order} />}
       />
       <OrderConversation key={order.id} orderId={order.id} status={order.status} />
@@ -229,8 +238,10 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       {!!order.payments?.length && (
         <section className="grid gap-4">
           <SectionHeader
-            title="Bukti pembayaran per tahap"
-            description="Periksa dan verifikasi setiap pembayaran customer secara terpisah."
+            title={translateText("Bukti pembayaran per tahap")}
+            description={translateText(
+              "Periksa dan verifikasi setiap pembayaran customer secara terpisah.",
+            )}
           />
           {sortPaymentsByInstallment(order.payments).map((item) => (
             <PaymentVerificationPanel
@@ -271,13 +282,15 @@ function PaymentVerificationPanel({
   onVerify: () => void;
   payment: OrderPayment;
 }) {
+  const { translateText, locale } = useTranslation();
   return (
     <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Bukti pembayaran</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            {paymentInstallmentLabel(payment.installment)} sebesar {formatCurrency(payment.amount)}
+          <h2 className="text-lg font-semibold text-ink">{translateText("Bukti pembayaran")}</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            {paymentInstallmentLabel(payment.installment, locale)} {translateText("sebesar")}{" "}
+            {formatCurrency(payment.amount, locale)}
           </p>
         </div>
         <StatusBadge status={payment.status} />
@@ -285,7 +298,7 @@ function PaymentVerificationPanel({
 
       {payment.rejectReason && (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Alasan penolakan bukti:</strong> {payment.rejectReason}
+          <strong>{translateText("Alasan penolakan bukti:")}</strong> {payment.rejectReason}
         </p>
       )}
 
@@ -296,8 +309,8 @@ function PaymentVerificationPanel({
             <PaymentProofHistory proofs={payment.proofs} />
           </>
         ) : (
-          <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-500">
-            Customer belum mengunggah bukti pembayaran.
+          <p className="rounded-xl bg-stone-50 p-5 text-sm text-stone-600">
+            {translateText("Customer belum mengunggah bukti pembayaran.")}{" "}
           </p>
         )}
       </div>
@@ -311,16 +324,20 @@ function PaymentVerificationPanel({
               loading={actionLoading}
               onClick={onVerify}
             >
-              Verifikasi {paymentInstallmentLabel(payment.installment)}
+              {translateText("Verifikasi")} {paymentInstallmentLabel(payment.installment, locale)}
             </AppButton>
             <PopupConfirm
-              description="Jelaskan alasan penolakan agar customer dapat memperbaiki bukti pembayaran."
+              description={translateText(
+                "Jelaskan alasan penolakan agar customer dapat memperbaiki bukti pembayaran.",
+              )}
               onConfirm={onReject}
               requireReason
-              title={`Tolak bukti ${paymentInstallmentLabel(payment.installment)}?`}
+              title={translateText("Tolak bukti {0}?", {
+                0: paymentInstallmentLabel(payment.installment, locale),
+              })}
               trigger={
                 <AppButton disabled={actionLoading || !payment.proofAttachmentId} variant="danger">
-                  Tolak bukti
+                  {translateText("Tolak bukti")}{" "}
                 </AppButton>
               }
             />
@@ -347,25 +364,28 @@ function OrderDecision({
   order: Order;
   payment?: OrderPayment;
 }) {
+  const { translateText, locale } = useTranslation();
   if (canVendorDecide(order)) {
     return (
       <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-ink">Keputusan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Pembayaran sudah terverifikasi. Konfirmasi apakah pesanan dapat diterima.
+        <h2 className="text-lg font-semibold text-ink">{translateText("Keputusan pesanan")}</h2>
+        <p className="mt-1 text-sm text-stone-600">
+          {translateText(
+            "Pembayaran sudah terverifikasi. Konfirmasi apakah pesanan dapat diterima.",
+          )}{" "}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <AppButton disabled={actionLoading} loading={actionLoading} onClick={onAccept}>
-            Terima pesanan
+            {translateText("Terima pesanan")}{" "}
           </AppButton>
           <PopupConfirm
-            description="Alasan penolakan wajib disampaikan kepada customer."
+            description={translateText("Alasan penolakan wajib disampaikan kepada customer.")}
             onConfirm={onReject}
             requireReason
-            title="Tolak pesanan?"
+            title={translateText("Tolak pesanan?")}
             trigger={
               <AppButton disabled={actionLoading} variant="danger">
-                Tolak pesanan
+                {translateText("Tolak pesanan")}{" "}
               </AppButton>
             }
           />
@@ -377,12 +397,12 @@ function OrderDecision({
   if (order.status === "CONFIRMED") {
     return (
       <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Mulai pengerjaan ketika layanan sudah memasuki tahap pelaksanaan.
+        <h2 className="text-lg font-semibold text-ink">{translateText("Pelaksanaan pesanan")}</h2>
+        <p className="mt-1 text-sm text-stone-600">
+          {translateText("Mulai pengerjaan ketika layanan sudah memasuki tahap pelaksanaan.")}{" "}
         </p>
         <AppButton className="mt-5" loading={actionLoading} onClick={onStart}>
-          Mulai pengerjaan
+          {translateText("Mulai pengerjaan")}{" "}
         </AppButton>
       </section>
     );
@@ -391,12 +411,14 @@ function OrderDecision({
   if (order.status === "IN_PROGRESS") {
     return (
       <section className="rounded-xl border bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-ink">Pelaksanaan pesanan</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Jika seluruh layanan telah diberikan, kirim penyelesaian untuk dikonfirmasi customer.
+        <h2 className="text-lg font-semibold text-ink">{translateText("Pelaksanaan pesanan")}</h2>
+        <p className="mt-1 text-sm text-stone-600">
+          {translateText(
+            "Jika seluruh layanan telah diberikan, kirim penyelesaian untuk dikonfirmasi customer.",
+          )}{" "}
         </p>
         <AppButton className="mt-5" loading={actionLoading} onClick={onDeliver}>
-          Tandai layanan selesai
+          {translateText("Tandai layanan selesai")}{" "}
         </AppButton>
       </section>
     );
@@ -405,7 +427,9 @@ function OrderDecision({
   if (order.status === "WAITING_CUSTOMER_CONFIRMATION") {
     return (
       <p className="rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
-        Layanan telah diserahkan. Menunggu customer mengonfirmasi pesanan selesai.
+        {translateText(
+          "Layanan telah diserahkan. Menunggu customer mengonfirmasi pesanan selesai.",
+        )}{" "}
       </p>
     );
   }
@@ -413,14 +437,16 @@ function OrderDecision({
   if (order.status === "COMPLETED") {
     return (
       <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
-        Pesanan telah selesai dan dikonfirmasi customer.
+        {translateText("Pesanan telah selesai dan dikonfirmasi customer.")}{" "}
       </p>
     );
   }
 
   const message =
     payment?.status === "WAITING_VERIFICATION"
-      ? `${paymentInstallmentLabel(payment.installment)} menunggu verifikasi Anda.`
+      ? translateText("{0} menunggu verifikasi Anda.", {
+          0: paymentInstallmentLabel(payment.installment, locale),
+        })
       : payment?.status === "REJECTED"
         ? "Menunggu customer mengunggah ulang bukti pembayaran."
         : payment?.status === "WAITING_PAYMENT"

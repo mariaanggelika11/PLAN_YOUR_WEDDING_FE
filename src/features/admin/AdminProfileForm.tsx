@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import {
   getAccountProfile,
@@ -14,6 +15,7 @@ import { ShieldCheck } from "lucide-react";
 import { type FormEvent } from "react";
 
 export function AdminProfileForm() {
+  const { translateText } = useTranslation();
   const profile = useAsyncResource<AccountProfile | null>(getAccountProfile, {
     initialData: null,
     mapError: accountLoadError,
@@ -51,15 +53,15 @@ export function AdminProfileForm() {
         </span>
         <div>
           <h2 className="font-semibold">Administrator</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Kelola informasi dasar akun administrator yang sedang login.
+          <p className="mt-1 text-sm text-stone-600">
+            {translateText("Kelola informasi dasar akun administrator yang sedang login.")}{" "}
           </p>
         </div>
       </section>
       <div className="grid gap-4 md:grid-cols-2">
         <AppInput
           defaultValue={profile.data.fullname}
-          label="Nama lengkap"
+          label={translateText("Nama lengkap")}
           name="fullname"
           required
         />
@@ -72,15 +74,19 @@ export function AdminProfileForm() {
         />
         <AppInput
           defaultValue={profile.data.phoneNumber ?? ""}
-          label="Nomor HP"
+          label={translateText("Nomor HP")}
           name="phoneNumber"
           type="tel"
         />
-        <AppInput disabled label="Status akun" value={profile.data.active ? "Aktif" : "Nonaktif"} />
+        <AppInput
+          disabled
+          label={translateText("Status akun")}
+          value={profile.data.active ? translateText("Aktif") : translateText("Nonaktif")}
+        />
       </div>
       <div className="flex justify-end">
         <AppButton loading={save.loading} type="submit">
-          Simpan perubahan
+          {translateText("Simpan perubahan")}{" "}
         </AppButton>
       </div>
     </form>

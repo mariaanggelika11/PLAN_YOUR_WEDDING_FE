@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -43,6 +44,7 @@ import { OverdueReminder } from "./components/OverdueReminder";
 import { upcomingTasks } from "./calendar";
 
 export function ProgressPage() {
+  const { translateText } = useTranslation();
   const profile = useProfileData("customer");
   if (profile.loading) return <LoadingSkeleton />;
   if (profile.error) return <ErrorState retry={() => void profile.reload()} />;
@@ -50,11 +52,13 @@ export function ProgressPage() {
     return (
       <div>
         <EmptyState
-          title="Lengkapi profil pernikahan"
-          description="Isi profil customer untuk mulai menyiapkan rencana pernikahan."
+          title={translateText("Lengkapi profil pernikahan")}
+          description={translateText(
+            "Isi profil customer untuk mulai menyiapkan rencana pernikahan.",
+          )}
         />
         <AppButton asChild>
-          <Link href={ROUTES.customer.profile}>Lengkapi profil</Link>
+          <Link href={ROUTES.customer.profile}>{translateText("Lengkapi profil")}</Link>
         </AppButton>
       </div>
     );
@@ -62,6 +66,7 @@ export function ProgressPage() {
 }
 
 function Planner({ profile }: { profile: CustomerApiProfile }) {
+  const { translateText, locale } = useTranslation();
   const progress = useWeddingProgress();
   const mutation = usePlanningMutation();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -96,7 +101,12 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       try {
         const tasks = await planningService.getAllTasks();
         const { downloadPlanningPdf } = await import("./exportPdf");
-        await downloadPlanningPdf({ settings: defaultSettings, tasks, exportedOn: today });
+        await downloadPlanningPdf({
+          settings: defaultSettings,
+          tasks,
+          exportedOn: today,
+          locale,
+        });
       } finally {
         setExporting(false);
       }
@@ -134,7 +144,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
   return (
     <FeaturePage
       title="Wedding Progress"
-      description="Langkah kecil menuju hari istimewa."
+      description={translateText("Langkah kecil menuju hari istimewa.")}
       showHeader={false}
     >
       <div className="grid gap-6">
@@ -152,37 +162,41 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
             <div>
               <h2 className="text-lg font-semibold text-ink sm:text-2xl">
                 {days === null
-                  ? "Hari istimewamu dimulai dari sini"
+                  ? translateText("Hari istimewamu dimulai dari sini")
                   : days > 0
-                    ? `${days} hari menuju hari istimewa`
+                    ? translateText("{0} hari menuju hari istimewa", { 0: days })
                     : days === 0
-                      ? "Selamat menikmati hari pernikahanmu!"
-                      : "Lengkapi langkah setelah pernikahan"}
+                      ? translateText("Selamat menikmati hari pernikahanmu!")
+                      : translateText("Lengkapi langkah setelah pernikahan")}
               </h2>
-              <p className="mt-2 flex items-center gap-2 text-sm text-stone-500">
+              <p className="mt-2 flex items-center gap-2 text-sm text-stone-600">
                 <CalendarDays size={16} />
-                {displayDate(settings.date)}
+                {displayDate(settings.date, locale)}
                 {settings.event && ` · ${settings.event.replaceAll("_", " ")}`}
               </p>
             </div>
             <AppButton variant="secondary" onClick={() => setSettingsOpen(true)}>
-              <Settings2 size={16} /> {hasTasks ? "Atur rencana" : "Buat checklist pernikahanku"}
+              <Settings2 size={16} />{" "}
+              {hasTasks
+                ? translateText("Atur rencana")
+                : translateText("Buat checklist pernikahanku")}
             </AppButton>
           </div>
           <div className="mt-5 grid items-center gap-5 lg:grid-cols-[1.5fr_1fr]">
             <div>
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="font-medium text-ink">Tugas selesai</p>
-                  <p className="mt-1 text-xs text-stone-500">
-                    {summary.completed} dari {summary.total} tugas yang diperlukan
+                  <p className="font-medium text-ink">{translateText("Tugas selesai")}</p>
+                  <p className="mt-1 text-xs text-stone-600">
+                    {summary.completed} {translateText("dari")} {summary.total}{" "}
+                    {translateText("tugas yang diperlukan")}{" "}
                   </p>
                 </div>
                 <strong className="text-3xl font-semibold text-blush">{summary.percent}%</strong>
               </div>
               <div
                 role="progressbar"
-                aria-label="Tugas persiapan selesai"
+                aria-label={translateText("Tugas persiapan selesai")}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={summary.percent}
@@ -194,18 +208,19 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                 />
               </div>
             </div>
-            <p className="text-xs leading-6 text-stone-500">
-              {summary.pending} perlu dikerjakan · {summary.important} tugas penting
+            <p className="text-xs leading-6 text-stone-600">
+              {summary.pending} {translateText("perlu dikerjakan ·")} {summary.important}{" "}
+              {translateText("tugas penting")}{" "}
             </p>
           </div>
         </section>
         {!progress.globalTasks.data && progress.globalTasks.loading ? (
-          <p role="status" className="text-xs text-stone-500">
-            Memeriksa tugas terlambat…
+          <p role="status" className="text-xs text-stone-600">
+            {translateText("Memeriksa tugas terlambat…")}{" "}
           </p>
         ) : progress.globalTasks.error ? (
           <ErrorState
-            description="Pengingat tugas terlambat belum dapat dimuat."
+            description={translateText("Pengingat tugas terlambat belum dapat dimuat.")}
             retry={() => void progress.globalTasks.reload()}
           />
         ) : (
@@ -223,7 +238,9 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
               <div className="grid gap-4 border-b p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-ink">Kalender persiapan</h2>
+                    <h2 className="text-lg font-semibold text-ink">
+                      {translateText("Kalender persiapan")}
+                    </h2>
                   </div>
                   <div className="flex items-center gap-2">
                     <AppButton
@@ -231,7 +248,7 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                       disabled={progress.tasks.loading}
                       onClick={() => void progress.refresh()}
                     >
-                      Segarkan
+                      {translateText("Segarkan")}{" "}
                     </AppButton>
                     <AppButton
                       variant="secondary"
@@ -240,45 +257,54 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         setAdding(true);
                       }}
                     >
-                      <Plus size={16} /> Tambah tugas
+                      <Plus size={16} /> {translateText("Tambah tugas")}{" "}
                     </AppButton>
                   </div>
                 </div>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-stone-600">
                   {progress.tasks.loading
-                    ? "Memuat jadwal…"
+                    ? translateText("Memuat jadwal…")
                     : progress.tasks.error
-                      ? "Jadwal belum dapat dimuat."
-                      : `${upcomingTasks(progress.allTasks, today)} tugas akan datang · ${progress.allTasks.filter((task) => !task.due).length} tanpa tenggat`}
-                  {query.filter || category || filter !== "ALL" ? " · sesuai filter" : ""}
+                      ? translateText("Jadwal belum dapat dimuat.")
+                      : translateText("{0} tugas akan datang · {1} tanpa tenggat", {
+                          0: upcomingTasks(progress.allTasks, today),
+                          1: progress.allTasks.filter((task) => !task.due).length,
+                        })}
+                  {query.filter || category || filter !== "ALL"
+                    ? translateText(" · sesuai filter")
+                    : ""}
                 </p>
                 <details className="rounded-xl border border-stone-100 bg-stone-50/50 p-3">
                   <summary className="cursor-pointer text-sm font-medium text-stone-600">
-                    Cari dan filter tugas
-                    {query.filter || category || filter !== "ALL" ? " · Filter aktif" : ""}
+                    {translateText("Cari dan filter tugas")}{" "}
+                    {query.filter || category || filter !== "ALL"
+                      ? translateText(" · Filter aktif")
+                      : ""}
                   </summary>
                   <div className="mt-4 grid items-start gap-3 sm:grid-cols-2 [&>label]:min-w-0">
                     <AppInput
                       className="h-12 min-w-0 w-full"
-                      label="Cari tugas"
+                      label={translateText("Cari tugas")}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Nama tugas, PIC, catatan"
+                      placeholder={translateText("Nama tugas, PIC, catatan")}
                     />
                     <AppSelect
                       className="h-12 min-w-0 w-full"
-                      label="Kategori"
+                      label={translateText("Kategori")}
                       value={category}
                       onChange={(e) => changeFilters({ category: e.target.value || undefined })}
                     >
-                      <option value="">Semua kategori</option>
+                      <option value="">{translateText("Semua kategori")}</option>
                       {categories.map((item) => (
-                        <option key={item}>{item}</option>
+                        <option key={item} value={item}>
+                          {translateText(item)}
+                        </option>
                       ))}
                     </AppSelect>
                     <AppSelect
                       className="h-12 min-w-0 w-full"
-                      label="Status"
+                      label={translateText("Status")}
                       value={filter}
                       onChange={(e) =>
                         changeFilters({
@@ -290,34 +316,34 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                         })
                       }
                     >
-                      <option value="ALL">Semua status</option>
-                      <option value="LATE">Lewat tenggat</option>
+                      <option value="ALL">{translateText("Semua status")}</option>
+                      <option value="LATE">{translateText("Lewat tenggat")}</option>
                       {Object.entries(statuses).map(([value, label]) => (
                         <option value={value} key={value}>
-                          {label}
+                          {translateText(label)}
                         </option>
                       ))}
                     </AppSelect>
                     <AppSelect
                       className="h-12 min-w-0 w-full"
-                      label="Urutkan"
+                      label={translateText("Urutkan")}
                       value={sortOrder}
                       onChange={(e) =>
                         changeFilters({ sortBy: e.target.value as "due_asc" | "due_desc" })
                       }
                     >
-                      <option value="due_asc">Tenggat terdekat</option>
-                      <option value="due_desc">Tenggat terjauh</option>
+                      <option value="due_asc">{translateText("Tenggat terdekat")}</option>
+                      <option value="due_desc">{translateText("Tenggat terjauh")}</option>
                     </AppSelect>
                   </div>
                   <AppButton variant="ghost" className="mt-3" onClick={progress.resetFilters}>
-                    Reset filter
+                    {translateText("Reset filter")}{" "}
                   </AppButton>
                 </details>
               </div>
               {progress.tasks.loading && (
                 <div className="p-5" role="status">
-                  Memuat tugas…
+                  {translateText("Memuat tugas…")}{" "}
                 </div>
               )}
               {progress.tasks.error && <ErrorState retry={() => void progress.tasks.reload()} />}
@@ -343,15 +369,17 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
               {!progress.tasks.loading &&
                 !progress.tasks.error &&
                 progress.allTasks.length === 0 && (
-                  <div className="border-t p-5 text-center text-sm text-stone-500">
+                  <div className="border-t p-5 text-center text-sm text-stone-600">
                     <p>
                       {hasTasks
-                        ? "Tidak ada tugas yang cocok dengan filter."
-                        : "Belum ada tugas. Tambahkan persiapanmu atau mulai dari template melalui Buat checklist pernikahanku."}
+                        ? translateText("Tidak ada tugas yang cocok dengan filter.")
+                        : translateText(
+                            "Belum ada tugas. Tambahkan persiapanmu atau mulai dari template melalui Buat checklist pernikahanku.",
+                          )}
                     </p>
                     {hasTasks && (
                       <AppButton variant="ghost" onClick={progress.resetFilters}>
-                        Tampilkan semua tugas
+                        {translateText("Tampilkan semua tugas")}{" "}
                       </AppButton>
                     )}
                   </div>
@@ -361,59 +389,75 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
           <aside className="grid gap-5">
             <details className="group">
               <summary className="cursor-pointer rounded-xl border bg-white p-4 text-sm font-semibold text-ink">
-                Detail acara & alat bantu
+                {translateText("Detail acara & alat bantu")}{" "}
               </summary>
               <div className="mt-3 grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
                 <section className="rounded-xl border bg-white p-5">
-                  <h2 className="font-semibold text-ink">Rencana acaramu</h2>
+                  <h2 className="font-semibold text-ink">{translateText("Rencana acaramu")}</h2>
                   <dl className="mt-4 grid gap-4 text-sm">
-                    <Info label="Lokasi" value={settings.location || "Belum ditentukan"} />
                     <Info
-                      label="Perkiraan tamu"
+                      label={translateText("Lokasi")}
+                      value={settings.location || translateText("Belum ditentukan")}
+                    />
+                    <Info
+                      label={translateText("Perkiraan tamu")}
                       value={
                         settings.guests
-                          ? `${settings.guests.toLocaleString("id-ID")} orang`
-                          : "Belum ditentukan"
+                          ? translateText("{0} orang", {
+                              0: settings.guests.toLocaleString(
+                                locale === "en" ? "en-GB" : "id-ID",
+                              ),
+                            })
+                          : translateText("Belum ditentukan")
                       }
                     />
                     <Info
-                      label="Target anggaran"
-                      value={settings.budget ? formatCurrency(settings.budget) : "Belum ditentukan"}
+                      label={translateText("Target anggaran")}
+                      value={
+                        settings.budget
+                          ? formatCurrency(settings.budget, locale)
+                          : translateText("Belum ditentukan")
+                      }
                     />
                     <Info
-                      label="Koordinasi"
+                      label={translateText("Koordinasi")}
                       value={
                         settings.useWo ? "Dibantu wedding organizer" : "Mandiri / bersama keluarga"
                       }
                     />
                   </dl>
-                  <p className="mt-5 border-t pt-4 text-xs leading-5 text-stone-500">
-                    Tenggat template adalah panduan. Sesuaikan dengan kebutuhan dan kesepakatan
-                    vendormu.
+                  <p className="mt-5 border-t pt-4 text-xs leading-5 text-stone-600">
+                    {translateText(
+                      "Tenggat template adalah panduan. Sesuaikan dengan kebutuhan dan kesepakatan vendormu.",
+                    )}{" "}
                   </p>
                 </section>
                 <section className="rounded-xl bg-rose-50 p-5">
-                  <h2 className="font-semibold text-ink">Lengkapi tim pernikahanmu</h2>
+                  <h2 className="font-semibold text-ink">
+                    {translateText("Lengkapi tim pernikahanmu")}
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-stone-600">
-                    Temukan vendor, lalu tautkan pesanan ke tugas yang ditangani. Vendor di luar
-                    aplikasi juga bisa dicatat.
+                    {translateText(
+                      "Temukan vendor, lalu tautkan pesanan ke tugas yang ditangani. Vendor di luar aplikasi juga bisa dicatat.",
+                    )}{" "}
                   </p>
                   <AppButton asChild variant="secondary" className="mt-4 w-full">
                     <Link href={ROUTES.customer.marketplace}>
-                      Cari vendor <ArrowRight size={16} />
+                      {translateText("Cari vendor")} <ArrowRight size={16} />
                     </Link>
                   </AppButton>
                   <Link
                     className="mt-4 block text-center text-sm font-medium text-blush"
                     href={ROUTES.customer.orders}
                   >
-                    Lihat pesanan & pembayaran
+                    {translateText("Lihat pesanan & pembayaran")}{" "}
                   </Link>
                 </section>
                 <section className="rounded-xl border border-dashed p-5">
-                  <p className="text-xs leading-5 text-stone-500">
-                    Unduh ringkasan acara, seluruh tugas, dan catatan dalam PDF yang bisa dibaca,
-                    dibagikan, atau dicetak.
+                  <p className="text-xs leading-5 text-stone-600">
+                    {translateText(
+                      "Unduh ringkasan acara, seluruh tugas, dan catatan dalam PDF yang bisa dibaca, dibagikan, atau dicetak.",
+                    )}{" "}
                   </p>
                   <AppButton
                     variant="ghost"
@@ -421,7 +465,8 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
                     disabled={mutation.busy}
                     onClick={() => void download()}
                   >
-                    <Download size={16} /> {exporting ? "Menyiapkan unduhan…" : "Unduh PDF"}
+                    <Download size={16} />{" "}
+                    {exporting ? translateText("Menyiapkan unduhan…") : translateText("Unduh PDF")}
                   </AppButton>
                 </section>
               </div>
@@ -431,8 +476,12 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       </div>
       {settingsOpen && (
         <Modal
-          title={hasTasks ? "Atur rencana pernikahan" : "Buat rencana pernikahanmu"}
-          description="Sesuaikan template dengan acara dan kebutuhanmu."
+          title={
+            hasTasks
+              ? translateText("Atur rencana pernikahan")
+              : translateText("Buat rencana pernikahanmu")
+          }
+          description={translateText("Sesuaikan template dengan acara dan kebutuhanmu.")}
           onClose={() => setSettingsOpen(false)}
         >
           <SettingsForm
@@ -457,31 +506,32 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       )}
       {showDeadlineGuide && (
         <Modal
-          title="Checklist berhasil dibuat"
-          description="Tentang tenggat tugas"
+          title={translateText("Checklist berhasil dibuat")}
+          description={translateText("Tentang tenggat tugas")}
           dismissible={false}
           onClose={() => setShowDeadlineGuide(false)}
         >
           <div className="grid gap-4 text-sm leading-6 text-stone-600">
             <p>
-              Tenggat awal tugas template dihitung otomatis dari tanggal pernikahanmu berdasarkan
-              panduan persiapan. Kamu bisa mengubahnya sesuai kebutuhan atau kesepakatan vendor
-              dengan membuka detail tugas.
+              {translateText(
+                "Tenggat awal tugas template dihitung otomatis dari tanggal pernikahanmu berdasarkan panduan persiapan. Kamu bisa mengubahnya sesuai kebutuhan atau kesepakatan vendor dengan membuka detail tugas.",
+              )}{" "}
             </p>
             <p>
-              Kalau tanggal panduan sudah terlewati, sesuaikan tenggat dengan waktu persiapanmu.
-              Jika tanggal pernikahan belum diisi, lengkapi dulu di profil.
+              {translateText(
+                "Kalau tanggal panduan sudah terlewati, sesuaikan tenggat dengan waktu persiapanmu. Jika tanggal pernikahan belum diisi, lengkapi dulu di profil.",
+              )}{" "}
             </p>
             <AppButton className="w-full" onClick={() => setShowDeadlineGuide(false)}>
-              Oke, mengerti
+              {translateText("Oke, mengerti")}{" "}
             </AppButton>
           </div>
         </Modal>
       )}
       {selected && (
         <Modal
-          title="Detail persiapan"
-          description="Atur langkah, penanggung jawab, dan kebutuhan tugas ini."
+          title={translateText("Detail persiapan")}
+          description={translateText("Atur langkah, penanggung jawab, dan kebutuhan tugas ini.")}
           onClose={() => setSelected(null)}
         >
           {detail.loading ? (
@@ -513,8 +563,8 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
       )}
       {adding && (
         <Modal
-          title="Tambah tugas persiapan"
-          description="Tambahkan kebutuhan yang belum ada di template."
+          title={translateText("Tambah tugas persiapan")}
+          description={translateText("Tambahkan kebutuhan yang belum ada di template.")}
           onClose={() => setAdding(false)}
         >
           <TaskEditor
@@ -550,9 +600,10 @@ function Planner({ profile }: { profile: CustomerApiProfile }) {
 }
 
 function Info({ label, value }: { label: string; value: string }) {
+  const { translateText } = useTranslation();
   return (
     <div>
-      <dt className="text-xs text-stone-500">{label}</dt>
+      <dt className="text-xs text-stone-600">{translateText(label)}</dt>
       <dd className="mt-1 break-words font-medium text-ink">{value}</dd>
     </div>
   );

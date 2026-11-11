@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useCallback, useState } from "react";
 import { getAttachmentBlob, deleteAttachment } from "@/features/profile/api/attachmentApi";
 import { updateVendorProfile } from "@/features/profile/api/profileApi";
@@ -20,23 +22,25 @@ export function PortfolioImage({
   id: string;
   alt?: string;
 }) {
+  const { translateText } = useTranslation();
   const load = useCallback(() => getAttachmentBlob(id), [id]);
   const image = useImageUpload({ enabled: true, load, loadErrorMessage: "Foto gagal dimuat." });
   return image.previewUrl ? (
     <a href={image.previewUrl} target="_blank" rel="noreferrer">
-      <img
+      <AttachmentImage
         src={image.previewUrl}
         alt={alt}
         className="aspect-square w-full rounded-lg object-cover"
       />
     </a>
   ) : (
-    <div className="grid aspect-square place-items-center rounded-lg bg-stone-100 text-xs text-stone-500">
-      Foto belum tersedia
+    <div className="grid aspect-square place-items-center rounded-lg bg-stone-100 text-xs text-stone-600">
+      {translateText("Foto belum tersedia")}{" "}
     </div>
   );
 }
 export function PortfolioGallery({ ids }: { ids: string[] }) {
+  const { translateText } = useTranslation();
   return ids.length ? (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {ids.map((id) => (
@@ -45,12 +49,13 @@ export function PortfolioGallery({ ids }: { ids: string[] }) {
     </div>
   ) : (
     <EmptyState
-      title="Belum ada portofolio"
-      description="Vendor belum menambahkan foto hasil pekerjaannya."
+      title={translateText("Belum ada portofolio")}
+      description={translateText("Vendor belum menambahkan foto hasil pekerjaannya.")}
     />
   );
 }
 export function PortfolioEditor() {
+  const { translateText } = useTranslation();
   const resource = useVendorProfile();
   const action = useAsyncAction();
   const popup = usePopup();
@@ -99,7 +104,7 @@ export function PortfolioEditor() {
   }
   return (
     <section className="grid gap-4 rounded-xl border bg-white p-5 sm:p-6">
-      <h2 className="text-lg font-semibold">Portofolio toko</h2>
+      <h2 className="text-lg font-semibold">{translateText("Portofolio toko")}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {(profile.portfolioAttachmentIds ?? []).map((id) => (
           <div className="grid gap-2" key={id}>
@@ -110,7 +115,7 @@ export function PortfolioEditor() {
                 disabled={action.loading}
                 onClick={() => void remove(id)}
               >
-                Hapus foto
+                {translateText("Hapus foto")}{" "}
               </AppButton>
             )}
           </div>
@@ -119,7 +124,7 @@ export function PortfolioEditor() {
       {canEdit && (
         <>
           <label className="grid gap-2 text-sm font-medium">
-            Pilih foto portofolio
+            {translateText("Pilih foto portofolio")}{" "}
             <input
               key={inputKey}
               type="file"
@@ -130,9 +135,10 @@ export function PortfolioEditor() {
               className="w-full min-w-0 rounded-lg border p-3"
             />
           </label>
-          <p className="text-xs text-stone-500">
-            JPG, PNG, atau WebP. Maksimal 5 MB per foto. Foto baru ditambahkan tanpa menghapus foto
-            yang sudah tersimpan.
+          <p className="text-xs text-stone-600">
+            {translateText(
+              "JPG, PNG, atau WebP. Maksimal 5 MB per foto. Foto baru ditambahkan tanpa menghapus foto yang sudah tersimpan.",
+            )}{" "}
           </p>
           <AppButton
             className="w-fit"
@@ -140,7 +146,7 @@ export function PortfolioEditor() {
             disabled={!files.length}
             onClick={() => void upload()}
           >
-            Simpan portofolio
+            {translateText("Simpan portofolio")}{" "}
           </AppButton>
         </>
       )}

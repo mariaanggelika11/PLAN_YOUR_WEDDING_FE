@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import { useAuth } from "@/features/auth/useAuth";
 import { useTranslation } from "@/shared/i18n/useTranslation";
@@ -13,8 +14,9 @@ export function NotificationItem({
   notification: AppNotification;
   onNavigate?: () => void;
 }) {
+  const { translateText, t, locale } = useTranslation();
   const { user } = useAuth();
-  const { t, locale } = useTranslation();
+
   const { busy, markRead } = useNotifications();
   const href = notificationItemDestination(notification, user?.role.toLowerCase() ?? "");
   const date = new Date(notification.createdAt);
@@ -23,7 +25,9 @@ export function NotificationItem({
       className={`rounded-xl border p-4 ${notification.isRead ? "bg-white" : "border-rose-100 bg-rose-50"}`}
     >
       {notification.type === "ORDER_AUTO_COMPLETED" && (
-        <p className="mb-2 text-xs font-semibold text-emerald-700">Pesanan selesai otomatis</p>
+        <p className="mb-2 text-xs font-semibold text-emerald-700">
+          {translateText("Pesanan selesai otomatis")}
+        </p>
       )}
       <div className="flex items-start gap-2">
         {!notification.isRead && (
@@ -38,7 +42,7 @@ export function NotificationItem({
         {notification.message}
       </p>
       {!Number.isNaN(date.getTime()) && (
-        <time dateTime={notification.createdAt} className="mt-2 block text-xs text-stone-500">
+        <time dateTime={notification.createdAt} className="mt-2 block text-xs text-stone-600">
           {new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", {
             dateStyle: "medium",
             timeStyle: "short",

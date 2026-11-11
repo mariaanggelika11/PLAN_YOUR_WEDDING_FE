@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import Link from "next/link";
 import { useCallback } from "react";
 import { getOrders } from "@/features/orders/repository";
@@ -26,6 +27,7 @@ const columns = {
   disputes: ["Nomor", "Customer", "Vendor", "Total", "Status"],
 };
 export function LiveMonitoring({ kind }: { kind: Kind }) {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(
     async (query: PaginationQuery): Promise<{ data: ReactNode[][]; total: number }> => {
       if (kind === "products") {
@@ -35,7 +37,7 @@ export function LiveMonitoring({ kind }: { kind: Kind }) {
           data: result.data.map((item) => [
             item.name,
             item.vendor.businessName,
-            formatCurrency(item.price),
+            formatCurrency(item.price, locale),
             <StatusBadge key="status" status={item.status} />,
           ]),
         };
@@ -68,16 +70,19 @@ export function LiveMonitoring({ kind }: { kind: Kind }) {
           </Link>,
           item.customer.fullName,
           item.vendor.businessName,
-          formatCurrency(item.totalAmount),
+          formatCurrency(item.totalAmount, locale),
           <StatusBadge key="status" status={item.status} />,
         ]),
       };
     },
-    [kind],
+    [kind, locale],
   );
   const list = usePaginatedResource(loader);
   return (
-    <FeaturePage title={titles[kind]} description="Data yang tercatat pada aplikasi.">
+    <FeaturePage
+      title={titles[kind]}
+      description={translateText("Data yang tercatat pada aplikasi.")}
+    >
       {list.loading ? (
         <LoadingSkeleton />
       ) : list.error ? (

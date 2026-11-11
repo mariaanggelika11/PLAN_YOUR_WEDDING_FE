@@ -8,22 +8,23 @@ import { useCallback } from "react";
 
 export function useCustomerProfileEditor(enabled = true) {
   const resource = useProfileData("customer", enabled);
+  const { data, reload, setData } = resource;
 
   const reloadAndNotify = useCallback(async () => {
-    return resource.reload();
-  }, [resource.reload]);
+    return reload();
+  }, [reload]);
 
   const saveProfile = useCallback(
     async (form: HTMLFormElement, eventTypeOptions: MasterParameterOption[]) => {
       const payload = customerFormToPayload(form, eventTypeOptions);
-      const saved = resource.data
-        ? await updateCustomerProfile(resource.data.id, payload)
+      const saved = data
+        ? await updateCustomerProfile(data.id, payload)
         : await saveCustomerProfileDraft(payload);
-      resource.setData(saved);
-      const refreshed = await resource.reload();
+      setData(saved);
+      const refreshed = await reload();
       return refreshed ?? saved;
     },
-    [resource.data, resource.reload, resource.setData],
+    [data, reload, setData],
   );
 
   return { ...resource, reloadAndNotify, saveProfile };

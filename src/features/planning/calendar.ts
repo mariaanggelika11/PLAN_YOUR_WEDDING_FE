@@ -42,7 +42,7 @@ export function calendarStatusCounts(tasks: WeddingTask[], today: string) {
   };
 }
 
-export function overdueMonthLabels(tasks: WeddingTask[]) {
+export function overdueMonthLabels(tasks: WeddingTask[], locale: "id" | "en" = "id") {
   const groups = new Map<string, number>();
   for (const task of tasks) {
     const month = task.due.slice(0, 7);
@@ -50,6 +50,6 @@ export function overdueMonthLabels(tasks: WeddingTask[]) {
   }
   return [...groups].map(
     ([month, count]) =>
-      `${count} tugas dari ${new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`))}`,
+      `${count} ${locale === "en" ? "tasks from" : "tugas dari"} ${new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`))}`,
   );
 }

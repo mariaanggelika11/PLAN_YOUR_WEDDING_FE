@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getAdminUsers, updateUserActive } from "@/features/admin/api/adminApi";
 import type { AdminUser } from "@/features/admin/types";
@@ -14,6 +15,7 @@ import { useState } from "react";
 const PAGE_SIZE = 10;
 
 export function AdminUsersPage() {
+  const { translateText } = useTranslation();
   const table = usePaginatedResource(getAdminUsers, { mapError: errorMessage });
   const action = useAsyncAction();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -31,7 +33,10 @@ export function AdminUsersPage() {
   }
 
   return (
-    <Page title="Manajemen Pengguna" description="Kelola status dan akses pengguna.">
+    <Page
+      title={translateText("Manajemen Pengguna")}
+      description={translateText("Kelola status dan akses pengguna.")}
+    >
       <ListFeedback {...table} />
       {!table.loading && !table.error && (
         <DataTable
@@ -54,12 +59,12 @@ export function AdminUsersPage() {
               active={user.active}
               disabled={updatingId === user.id}
               key={user.id}
-              label={`Status pengguna ${user.fullname}`}
+              label={translateText("Status pengguna {0}", { 0: user.fullname })}
               onChange={() => void toggleUser(user)}
               showText
             />,
           ])}
-          title="Daftar pengguna"
+          title={translateText("Daftar pengguna")}
         />
       )}
     </Page>

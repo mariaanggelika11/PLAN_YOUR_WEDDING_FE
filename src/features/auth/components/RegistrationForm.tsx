@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import {
   registerCustomer,
@@ -31,6 +32,7 @@ type RegistrationType = "customer" | "vendor";
 type RegistrationStep = "details" | "otp" | "success";
 
 export function RegistrationForm({ type }: { type: RegistrationType }) {
+  const { translateText } = useTranslation();
   const [step, setStep] = useState<RegistrationStep>("details");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +118,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       <div className="grid gap-4">
         <SuccessState message="Email berhasil diverifikasi. Akun Anda siap digunakan." />
         <AppButton asChild>
-          <Link href={ROUTES.login}>Masuk ke akun</Link>
+          <Link href={ROUTES.login}>{translateText("Masuk ke akun")}</Link>
         </AppButton>
       </div>
     );
@@ -126,24 +128,36 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
     <form className="grid gap-4" onSubmit={submit}>
       {type === "vendor" ? (
         <>
-          <AppInput label="Nama pemilik" name="ownerName" autoComplete="name" required />
-          <AppInput label="Nama bisnis" name="businessName" required />
+          <AppInput
+            label={translateText("Nama pemilik")}
+            name="ownerName"
+            autoComplete="name"
+            required
+          />
+          <AppInput label={translateText("Nama bisnis")} name="businessName" required />
         </>
       ) : (
-        <AppInput label="Nama lengkap" name="fullname" autoComplete="name" required />
+        <AppInput
+          label={translateText("Nama lengkap")}
+          name="fullname"
+          autoComplete="name"
+          required
+        />
       )}
 
       <AppInput
         label="Email"
         name="email"
         type="email"
-        placeholder="nama@email.com"
+        placeholder={translateText("nama@email.com")}
         autoComplete="email"
         required
       />
 
       <AppInput
-        label={type === "vendor" ? "Nomor telepon bisnis" : "Nomor HP"}
+        label={
+          type === "vendor" ? translateText("Nomor telepon bisnis") : translateText("Nomor HP")
+        }
         name={type === "vendor" ? "businessPhone" : "phoneNumber"}
         type="tel"
         autoComplete="tel"
@@ -152,7 +166,7 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
 
       {type === "vendor" && (
         <AppInput
-          label="Alamat bisnis"
+          label={translateText("Alamat bisnis")}
           name="businessAddress"
           autoComplete="street-address"
           required
@@ -162,16 +176,16 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
       <PasswordInput
         label="Password"
         name="password"
-        placeholder="Buat password yang kuat"
+        placeholder={translateText("Buat password yang kuat")}
         helper={validationMessages.password}
         autoComplete="new-password"
         required
       />
 
       <PasswordInput
-        label="Konfirmasi password"
+        label={translateText("Konfirmasi password")}
         name="confirmPassword"
-        placeholder="Masukkan kembali password"
+        placeholder={translateText("Masukkan kembali password")}
         autoComplete="new-password"
         required
       />
@@ -180,18 +194,20 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
         {terms ? (
           <RegistrationTerms type={type} terms={terms} />
         ) : termsResource.loading ? (
-          <p role="status" className="text-stone-500">
-            Memuat syarat dan ketentuan…
+          <p role="status" className="text-stone-600">
+            {translateText("Memuat syarat dan ketentuan…")}{" "}
           </p>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-2 text-red-700">
-            <span>{termsResource.error || "Syarat dan ketentuan gagal dimuat."}</span>
+            <span>
+              {termsResource.error || translateText("Syarat dan ketentuan gagal dimuat.")}
+            </span>
             <AppButton
               type="button"
               variant="secondary"
               onClick={() => void termsResource.reload()}
             >
-              Muat ulang
+              {translateText("Muat ulang")}{" "}
             </AppButton>
           </div>
         )}
@@ -205,13 +221,17 @@ export function RegistrationForm({ type }: { type: RegistrationType }) {
             onChange={(event) => setAcceptedTerms(event.target.checked)}
             className="mt-1 size-4 shrink-0 accent-blush"
           />
-          <span>Saya telah membaca dan menyetujui syarat dan ketentuan Plan Your Wedding.</span>
+          <span>
+            {translateText(
+              "Saya telah membaca dan menyetujui syarat dan ketentuan Plan Your Wedding.",
+            )}
+          </span>
         </label>
       </div>
 
-      {error && <PopupMessage message={error} variant="error" />}
+      {error && <PopupMessage message={translateText(error)} variant="error" />}
       <AppButton loading={isLoading} disabled={!acceptedTerms || !termsReady} type="submit">
-        Daftar sekarang
+        {translateText("Daftar sekarang")}{" "}
       </AppButton>
     </form>
   );

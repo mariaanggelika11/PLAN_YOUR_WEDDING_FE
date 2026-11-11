@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import {
   activateTermsVersion,
@@ -34,6 +35,7 @@ type PreviewDocument = Pick<TermsDocument, "title" | "version" | "content"> &
   Partial<Pick<TermsDocument, "effectiveAt" | "contentHash">>;
 
 export function TermsVersionManager() {
+  const { translateText, locale } = useTranslation();
   const { confirm, notify } = usePopup();
   const versions = useAsyncResource(getTermsVersions, {
     initialData: [] as TermsVersionSummary[],
@@ -70,8 +72,11 @@ export function TermsVersionManager() {
   async function activate(version: TermsVersionSummary) {
     const audience = version.termsType === "VENDOR" ? "vendor" : "customer";
     const result = await confirm({
-      title: `Aktifkan versi ${version.version}?`,
-      message: `Versi ini menggantikan S&K ${TERMS_TYPE_LABELS[version.termsType].toLowerCase()} yang sedang aktif. Seluruh ${audience} yang sudah terdaftar akan diminta menyetujui versi ini saat membuka aplikasi.`,
+      title: translateText("Aktifkan versi {0}?", { 0: version.version }),
+      message: translateText(
+        "Versi ini menggantikan S&K {0} yang sedang aktif. Seluruh {1} yang sudah terdaftar akan diminta menyetujui versi ini saat membuka aplikasi.",
+        { 0: TERMS_TYPE_LABELS[version.termsType].toLowerCase(), 1: audience },
+      ),
       confirmLabel: "Aktifkan",
       variant: "warning",
     });
@@ -79,7 +84,10 @@ export function TermsVersionManager() {
     setBusyId(version.id);
     try {
       await activateTermsVersion(version.id);
-      notify({ message: `Versi ${version.version} sekarang aktif.`, variant: "success" });
+      notify({
+        message: translateText("Versi {0} sekarang aktif.", { 0: version.version }),
+        variant: "success",
+      });
       await versions.reload({ background: true });
     } catch (error) {
       notify({ message: getErrorMessage(error, "Versi gagal diaktifkan."), variant: "error" });
@@ -92,11 +100,12 @@ export function TermsVersionManager() {
     <div className="grid gap-5">
       <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-2xl text-sm leading-6 text-stone-600">
-          Versi yang sudah dibuat tidak dapat diubah karena menjadi bukti persetujuan pengguna.
-          Untuk revisi, unduh JSON versi sebelumnya, ubah isinya, lalu buat versi baru.
+          {translateText(
+            "Versi yang sudah dibuat tidak dapat diubah karena menjadi bukti persetujuan pengguna. Untuk revisi, unduh JSON versi sebelumnya, ubah isinya, lalu buat versi baru.",
+          )}{" "}
         </p>
         <AppButton type="button" onClick={() => setFormOpen(true)} disabled={formOpen}>
-          <Plus size={16} /> Buat versi baru
+          <Plus size={16} /> {translateText("Buat versi baru")}{" "}
         </AppButton>
       </div>
 
@@ -107,7 +116,10 @@ export function TermsVersionManager() {
           onCreated={(created) => {
             setFormOpen(false);
             notify({
-              message: `Versi ${created.version} berhasil dibuat${created.isActive ? " dan diaktifkan" : ""}.`,
+              message: translateText("Versi {0} berhasil dibuat{1}.", {
+                0: created.version,
+                1: created.isActive ? " dan diaktifkan" : "",
+              }),
               variant: "success",
             });
             void versions.reload({ background: true });
@@ -117,23 +129,24 @@ export function TermsVersionManager() {
 
       <section className="overflow-hidden rounded-xl border bg-white shadow-sm">
         <div className="border-b px-5 py-4">
-          <h2 className="font-semibold">Riwayat versi syarat dan ketentuan</h2>
-          <p className="mt-1 text-xs text-stone-500">
-            Satu versi aktif per jenis. Kolom “Disetujui” menunjukkan jumlah akun yang menyetujui
-            versi tersebut.
+          <h2 className="font-semibold">{translateText("Riwayat versi syarat dan ketentuan")}</h2>
+          <p className="mt-1 text-xs text-stone-600">
+            {translateText(
+              "Satu versi aktif per jenis. Kolom “Disetujui” menunjukkan jumlah akun yang menyetujui versi tersebut.",
+            )}{" "}
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="bg-stone-50 text-xs font-medium text-stone-600 [&_th]:font-medium">
               <tr>
-                <th className="p-4">Jenis</th>
-                <th className="p-4">Versi</th>
-                <th className="p-4">Judul</th>
-                <th className="p-4">Berlaku sejak</th>
-                <th className="p-4">Disetujui</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Aksi</th>
+                <th className="p-4">{translateText("Jenis")}</th>
+                <th className="p-4">{translateText("Versi")}</th>
+                <th className="p-4">{translateText("Judul")}</th>
+                <th className="p-4">{translateText("Berlaku sejak")}</th>
+                <th className="p-4">{translateText("Disetujui")}</th>
+                <th className="p-4">{translateText("Status")}</th>
+                <th className="p-4 text-right">{translateText("Aksi")}</th>
               </tr>
             </thead>
             <tbody>
@@ -149,30 +162,32 @@ export function TermsVersionManager() {
                     <td className="p-4 text-stone-600">{TERMS_TYPE_LABELS[version.termsType]}</td>
                     <td className="p-4 font-semibold text-ink">{version.version}</td>
                     <td className="p-4 text-stone-600">{version.title}</td>
-                    <td className="p-4 text-stone-600">{formatDate(version.effectiveAt)}</td>
+                    <td className="p-4 text-stone-600">
+                      {formatDate(version.effectiveAt, locale)}
+                    </td>
                     <td className="p-4 tabular-nums">{version.acceptanceCount}</td>
                     <td className="p-4">
                       {version.isActive ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                          <CheckCircle2 size={13} /> Aktif
+                          <CheckCircle2 size={13} /> {translateText("Aktif")}{" "}
                         </span>
                       ) : (
                         <span className="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">
-                          Tidak aktif
+                          {translateText("Tidak aktif")}{" "}
                         </span>
                       )}
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <AppIconButton
-                          label={`Lihat versi ${version.version}`}
+                          label={translateText("Lihat versi {0}", { 0: version.version })}
                           disabled={busyId !== null}
                           onClick={() => void withVersion(version.id, setPreview)}
                         >
                           <Eye size={15} />
                         </AppIconButton>
                         <AppIconButton
-                          label={`Unduh JSON versi ${version.version}`}
+                          label={translateText("Unduh JSON versi {0}", { 0: version.version })}
                           disabled={busyId !== null}
                           onClick={() => void withVersion(version.id, download)}
                         >
@@ -186,7 +201,7 @@ export function TermsVersionManager() {
                             disabled={busyId !== null}
                             onClick={() => void activate(version)}
                           >
-                            Aktifkan
+                            {translateText("Aktifkan")}{" "}
                           </AppButton>
                         )}
                       </div>
@@ -204,17 +219,17 @@ export function TermsVersionManager() {
           <TermsDialogContent
             document={preview}
             idPrefix="terms-admin-preview"
-            description="Tampilan dokumen seperti yang dilihat pengguna."
+            description={translateText("Tampilan dokumen seperti yang dilihat pengguna.")}
             footer={
               <>
-                <p className="min-w-0 break-all font-mono text-[11px] leading-5 text-stone-500">
+                <p className="min-w-0 break-all font-mono text-[11px] leading-5 text-stone-600">
                   {preview.contentHash
                     ? `SHA-256: ${preview.contentHash}`
-                    : "Pratinjau (belum disimpan)"}
+                    : translateText("Pratinjau (belum disimpan)")}
                 </p>
                 <Dialog.Close asChild>
                   <AppButton type="button" variant="secondary">
-                    Tutup
+                    {translateText("Tutup")}{" "}
                   </AppButton>
                 </Dialog.Close>
               </>
@@ -235,6 +250,7 @@ function TermsVersionForm({
   onCreated: (created: TermsDocument) => void;
   onPreview: (document: PreviewDocument) => void;
 }) {
+  const { translateText } = useTranslation();
   const [termsType, setTermsType] = useState<TermsType>("CUSTOMER");
   const [title, setTitle] = useState(DEFAULT_TITLES.CUSTOMER);
   const [version, setVersion] = useState("");
@@ -297,10 +313,10 @@ function TermsVersionForm({
 
   return (
     <form className="grid gap-4 rounded-xl border bg-white p-5 shadow-sm" onSubmit={submit}>
-      <h2 className="font-semibold">Versi baru</h2>
+      <h2 className="font-semibold">{translateText("Versi baru")}</h2>
       <div className="grid gap-4 md:grid-cols-2">
         <AppSelect
-          label="Jenis"
+          label={translateText("Jenis")}
           required
           value={termsType}
           onChange={(event) => changeType(event.target.value as TermsType)}
@@ -312,46 +328,50 @@ function TermsVersionForm({
           ))}
         </AppSelect>
         <AppInput
-          label="Nomor versi"
+          label={translateText("Nomor versi")}
           required
           maxLength={20}
-          placeholder="Contoh: 1.1"
+          placeholder={translateText("Contoh: 1.1")}
           value={version}
           onChange={(event) => setVersion(event.target.value)}
         />
         <AppInput
-          label="Judul"
+          label={translateText("Judul")}
           required
           maxLength={255}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
         <AppDatePicker
-          label="Berlaku sejak"
-          helper="Kosongkan untuk memakai tanggal hari ini."
+          label={translateText("Berlaku sejak")}
+          helper={translateText("Kosongkan untuk memakai tanggal hari ini.")}
           value={effectiveAt}
           onChange={(event) => setEffectiveAt(event.target.value)}
         />
       </div>
       <AppInput
-        label="Isi (file JSON)"
+        label={translateText("Isi (file JSON)")}
         type="file"
         accept=".json,application/json"
         required
         error={fileError}
-        helper='Array blok: { "kind": "paragraph", "text": "..." } atau { "kind": "table", "rows": [["..."]] }.'
+        helper={translateText(
+          'Array blok: { "kind": "paragraph", "text": "..." } atau { "kind": "table", "rows": [["..."]] }.',
+        )}
         onChange={(event) => void readFile(event)}
       />
       {content && (
         <div className="flex flex-wrap items-center gap-3 text-sm text-stone-600">
-          <span>{content.length} blok dimuat.</span>
+          <span>
+            {content.length} {translateText("blok dimuat.")}
+          </span>
           <AppButton
             type="button"
             variant="outline"
             className="min-h-9 px-3 py-1.5 text-xs"
             onClick={() => onPreview({ title, version: version || "-", content })}
           >
-            <Eye size={14} /> Pratinjau
+            <Eye size={14} /> {translateText("Pratinjau")}{" "}
           </AppButton>
         </div>
       )}
@@ -363,20 +383,22 @@ function TermsVersionForm({
           className="mt-1 size-4 shrink-0 accent-blush"
         />
         <span>
-          Langsung aktifkan. Pengguna yang sudah terdaftar akan diminta menyetujui versi ini.
+          {translateText(
+            "Langsung aktifkan. Pengguna yang sudah terdaftar akan diminta menyetujui versi ini.",
+          )}{" "}
         </span>
       </label>
       {error && (
         <p role="alert" className="text-sm text-red-700">
-          {error}
+          {translateText(error)}
         </p>
       )}
       <div className="flex justify-end gap-2">
         <AppButton type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-          Batal
+          {translateText("Batal")}{" "}
         </AppButton>
         <AppButton type="submit" loading={saving}>
-          Simpan versi
+          {translateText("Simpan versi")}{" "}
         </AppButton>
       </div>
     </form>
@@ -386,7 +408,7 @@ function TermsVersionForm({
 function TableMessage({ message }: { message: string }) {
   return (
     <tr>
-      <td colSpan={7} className="p-8 text-center text-sm text-stone-500">
+      <td colSpan={7} className="p-8 text-center text-sm text-stone-600">
         {message}
       </td>
     </tr>

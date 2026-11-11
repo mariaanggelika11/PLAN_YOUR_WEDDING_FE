@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { useEffect, useState } from "react";
 import { getAvailability, type Availability } from "./api";
 export function localDateToday() {
@@ -16,6 +17,7 @@ export function AvailabilityCheck({
   revision: number;
   onResult: (result: Availability | null) => void;
 }) {
+  const { translateText } = useTranslation();
   const [result, setResult] = useState<Availability | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
@@ -47,20 +49,20 @@ export function AvailabilityCheck({
   return (
     <div role="status" className="mt-2 rounded-lg bg-stone-50 p-3 text-xs leading-5">
       {!date ? (
-        "Pilih tanggal untuk memeriksa ketersediaan."
+        translateText("Pilih tanggal untuk memeriksa ketersediaan.")
       ) : error ? (
         <>
-          <p className="text-red-700">{error}</p>
+          <p className="text-red-700">{translateText(error)}</p>
           <button
             type="button"
             className="mt-1 font-semibold text-blush"
             onClick={() => setRetry((value) => value + 1)}
           >
-            Coba lagi
+            {translateText("Coba lagi")}{" "}
           </button>
         </>
       ) : !result ? (
-        "Memeriksa jadwal…"
+        translateText("Memeriksa jadwal…")
       ) : (
         <p className={result.available ? "text-emerald-700" : "text-red-700"}>{result.message}</p>
       )}

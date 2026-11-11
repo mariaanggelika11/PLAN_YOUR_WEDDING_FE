@@ -1,4 +1,5 @@
 "use client";
+
 import { Pagination } from "@/shared/components/navigation/Pagination";
 import { useCallback, useEffect, useState } from "react";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
@@ -13,7 +14,8 @@ import { NotificationItem } from "./NotificationItem";
 import type { NotificationPageData } from "./types";
 
 export function NotificationPage() {
-  const { t } = useTranslation();
+  const { translateText, t } = useTranslation();
+
   const state = useNotifications();
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -80,7 +82,7 @@ export function NotificationPage() {
             />
           )}
           <Pagination
-            label="Halaman notifikasi"
+            label={translateText("Halaman notifikasi")}
             page={page}
             totalPages={pages}
             onPageChange={setPage}

@@ -28,7 +28,7 @@ export function SectionHeader({ title, description }: { title: string; descripti
     <div>
       <h2 className="text-lg font-semibold tracking-tight">{translateText(title)}</h2>
       {description && (
-        <p className="mt-1 text-sm leading-6 text-stone-500">{translateText(description)}</p>
+        <p className="mt-1 text-sm leading-6 text-stone-600">{translateText(description)}</p>
       )}
     </div>
   );

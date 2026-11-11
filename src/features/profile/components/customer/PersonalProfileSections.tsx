@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getAttachmentBlob } from "@/features/profile/api/attachmentApi";
 import { ImageUploadPreview } from "@/features/profile/components/shared/ImageUploadPreview";
@@ -18,50 +19,57 @@ export function CustomerPersonalSections({
   activeStep: number;
   profile: CustomerApiProfile | null;
 }) {
+  const { translateText } = useTranslation();
   const values = customerProfileToForm(profile);
   return (
     <>
       <FormSection
         active={activeStep === 0}
-        description="Informasi dasar yang digunakan pada akun customer Anda."
+        description={translateText("Informasi dasar yang digunakan pada akun customer Anda.")}
         step={0}
-        title="Data pribadi"
+        title={translateText("Data pribadi")}
       >
         <AppInput
           defaultValue={values.fullName}
-          label="Nama lengkap"
+          label={translateText("Nama lengkap")}
           maxLength={200}
           name="fullName"
           required
         />
         <AppSelect defaultValue={values.gender} label="Gender" name="gender">
-          <option value="">Pilih gender</option>
-          <option value="1">Laki-laki</option>
-          <option value="2">Perempuan</option>
+          <option value="">{translateText("Pilih gender")}</option>
+          <option value="1">{translateText("Laki-laki")}</option>
+          <option value="2">{translateText("Perempuan")}</option>
         </AppSelect>
         <AppInput
           defaultValue={values.birthDate}
-          label="Tanggal lahir"
+          label={translateText("Tanggal lahir")}
           name="birthDate"
           type="date"
         />
       </FormSection>
       <FormSection
         active={activeStep === 1}
-        description="Pilih provinsi terlebih dahulu agar daftar kota sesuai."
+        description={translateText("Pilih provinsi terlebih dahulu agar daftar kota sesuai.")}
         step={1}
-        title="Alamat tempat tinggal"
+        title={translateText("Alamat tempat tinggal")}
       >
         <RegionFields initialCity={values.city} initialProvince={values.province} />
         <div className="md:col-span-2">
-          <AppTextarea defaultValue={values.address} label="Alamat lengkap" name="address" />
+          <AppTextarea
+            defaultValue={values.address}
+            label={translateText("Alamat lengkap")}
+            name="address"
+          />
         </div>
       </FormSection>
       <FormSection
         active={activeStep === 2}
-        description="Unggah foto profile yang akan ditampilkan pada akun customer Anda."
+        description={translateText(
+          "Unggah foto profile yang akan ditampilkan pada akun customer Anda.",
+        )}
         step={2}
-        title="Foto profile"
+        title={translateText("Foto profile")}
       >
         <CustomerAvatarUpload attachmentId={profile?.avatarAttachmentId ?? null} />
       </FormSection>
@@ -70,6 +78,7 @@ export function CustomerPersonalSections({
 }
 
 function CustomerAvatarUpload({ attachmentId }: { attachmentId: string | null }) {
+  const { translateText } = useTranslation();
   const { confirm } = usePopup();
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
@@ -102,17 +111,17 @@ function CustomerAvatarUpload({ attachmentId }: { attachmentId: string | null })
   return (
     <>
       <ImageUploadPreview
-        alt="Foto profile"
+        alt={translateText("Foto profile")}
         emptyLabel="Belum ada gambar"
         error={image.error}
-        helper="JPG, PNG, atau WebP maksimal 5 MB."
+        helper={translateText("JPG, PNG, atau WebP maksimal 5 MB.")}
         inputLabel={image.previewUrl ? "Ganti foto profile" : "Upload foto profile"}
         inputName="avatarPhoto"
         isLoading={image.loading}
         note={
           removePending
-            ? "Foto akan dihapus saat perubahan disimpan."
-            : "Foto akan diunggah saat profile disimpan."
+            ? translateText("Foto akan dihapus saat perubahan disimpan.")
+            : translateText("Foto akan diunggah saat profile disimpan.")
         }
         onChange={selectAvatar}
         onRemove={attachmentId ? () => void removeAvatar() : undefined}

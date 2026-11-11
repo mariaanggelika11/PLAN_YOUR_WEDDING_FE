@@ -1,22 +1,68 @@
 "use client";
-import { StorePage } from "@/features/marketplace/StorePage";
-import { EmptyState } from "@/shared/components/feedback/AsyncStates";
+import dynamic from "next/dynamic";
+import { useTranslation } from "@/shared/i18n/useTranslation";
+
+import { EmptyState, LoadingSkeleton } from "@/shared/components/feedback/AsyncStates";
 import { FeaturePage as Page } from "@/shared/components/layout/FeaturePage";
 
-import { NotificationPage } from "@/features/notifications/NotificationPage";
-import { VendorProfileForm } from "@/features/profile/components/vendor/VendorProfileForm";
-import { VendorDashboard } from "@/features/vendor/DashboardPage";
-import { OrderDetail, OrdersPage } from "@/features/vendor/OrderPages";
-import { MarketplaceExplorer } from "@/features/marketplace/MarketplaceExplorer";
-import { ProductDetail as MarketplaceProductDetail } from "@/features/customer/MarketplacePages";
-import {
-  ProductAccessGate,
-  ProductDetailPage,
-  ProductsPage,
-  VendorProductForm,
-} from "@/features/vendor/ProductPages";
+const StorePage = dynamic(
+  () => import("@/features/marketplace/StorePage").then((module) => module.StorePage),
+  { loading: () => <LoadingSkeleton /> },
+);
+const NotificationPage = dynamic(
+  () =>
+    import("@/features/notifications/NotificationPage").then((module) => module.NotificationPage),
+  { loading: () => <LoadingSkeleton /> },
+);
+const VendorProfileForm = dynamic(
+  () =>
+    import("@/features/profile/components/vendor/VendorProfileForm").then(
+      (module) => module.VendorProfileForm,
+    ),
+  { loading: () => <LoadingSkeleton /> },
+);
+const VendorDashboard = dynamic(
+  () => import("@/features/vendor/DashboardPage").then((module) => module.VendorDashboard),
+  { loading: () => <LoadingSkeleton /> },
+);
+const OrderDetail = dynamic(
+  () => import("@/features/vendor/OrderPages").then((module) => module.OrderDetail),
+  { loading: () => <LoadingSkeleton /> },
+);
+const OrdersPage = dynamic(
+  () => import("@/features/vendor/OrderPages").then((module) => module.OrdersPage),
+  { loading: () => <LoadingSkeleton /> },
+);
+const MarketplaceExplorer = dynamic(
+  () =>
+    import("@/features/marketplace/MarketplaceExplorer").then(
+      (module) => module.MarketplaceExplorer,
+    ),
+  { loading: () => <LoadingSkeleton /> },
+);
+const MarketplaceProductDetail = dynamic(
+  () => import("@/features/customer/MarketplacePages").then((module) => module.ProductDetail),
+  { loading: () => <LoadingSkeleton /> },
+);
+const ProductAccessGate = dynamic(
+  () => import("@/features/vendor/ProductPages").then((module) => module.ProductAccessGate),
+  { loading: () => <LoadingSkeleton /> },
+);
+const ProductDetailPage = dynamic(
+  () => import("@/features/vendor/ProductPages").then((module) => module.ProductDetailPage),
+  { loading: () => <LoadingSkeleton /> },
+);
+const ProductsPage = dynamic(
+  () => import("@/features/vendor/ProductPages").then((module) => module.ProductsPage),
+  { loading: () => <LoadingSkeleton /> },
+);
+const VendorProductForm = dynamic(
+  () => import("@/features/vendor/ProductPages").then((module) => module.VendorProductForm),
+  { loading: () => <LoadingSkeleton /> },
+);
 
 export function VendorPage({ slug }: { slug: string[] }) {
+  const { translateText } = useTranslation();
   const page = slug[0] ?? "dashboard";
   // TODO API: Tampilkan loading, error, empty, dan success state sesuai hasil request.
   if (page === "dashboard") return <VendorDashboard />;
@@ -27,15 +73,18 @@ export function VendorPage({ slug }: { slug: string[] }) {
   if (page === "marketplace")
     return (
       <Page
-        title="Marketplace Vendor"
-        description="Lihat produk aktif dan posisi layanan Anda di marketplace."
+        title={translateText("Marketplace Vendor")}
+        description={translateText("Lihat produk aktif dan posisi layanan Anda di marketplace.")}
       >
         <MarketplaceExplorer role="vendor" />
       </Page>
     );
   if (page === "profile")
     return (
-      <Page title="Profil Bisnis" description="Informasi ini tampil di halaman toko vendor.">
+      <Page
+        title={translateText("Profil Bisnis")}
+        description={translateText("Informasi ini tampil di halaman toko vendor.")}
+      >
         <VendorProfileForm />
       </Page>
     );
@@ -43,11 +92,13 @@ export function VendorPage({ slug }: { slug: string[] }) {
     return (
       <ProductAccessGate>
         <Page
-          title="Buat Paket Layanan"
-          description="Buat paket yang jelas agar customer mudah membandingkan."
+          title={translateText("Buat Paket Layanan")}
+          description={translateText("Buat paket yang jelas agar customer mudah membandingkan.")}
         >
           <VendorProductForm
-            note="Simpan sebagai draft jika informasi paket belum lengkap, atau publikasikan setelah semua data siap."
+            note={translateText(
+              "Simpan sebagai draft jika informasi paket belum lengkap, atau publikasikan setelah semua data siap.",
+            )}
             submitLabel="Publish paket"
           />
         </Page>
@@ -56,9 +107,14 @@ export function VendorPage({ slug }: { slug: string[] }) {
   if (page === "products" && slug.includes("edit"))
     return (
       <ProductAccessGate>
-        <Page title="Edit Paket Layanan" description="Perbarui detail dan status paket.">
+        <Page
+          title={translateText("Edit Paket Layanan")}
+          description={translateText("Perbarui detail dan status paket.")}
+        >
           <VendorProductForm
-            note="Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat."
+            note={translateText(
+              "Perubahan harga hanya berlaku untuk pesanan baru dan tidak mengubah nilai pesanan yang sudah dibuat.",
+            )}
             productId={slug[1]}
             submitLabel="Simpan perubahan"
           />
@@ -80,5 +136,5 @@ export function VendorPage({ slug }: { slug: string[] }) {
   if (page === "orders" && slug[1]) return <OrderDetail orderId={slug[1]} />;
   if (page === "orders") return <OrdersPage />;
   if (page === "notifications") return <NotificationPage />;
-  return <EmptyState title="Halaman tidak ditemukan" />;
+  return <EmptyState title={translateText("Halaman tidak ditemukan")} />;
 }

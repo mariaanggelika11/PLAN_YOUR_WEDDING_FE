@@ -1,3 +1,9 @@
+import { captureApiFailure } from "../monitoring/client.ts";
+import { browserLocale } from "../i18n/browserLocale.ts";
+import { translateValidationKey } from "../i18n/validationMessages.ts";
+import type { AppLocale } from "../i18n/locale.ts";
+import { RequestTimeoutError, withRequestDeadline } from "./requestDeadline.ts";
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend-api";
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -7,19 +13,18 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     headers.set("Content-Type", "application/json");
   }
 
-  let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-  } catch {
-    throw new ApiError("Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.", 0);
+    return await withRequestDeadline(async (signal) => {
+      const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, signal });
+      const payload = await readResponseBody(response);
+      if (!response.ok) throw new ApiError(getErrorMessage(payload), response.status, payload);
+      return payload as T;
+    }, init);
+  } catch (error) {
+    const failure = error instanceof ApiError ? error : requestFailure(error, init?.signal);
+    captureApiFailure(failure.status, (failure.payload as { code?: string } | undefined)?.code);
+    throw failure;
   }
-
-  const payload = await readResponseBody(response);
-  if (!response.ok) {
-    throw new ApiError(getErrorMessage(payload), response.status, payload);
-  }
-
-  return payload as T;
 }
 
 export class ApiError extends Error {
@@ -34,6 +39,21 @@ export class ApiError extends Error {
   }
 }
 
+export function requestFailure(error: unknown, signal?: AbortSignal | null) {
+  if (error instanceof RequestTimeoutError) {
+    return new ApiError(
+      "Permintaan melewati batas waktu. Periksa status terbaru sebelum mencoba lagi.",
+      0,
+      { code: "REQUEST_TIMEOUT" },
+    );
+  }
+  if (signal?.aborted)
+    return new ApiError("Permintaan dibatalkan.", 0, { code: "REQUEST_ABORTED" });
+  return new ApiError("Tidak dapat terhubung ke server. Periksa koneksi Anda dan coba lagi.", 0, {
+    code: "NETWORK_ERROR",
+  });
+}
+
 async function readResponseBody(response: Response): Promise<unknown> {
   if (response.status === 204) return null;
   const text = await response.text();
@@ -45,8 +65,12 @@ async function readResponseBody(response: Response): Promise<unknown> {
   }
 }
 
-export function getErrorMessage(payload: unknown, fallback = "Permintaan API gagal."): string {
-  if (typeof payload === "string" && payload) return translateValidationMessage(payload);
+export function getErrorMessage(
+  payload: unknown,
+  fallback = "Permintaan API gagal.",
+  locale: AppLocale = browserLocale(),
+): string {
+  if (typeof payload === "string" && payload) return translateValidationMessage(payload, locale);
   if (payload instanceof Error && payload.message) return payload.message;
   if (!payload || typeof payload !== "object") return fallback;
 
@@ -54,13 +78,15 @@ export function getErrorMessage(payload: unknown, fallback = "Permintaan API gag
   if (Array.isArray(message)) {
     const translated = message
       .filter((item): item is string => typeof item === "string")
-      .map(translateValidationMessage);
+      .map((message) => translateValidationMessage(message, locale));
     return [...new Set(translated)].join(" ") || fallback;
   }
-  return typeof message === "string" && message ? translateValidationMessage(message) : fallback;
+  return typeof message === "string" && message
+    ? translateValidationMessage(message, locale)
+    : fallback;
 }
 
-const FIELD_LABELS: Record<string, string> = {
+const FIELD_LABELS = {
   accountHolderName: "nama pemilik rekening",
   accountNumber: "nomor rekening",
   active: "status aktif",
@@ -89,31 +115,37 @@ const FIELD_LABELS: Record<string, string> = {
   terms: "syarat dan ketentuan",
   termsVersionId: "versi syarat dan ketentuan",
   vendorId: "vendor",
-};
+} as const;
 
-export function translateValidationMessage(message: string): string {
+export function translateValidationMessage(message: string, locale: AppLocale = "id"): string {
   const field = validationField(message);
-  const label = FIELD_LABELS[field] ?? humanizeField(field);
+  const knownField = Object.hasOwn(FIELD_LABELS, field);
+  const label = knownField
+    ? translateValidationKey(`validationFields.${field as keyof typeof FIELD_LABELS}`, locale)
+    : humanizeField(field);
   const minimum = message.match(/must not be less than (\d+)/i)?.[1];
   const maximum = message.match(/must not be greater than (\d+)/i)?.[1];
-
+  const values = { field: capitalize(label) };
   if (/must be an integer number/i.test(message))
-    return `${capitalize(label)} harus berupa angka bulat.`;
-  if (/must be a number/i.test(message)) return `${capitalize(label)} harus berupa angka.`;
-  if (minimum) return `${capitalize(label)} minimal ${minimum}.`;
-  if (maximum) return `${capitalize(label)} maksimal ${maximum}.`;
+    return translateValidationKey("validation.integer", locale, values);
+  if (/must be a number/i.test(message))
+    return translateValidationKey("validation.number", locale, values);
+  if (minimum)
+    return translateValidationKey("validation.minimum", locale, { ...values, value: minimum });
+  if (maximum)
+    return translateValidationKey("validation.maximum", locale, { ...values, value: maximum });
   if (/should not be empty|must not be empty/i.test(message))
-    return `${capitalize(label)} wajib diisi.`;
-  if (/must be an email/i.test(message)) return `Format ${label} tidak valid.`;
-  if (/must be a valid enum value|must be one of the following values/i.test(message)) {
-    return `Pilihan ${label} tidak valid.`;
-  }
-  if (/property .* should not exist/i.test(message)) {
-    return `Data ${label} belum didukung oleh server.`;
-  }
-  if (/must be a string/i.test(message)) return `${capitalize(label)} harus berupa teks.`;
+    return translateValidationKey("validation.required", locale, values);
+  if (/must be an email/i.test(message))
+    return translateValidationKey("validation.email", locale, { field: label });
+  if (/must be a valid enum value|must be one of the following values/i.test(message))
+    return translateValidationKey("validation.enum", locale, { field: label });
+  if (/property .* should not exist/i.test(message))
+    return translateValidationKey("validation.unsupported", locale, { field: label });
+  if (/must be a string/i.test(message))
+    return translateValidationKey("validation.string", locale, values);
   if (/must be a boolean/i.test(message))
-    return `${capitalize(label)} harus bernilai ya atau tidak.`;
+    return translateValidationKey("validation.boolean", locale, values);
   return message;
 }
 

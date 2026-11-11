@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import {
   CUSTOMER_PROFILE_PARAMETER_CODES,
@@ -31,6 +32,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 type ProfileType = "customer" | "vendor";
 
 export function ProfileFormController({ type }: { type: ProfileType }) {
+  const { translateText } = useTranslation();
   const unsaved = useUnsavedChanges();
   const masterParameters = useMasterParameters(
     type === "customer" ? CUSTOMER_PROFILE_PARAMETER_CODES : VENDOR_PROFILE_PARAMETER_CODES,
@@ -195,7 +197,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
         />
       )}
       {error ? (
-        <PopupMessage message={error} variant="error" />
+        <PopupMessage message={translateText(error)} variant="error" />
       ) : (
         message && <PopupMessage message={message} />
       )}
@@ -206,7 +208,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
           type="button"
           variant="secondary"
         >
-          Kembali
+          {translateText("Kembali")}{" "}
         </AppButton>
         {type === "vendor" ? (
           <div className="ml-auto flex flex-wrap gap-2">
@@ -217,7 +219,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
                 type="button"
                 variant="secondary"
               >
-                Simpan perubahan
+                {translateText("Simpan perubahan")}{" "}
               </AppButton>
             ) : !vendorIsVerified ? (
               <AppButton
@@ -227,12 +229,12 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
                 type="button"
                 variant="secondary"
               >
-                Simpan draft
+                {translateText("Simpan draft")}{" "}
               </AppButton>
             ) : null}
             {activeStep < steps.length - 1 ? (
               <AppButton disabled={isSaving} onClick={continueToNextStep} type="button">
-                Lanjutkan
+                {translateText("Lanjutkan")}{" "}
               </AppButton>
             ) : !vendorIsVerified ? (
               <AppButton
@@ -241,7 +243,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
                 onClick={(event) => void saveVendor("submit", event.currentTarget.form)}
                 type="button"
               >
-                Kirim untuk verifikasi
+                {translateText("Kirim untuk verifikasi")}{" "}
               </AppButton>
             ) : null}
           </div>
@@ -249,7 +251,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
           <div className="ml-auto flex flex-wrap gap-2">
             {activeStep < steps.length - 1 ? (
               <AppButton disabled={isSaving} onClick={continueToNextStep} type="button">
-                Lanjutkan
+                {translateText("Lanjutkan")}{" "}
               </AppButton>
             ) : (
               <AppButton
@@ -257,7 +259,7 @@ export function ProfileFormController({ type }: { type: ProfileType }) {
                 onClick={(event) => void saveCustomer(event.currentTarget.form)}
                 type="button"
               >
-                Simpan perubahan
+                {translateText("Simpan perubahan")}{" "}
               </AppButton>
             )}
           </div>

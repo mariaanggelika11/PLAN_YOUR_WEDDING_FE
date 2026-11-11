@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import type { ReactNode } from "react";
 import { OrderTimeline, type OrderTimelineItem } from "@/shared/components/data-display/Commerce";
 import { DetailGrid } from "@/shared/components/data-display/DetailBlocks";
@@ -13,14 +16,15 @@ export function OrderOverview({
   timeline: OrderTimelineItem[];
   paymentSummary: ReactNode;
 }) {
+  const { translateText } = useTranslation();
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div className="grid min-w-0 content-start gap-6">
-        <DetailGrid title="Detail acara" items={details} />
+        <DetailGrid title={translateText("Detail acara")} items={details} />
         {paymentSummary}
       </div>
       <section className="min-w-0 rounded-xl border bg-white p-5 sm:p-6">
-        <SectionHeader title="Timeline pesanan" />
+        <SectionHeader title={translateText("Timeline pesanan")} />
         <div className="mt-5">
           <OrderTimeline items={timeline} />
         </div>

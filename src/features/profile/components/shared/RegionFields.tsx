@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { getCities, getProvinces, type RegionOption } from "@/shared/api/regionApi";
 import { AppInput, AppSelect } from "@/shared/components/ui/FormFields";
@@ -19,6 +20,7 @@ export function RegionFields({
   provinceLabel?: string;
   provinceName?: string;
 }) {
+  const { translateText } = useTranslation();
   const [provinces, setProvinces] = useState<RegionOption[]>([]);
   const [cities, setCities] = useState<RegionOption[]>([]);
   const [provinceCode, setProvinceCode] = useState("");
@@ -84,7 +86,7 @@ export function RegionFields({
         }}
         value={province}
       >
-        <option value="">Pilih provinsi</option>
+        <option value="">{translateText("Pilih provinsi")}</option>
         {provinces.map((item) => (
           <option key={item.code} value={item.name}>
             {item.name}
@@ -98,7 +100,11 @@ export function RegionFields({
         onChange={(event) => setCity(event.target.value)}
         value={city}
       >
-        <option value="">{provinceCode ? "Pilih kabupaten/kota" : "Pilih provinsi dahulu"}</option>
+        <option value="">
+          {provinceCode
+            ? translateText("Pilih kabupaten/kota")
+            : translateText("Pilih provinsi dahulu")}
+        </option>
         {cities.map((item) => (
           <option key={item.code} value={item.name}>
             {item.name}

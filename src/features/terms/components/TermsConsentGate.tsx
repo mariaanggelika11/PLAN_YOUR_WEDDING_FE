@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { useAuth } from "@/features/auth/useAuth";
 import { acceptTerms, getMyTermsStatus } from "@/features/terms/api";
@@ -18,6 +19,7 @@ import { useCallback, useState } from "react";
  * stays usable and the check simply runs again on the next visit.
  */
 export function TermsConsentGate() {
+  const { translateText } = useTranslation();
   const { logout } = useAuth();
   const loadStatus = useCallback(() => getMyTermsStatus(), []);
   const status = useAsyncResource<TermsStatus | null>(loadStatus, { initialData: null });
@@ -59,7 +61,9 @@ export function TermsConsentGate() {
         dismissible={false}
         document={current}
         idPrefix={`terms-consent-${current.id}`}
-        description="Kami telah memperbarui syarat dan ketentuan. Baca dan setujui versi terbaru untuk melanjutkan menggunakan Plan Your Wedding."
+        description={translateText(
+          "Kami telah memperbarui syarat dan ketentuan. Baca dan setujui versi terbaru untuk melanjutkan menggunakan Plan Your Wedding.",
+        )}
         footer={
           <div className="grid w-full gap-3">
             <label className="flex items-start gap-3 text-sm">
@@ -70,16 +74,19 @@ export function TermsConsentGate() {
                 onChange={(event) => setChecked(event.target.checked)}
                 className="mt-1 size-4 shrink-0 accent-blush"
               />
-              <span>Saya telah membaca dan menyetujui {current.title.toLowerCase()} terbaru.</span>
+              <span>
+                {translateText("Saya telah membaca dan menyetujui")} {current.title.toLowerCase()}{" "}
+                {translateText("terbaru.")}
+              </span>
             </label>
             {error && (
               <p role="alert" className="text-sm text-red-700">
-                {error}
+                {translateText(error)}
               </p>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <AppButton type="button" variant="ghost" disabled={saving} onClick={leave}>
-                Keluar
+                {translateText("Keluar")}{" "}
               </AppButton>
               <AppButton
                 type="button"
@@ -87,7 +94,7 @@ export function TermsConsentGate() {
                 disabled={!checked}
                 onClick={() => void accept()}
               >
-                Setujui dan lanjutkan
+                {translateText("Setujui dan lanjutkan")}{" "}
               </AppButton>
             </div>
           </div>

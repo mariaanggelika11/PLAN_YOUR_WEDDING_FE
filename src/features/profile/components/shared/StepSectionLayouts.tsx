@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { FormSection } from "@/features/profile/components/shared/ProfileFormFields";
 import type { ReactNode } from "react";
 
@@ -7,12 +10,15 @@ interface StepSectionProps {
 }
 
 export function WeddingDetailsSection({ active, children }: StepSectionProps) {
+  const { translateText } = useTranslation();
   return (
     <FormSection
       active={active}
-      description="Lengkapi detail acara agar rekomendasi vendor dan perencanaan wedding lebih relevan."
+      description={translateText(
+        "Lengkapi detail acara agar rekomendasi vendor dan perencanaan wedding lebih relevan.",
+      )}
       step={3}
-      title="Detail pernikahan"
+      title={translateText("Detail pernikahan")}
     >
       {children}
     </FormSection>
@@ -20,12 +26,15 @@ export function WeddingDetailsSection({ active, children }: StepSectionProps) {
 }
 
 export function BusinessInformationSection({ active, children }: StepSectionProps) {
+  const { translateText } = useTranslation();
   return (
     <FormSection
       active={active}
-      description="Lengkapi identitas bisnis, lokasi, cakupan layanan, kategori, dan logo brand."
+      description={translateText(
+        "Lengkapi identitas bisnis, lokasi, cakupan layanan, kategori, dan logo brand.",
+      )}
       step={1}
-      title="Informasi bisnis"
+      title={translateText("Informasi bisnis")}
     >
       {children}
     </FormSection>
@@ -41,12 +50,13 @@ export function BankAccountSection({ children }: { children: ReactNode }) {
 }
 
 export function VerificationDocumentSection({ active, children }: StepSectionProps) {
+  const { translateText } = useTranslation();
   return (
     <FormSection
       active={active}
-      description="Lengkapi dokumen legal bisnis Anda."
+      description={translateText("Lengkapi dokumen legal bisnis Anda.")}
       step={3}
-      title="Dokumen verifikasi"
+      title={translateText("Dokumen verifikasi")}
     >
       {children}
     </FormSection>

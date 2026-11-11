@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { ChevronDown, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
@@ -28,6 +29,7 @@ export function SearchableSelect({
   loading?: boolean;
   clearable?: boolean;
 }) {
+  const { translateText } = useTranslation();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -53,7 +55,7 @@ export function SearchableSelect({
       }}
     >
       <label htmlFor={id} className="mb-2 block text-sm font-medium">
-        {label}
+        {translateText(label)}
       </label>
       <div className="relative">
         <input
@@ -67,7 +69,7 @@ export function SearchableSelect({
           aria-activedescendant={open && filtered[active] ? `${id}-option-${active}` : undefined}
           className="field-control pr-16"
           disabled={disabled || loading}
-          placeholder={loading ? "Memuat wilayah…" : placeholder}
+          placeholder={loading ? translateText("Memuat wilayah…") : translateText(placeholder)}
           value={open ? query : (selected?.label ?? value)}
           onClick={() => {
             setOpen(true);
@@ -108,7 +110,7 @@ export function SearchableSelect({
             <button
               type="button"
               disabled={disabled || loading}
-              aria-label={`Hapus ${label.toLowerCase()}`}
+              aria-label={translateText("Hapus {0}", { 0: label.toLowerCase() })}
               className="rounded p-1 hover:bg-stone-100"
               onClick={() => {
                 choose("");
@@ -118,14 +120,14 @@ export function SearchableSelect({
               <X size={16} />
             </button>
           )}
-          <ChevronDown size={16} className="pointer-events-none text-stone-400" />
+          <ChevronDown size={16} className="pointer-events-none text-stone-600" />
         </div>
       </div>
       {open && !disabled && !loading && (
         <ul
           id={`${id}-options`}
           role="listbox"
-          aria-label={label}
+          aria-label={translateText(label)}
           className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl border bg-white p-1 shadow-lg"
         >
           {filtered.length ? (
@@ -139,12 +141,12 @@ export function SearchableSelect({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(option.value)}
               >
-                {option.label}
+                {translateText(option.label)}
               </li>
             ))
           ) : (
-            <li role="presentation" className="px-3 py-2 text-sm text-stone-500">
-              Wilayah tidak ditemukan.
+            <li role="presentation" className="px-3 py-2 text-sm text-stone-600">
+              {translateText("Wilayah tidak ditemukan.")}{" "}
             </li>
           )}
         </ul>

@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
@@ -20,6 +21,7 @@ export function ServiceAreaField({
   disabled?: boolean;
   onDirty?: () => void;
 }) {
+  const { translateText } = useTranslation();
   const business = parseServiceAreas(businessArea);
   const [useBusiness, setUseBusiness] = useState(!initialValue && business.length > 0);
   const [selected, setSelected] = useState(() => parseServiceAreas(initialValue));
@@ -48,13 +50,14 @@ export function ServiceAreaField({
 
   return (
     <fieldset disabled={disabled} className="min-w-0 space-y-3">
-      <legend className="text-sm font-medium">Area layanan</legend>
+      <legend className="text-sm font-medium">{translateText("Area layanan")}</legend>
       <select ref={control} name={name} value={value} onChange={() => {}} hidden aria-hidden="true">
         <option value={value}>{value}</option>
       </select>
-      <p className="text-xs text-stone-500">
-        Pilih kota/kabupaten tempat acara yang bisa dilayani. Untuk venue, pilih lokasi venue
-        berada.
+      <p className="text-xs text-stone-600">
+        {translateText(
+          "Pilih kota/kabupaten tempat acara yang bisa dilayani. Untuk venue, pilih lokasi venue berada.",
+        )}{" "}
       </p>
       {businessArea !== undefined && (
         <label className="flex items-start gap-2 text-sm">
@@ -66,17 +69,21 @@ export function ServiceAreaField({
             className="mt-1 accent-blush"
           />
           <span>
-            Gunakan area layanan bisnis saat ini
-            <span className="mt-1 block text-xs text-stone-500">
+            {translateText("Gunakan area layanan bisnis saat ini")}{" "}
+            <span className="mt-1 block text-xs text-stone-600">
               {business.length
-                ? "Disalin saat paket disimpan. Perubahan area bisnis berikutnya tidak otomatis mengubah paket."
-                : "Isi area layanan di Profil Bisnis terlebih dahulu, atau pilih wilayah di bawah."}
+                ? translateText(
+                    "Disalin saat paket disimpan. Perubahan area bisnis berikutnya tidak otomatis mengubah paket.",
+                  )
+                : translateText(
+                    "Isi area layanan di Profil Bisnis terlebih dahulu, atau pilih wilayah di bawah.",
+                  )}
             </span>
           </span>
         </label>
       )}
       {(useBusiness ? business : selected).length > 0 && (
-        <ul className="flex flex-wrap gap-2" aria-label="Area layanan terpilih">
+        <ul className="flex flex-wrap gap-2" aria-label={translateText("Area layanan terpilih")}>
           {(useBusiness ? business : selected).map((area) => (
             <li
               key={area}
@@ -86,7 +93,7 @@ export function ServiceAreaField({
               {!useBusiness && (
                 <button
                   type="button"
-                  aria-label={`Hapus area ${area}`}
+                  aria-label={translateText("Hapus area {0}", { 0: area })}
                   className="shrink-0 rounded p-1 hover:bg-stone-200"
                   onClick={() => setSelected((current) => current.filter((item) => item !== area))}
                 >
@@ -99,7 +106,7 @@ export function ServiceAreaField({
       )}
       {!useBusiness && useBusinessOptions && (
         <SearchableSelect
-          label="Pilih area khusus paket"
+          label={translateText("Pilih area khusus paket")}
           value=""
           disabled={disabled}
           options={business
@@ -113,13 +120,13 @@ export function ServiceAreaField({
           onChange={(next) => {
             if (next) setSelected((current) => [...current, next]);
           }}
-          placeholder="Pilih dari area layanan bisnis"
+          placeholder={translateText("Pilih dari area layanan bisnis")}
         />
       )}
       {!useBusiness && !useBusinessOptions && (
         <div className="grid gap-3 sm:grid-cols-2">
           <SearchableSelect
-            label="Provinsi area layanan"
+            label={translateText("Provinsi area layanan")}
             value={province}
             loading={provinces.loading}
             disabled={disabled}
@@ -128,10 +135,10 @@ export function ServiceAreaField({
               cities.setData([]);
               setProvince(next);
             }}
-            placeholder="Cari provinsi"
+            placeholder={translateText("Cari provinsi")}
           />
           <SearchableSelect
-            label="Tambah kota/kabupaten"
+            label={translateText("Tambah kota/kabupaten")}
             value=""
             loading={cities.loading}
             disabled={disabled || !province || !cities.data.length || Boolean(cities.error)}
@@ -146,13 +153,19 @@ export function ServiceAreaField({
             onChange={(next) => {
               if (next) setSelected((current) => parseServiceAreas([...current, next].join(", ")));
             }}
-            placeholder={province ? "Cari kota/kabupaten" : "Pilih provinsi dahulu"}
+            placeholder={
+              province
+                ? translateText("Cari kota/kabupaten")
+                : translateText("Pilih provinsi dahulu")
+            }
           />
         </div>
       )}
       {!useBusiness && !useBusinessOptions && (provinces.error || cities.error) && (
         <p role="alert" className="text-xs text-red-600">
-          Pilihan wilayah gagal dimuat. Area yang sudah dipilih tetap tersimpan di formulir.{" "}
+          {translateText(
+            "Pilihan wilayah gagal dimuat. Area yang sudah dipilih tetap tersimpan di formulir.",
+          )}{" "}
           <button
             type="button"
             className="underline"
@@ -161,7 +174,7 @@ export function ServiceAreaField({
               void cities.reload();
             }}
           >
-            Coba lagi
+            {translateText("Coba lagi")}{" "}
           </button>
         </p>
       )}

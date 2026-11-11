@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import { AppInput } from "@/shared/components/ui/FormFields";
 import { formatThousands, parseFormattedInteger } from "@/shared/utils/number";
@@ -31,6 +32,7 @@ export function FormattedNumberInput({
   placeholder,
   required,
 }: FormattedNumberInputProps) {
+  const { translateText, locale } = useTranslation();
   const [rawValue, setRawValue] = useState(() => parseFormattedInteger(defaultValue));
 
   useEffect(() => setRawValue(parseFormattedInteger(defaultValue)), [defaultValue]);
@@ -40,9 +42,9 @@ export function FormattedNumberInput({
     const numericValue = nextValue ? Number(nextValue) : undefined;
     input.setCustomValidity(
       numericValue !== undefined && min !== undefined && numericValue < min
-        ? `Nilai minimum adalah ${formatThousands(min)}.`
+        ? translateText("Nilai minimum adalah {0}.", { 0: formatThousands(min, locale) })
         : numericValue !== undefined && max !== undefined && numericValue > max
-          ? `Nilai maksimum adalah ${formatThousands(max)}.`
+          ? translateText("Nilai maksimum adalah {0}.", { 0: formatThousands(max, locale) })
           : "",
     );
     setRawValue(nextValue);
@@ -55,13 +57,13 @@ export function FormattedNumberInput({
         disabled={disabled}
         helper={helper}
         inputMode="numeric"
-        label={label}
+        label={translateText(label)}
         onChange={(event) => changeValue(event.currentTarget)}
-        pattern="[0-9.]*"
-        placeholder={placeholder ? formatThousands(placeholder) : undefined}
+        pattern={locale === "en" ? "[0-9,]*" : "[0-9.]*"}
+        placeholder={placeholder ? formatThousands(placeholder, locale) : undefined}
         required={required}
         type="text"
-        value={formatThousands(rawValue)}
+        value={formatThousands(rawValue, locale)}
       />
       <input
         disabled={disabled}

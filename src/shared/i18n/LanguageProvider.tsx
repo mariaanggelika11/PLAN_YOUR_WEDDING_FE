@@ -1,73 +1,111 @@
 "use client";
 
-import { enDictionary, enTextDictionary } from "@/shared/i18n/dictionaries/en";
-import { idDictionary, type TranslationKey } from "@/shared/i18n/dictionaries/id";
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { AppMessages } from "./catalog";
+import { loadLocaleMessages } from "./loadMessages";
+import { isAppLocale, LOCALE_PREFERENCE_KEY, type AppLocale } from "./locale";
+export type { AppLocale } from "./locale";
 
-export type AppLocale = "id" | "en";
-type TranslationVariables = Record<string, string | number>;
-
-interface LanguageContextValue {
-  locale: AppLocale;
+interface LanguageActions {
   setLocale: (locale: AppLocale) => void;
-  t: (key: TranslationKey, variables?: TranslationVariables) => string;
-  translateText: (text: string) => string;
   toggleLocale: () => void;
+  isSwitchingLocale: boolean;
+  languageError: boolean;
+}
+export const LanguageActionsContext = createContext<LanguageActions | null>(null);
+
+function persistLocale(locale: AppLocale) {
+  document.cookie = `${LOCALE_PREFERENCE_KEY}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+  try {
+    window.localStorage.setItem(LOCALE_PREFERENCE_KEY, locale);
+  } catch {
+    /* Cookie and current locale remain available. */
+  }
 }
 
-const STORAGE_KEY = "pyw-locale";
-const dictionaries = { id: idDictionary, en: enDictionary };
+export function LanguageProvider({
+  children,
+  initialLocale,
+  initialMessages,
+}: {
+  children: ReactNode;
+  initialLocale: AppLocale;
+  initialMessages: AppMessages;
+}) {
+  const [active, setActive] = useState({ locale: initialLocale, messages: initialMessages });
+  const [isSwitchingLocale, setSwitching] = useState(false);
+  const [languageError, setLanguageError] = useState(false);
+  const cache = useRef(new Map<AppLocale, AppMessages>([[initialLocale, initialMessages]]));
+  const changeId = useRef(0);
 
-export const LanguageContext = createContext<LanguageContextValue | null>(null);
-
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<AppLocale>("id");
-
-  const setLocale = useCallback((nextLocale: AppLocale) => {
-    setLocaleState(nextLocale);
+  const setLocale = useCallback(async (locale: AppLocale) => {
+    if (!isAppLocale(locale)) return;
+    const requestId = ++changeId.current;
+    setSwitching(true);
+    setLanguageError(false);
     try {
-      window.localStorage.setItem(STORAGE_KEY, nextLocale);
+      const messages = cache.current.get(locale) ?? (await loadLocaleMessages(locale));
+      cache.current.set(locale, messages);
+      if (requestId !== changeId.current) return;
+      setActive({ locale, messages });
+      persistLocale(locale);
     } catch {
-      // Bahasa tetap berubah walaupun penyimpanan browser tidak tersedia.
+      if (requestId === changeId.current) setLanguageError(true);
+    } finally {
+      if (requestId === changeId.current) setSwitching(false);
     }
   }, []);
 
   useEffect(() => {
+    const hasCookie = document.cookie
+      .split(";")
+      .some((entry) => entry.trim().startsWith(`${LOCALE_PREFERENCE_KEY}=`));
+    if (hasCookie) return;
     try {
-      const savedLocale = window.localStorage.getItem(STORAGE_KEY);
-      if (savedLocale === "id" || savedLocale === "en") setLocaleState(savedLocale);
+      const saved = window.localStorage.getItem(LOCALE_PREFERENCE_KEY);
+      if (isAppLocale(saved)) void setLocale(saved);
     } catch {
-      // Gunakan bahasa Indonesia sebagai fallback.
+      /* Keep the language rendered by the server. */
     }
-  }, []);
+  }, [setLocale]);
 
   useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
+    const sync = (event: StorageEvent) => {
+      if (event.key === LOCALE_PREFERENCE_KEY && isAppLocale(event.newValue))
+        void setLocale(event.newValue);
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [setLocale]);
+  useEffect(() => {
+    document.documentElement.lang = active.locale;
+  }, [active.locale]);
 
-  const t = useCallback(
-    (key: TranslationKey, variables: TranslationVariables = {}) =>
-      interpolate(dictionaries[locale][key] ?? idDictionary[key], variables),
-    [locale],
+  const toggleLocale = useCallback(() => {
+    void setLocale(active.locale === "id" ? "en" : "id");
+  }, [active.locale, setLocale]);
+  const actions = useMemo(
+    () => ({ setLocale, toggleLocale, isSwitchingLocale, languageError }),
+    [setLocale, toggleLocale, isSwitchingLocale, languageError],
   );
-  const toggleLocale = useCallback(
-    () => setLocale(locale === "id" ? "en" : "id"),
-    [locale, setLocale],
-  );
-  const translateText = useCallback(
-    (text: string) => (locale === "en" ? (enTextDictionary[text] ?? text) : text),
-    [locale],
-  );
-  const value = useMemo(
-    () => ({ locale, setLocale, t, toggleLocale, translateText }),
-    [locale, setLocale, t, toggleLocale, translateText],
-  );
-
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
-
-function interpolate(template: string, variables: TranslationVariables) {
-  return template.replace(/\{(\w+)\}/g, (placeholder, key: string) =>
-    key in variables ? String(variables[key]) : placeholder,
+  return (
+    <LanguageActionsContext.Provider value={actions}>
+      <NextIntlClientProvider
+        locale={active.locale}
+        messages={active.messages}
+        timeZone="Asia/Jakarta"
+      >
+        {children}
+      </NextIntlClientProvider>
+    </LanguageActionsContext.Provider>
   );
 }

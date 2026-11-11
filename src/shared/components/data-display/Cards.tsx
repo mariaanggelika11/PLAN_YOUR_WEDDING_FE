@@ -23,16 +23,19 @@ export function DashboardCard({
   return (
     <article className="rounded-xl border bg-white p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-stone-500">{translateText(label)}</p>
+        <p className="text-sm text-stone-600">{translateText(label)}</p>
         <span className="size-1.5 rounded-full bg-stone-300" />
       </div>
-      <p className="mt-4 break-words text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
-      {note && <p className="mt-2 text-xs text-stone-500">{translateText(note)}</p>}
+      <p className="mt-4 break-words text-2xl font-semibold tracking-tight tabular-nums">
+        {typeof value === "string" ? translateText(value) : value}
+      </p>
+      {note && <p className="mt-2 text-xs text-stone-600">{translateText(note)}</p>}
     </article>
   );
 }
 export function VendorCard({ vendor }: { vendor: Vendor }) {
   const { translateText } = useTranslation();
+
   if (vendor.status !== "VERIFIED_ACTIVE") return null;
   // TODO API: Data vendor card berasal dari endpoint marketplace vendor list
   return (
@@ -42,11 +45,12 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
           src={vendor.image}
           alt={vendor.name}
           fill
+          sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
           className="object-cover transition duration-500 "
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
         <button
-          aria-label="Simpan vendor"
+          aria-label={translateText("Simpan vendor")}
           className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-white/90 text-stone-600 backdrop-blur hover:text-blush"
         >
           <Heart size={17} />
@@ -69,7 +73,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
               {vendor.name}
               <BadgeCheck size={16} className="fill-blue-500 text-white" />
             </h3>
-            <p className="mt-1 flex items-center gap-1 text-xs text-stone-500">
+            <p className="mt-1 flex items-center gap-1 text-xs text-stone-600">
               <MapPin size={13} /> {vendor.city}
             </p>
           </div>
@@ -81,7 +85,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
         <div className="mt-4 grid grid-cols-3 gap-2">
           {[1, 2, 3].map((item) => (
             <div className="relative h-12 overflow-hidden rounded-lg" key={item}>
-              <Image src={vendor.image} alt="" fill className="object-cover" />
+              <Image src={vendor.image} alt="" fill sizes="120px" className="object-cover" />
             </div>
           ))}
         </div>
@@ -90,7 +94,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
             <Link href={ROUTES.customer.vendor(vendor.id)}>{translateText("Lihat Detail")}</Link>
           </AppButton>
           <AppButton
-            aria-label="Chat vendor"
+            aria-label={translateText("Chat vendor")}
             variant="secondary"
             className="h-11 min-h-11 w-11 shrink-0 px-0"
           >
@@ -102,7 +106,8 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   );
 }
 export function ProductCard({ product }: { product: Product }) {
-  const { translateText } = useTranslation();
+  const { locale, translateText } = useTranslation();
+
   // TODO API: Ambil daftar package aktif dari backend
   return (
     <article className="group flex h-full flex-col rounded-xl border bg-white p-4 transition-colors hover:border-stone-300">
@@ -111,6 +116,7 @@ export function ProductCard({ product }: { product: Product }) {
           src={product.image}
           alt={product.name}
           fill
+          sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
           className="object-cover transition duration-500 "
         />
         <div className="absolute right-3 top-3">
@@ -119,8 +125,8 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <p className="mt-4 text-xs font-medium text-blush">{product.category}</p>
       <h3 className="mt-1 font-semibold">{product.name}</h3>
-      <p className="mt-2 text-lg font-semibold">{formatCurrency(product.price)}</p>
-      <p className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">
+      <p className="mt-2 text-lg font-semibold">{formatCurrency(product.price, locale)}</p>
+      <p className="mt-2 flex flex-wrap gap-3 text-xs text-stone-600">
         <span className="flex items-center gap-1">
           <Users size={13} /> {product.guestCapacity} {translateText("tamu")}
         </span>

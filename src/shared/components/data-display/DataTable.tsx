@@ -1,9 +1,10 @@
 "use client";
+
 import { Pagination } from "@/shared/components/navigation/Pagination";
 
 import { useTranslation } from "@/shared/i18n/useTranslation";
 import { Search } from "lucide-react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 interface DataTableProps {
   columns: string[];
@@ -33,22 +34,24 @@ export function DataTable({
   showToolbar = Boolean(onSearchChange),
   showPagination = false,
 }: DataTableProps) {
-  const { t, translateText } = useTranslation();
+  const { translateText, t } = useTranslation();
+  const titleId = useId();
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <section className="min-w-0 overflow-hidden rounded-xl border bg-white">
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-semibold">
+          <h3 id={titleId} className="font-semibold">
             {title ? translateText(title) : t("table.defaultTitle")}
           </h3>
-          <p className="text-xs text-stone-400">
+          <p className="text-xs text-stone-600">
             {t("table.resultCount", { total, item: translateText(itemLabel) })}
           </p>
         </div>
         {showToolbar && (
           <div className="flex min-w-0 gap-2">
-            <label className="flex flex-1 items-center gap-2 min-w-0 rounded-lg border bg-white px-3 py-2.5 text-stone-500 focus-within:border-blush">
+            <label className="flex flex-1 items-center gap-2 min-w-0 rounded-lg border bg-white px-3 py-2.5 text-stone-600 focus-within:border-blush">
               <Search size={15} />
               <input
                 aria-label={t("table.search")}
@@ -61,12 +64,20 @@ export function DataTable({
           </div>
         )}
       </div>
-      <div className="overflow-x-auto overscroll-x-contain">
+      <div
+        role="region"
+        aria-labelledby={titleId}
+        tabIndex={0}
+        className="overflow-x-auto overscroll-x-contain focus-visible:outline-offset-[-2px]"
+      >
         <table className="w-full min-w-[720px] text-left text-sm tabular-nums">
+          <caption className="sr-only">
+            {title ? translateText(title) : t("table.defaultTitle")}
+          </caption>
           <thead className="bg-stone-50 text-stone-600">
             <tr>
               {columns.map((column) => (
-                <th className="px-4 py-3 text-xs font-medium" key={column}>
+                <th scope="col" className="px-4 py-3 text-xs font-medium" key={column}>
                   {translateText(column)}
                 </th>
               ))}
@@ -88,7 +99,7 @@ export function DataTable({
               ))
             ) : (
               <tr className="border-t">
-                <td className="px-4 py-12 text-center text-stone-500" colSpan={columns.length}>
+                <td className="px-4 py-12 text-center text-stone-600" colSpan={columns.length}>
                   {t("table.empty")}
                 </td>
               </tr>
@@ -103,7 +114,7 @@ export function DataTable({
           totalPages={totalPages}
           onPageChange={onPageChange ?? (() => {})}
           disabled={!onPageChange}
-          label="Halaman tabel"
+          label={translateText("Halaman tabel")}
         />
       )}
     </section>

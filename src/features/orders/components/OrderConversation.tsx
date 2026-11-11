@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { conversationClosedReason } from "../completion";
 import type { Order } from "../types";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,18 +19,22 @@ export function OrderConversation({
   orderId: string;
   status?: Order["status"];
 }) {
+  const { translateText } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <details
       className="rounded-xl border bg-white p-5"
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary className="cursor-pointer font-semibold">Percakapan pesanan</summary>
+      <summary className="cursor-pointer font-semibold">
+        {translateText("Percakapan pesanan")}
+      </summary>
       {open && <ConversationBody key={orderId} orderId={orderId} status={status} />}
     </details>
   );
 }
 function ConversationBody({ orderId, status }: { orderId: string; status?: Order["status"] }) {
+  const { translateText, locale } = useTranslation();
   const [pages, setPages] = useState(1);
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -90,7 +95,7 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
     <div className="mt-4 grid min-w-0 gap-4">
       <div className="flex flex-wrap gap-2">
         <AppButton variant="secondary" disabled={resource.loading} onClick={() => void reload()}>
-          Muat ulang pesan
+          {translateText("Muat ulang pesan")}{" "}
         </AppButton>
         <AppButton
           variant="secondary"
@@ -101,7 +106,7 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
           }
           onClick={() => setPages((value) => value + 1)}
         >
-          Muat pesan lama
+          {translateText("Muat pesan lama")}{" "}
         </AppButton>
       </div>
       {readError && (
@@ -116,8 +121,8 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
       ) : (
         <div className="grid max-h-[480px] gap-3 overflow-y-auto" aria-live="polite">
           {!resource.data.data.length && (
-            <p className="text-sm text-stone-500">
-              Belum ada pesan. Diskusikan kebutuhan acara di sini.
+            <p className="text-sm text-stone-600">
+              {translateText("Belum ada pesan. Diskusikan kebutuhan acara di sini.")}{" "}
             </p>
           )}
           {resource.data.data.map((item) => (
@@ -134,24 +139,35 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
               {!!item.imageAttachmentIds.length && (
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {item.imageAttachmentIds.map((id) => (
-                    <PortfolioImage key={id} id={id} alt="Lampiran percakapan pesanan" />
+                    <PortfolioImage
+                      key={id}
+                      id={id}
+                      alt={translateText("Lampiran percakapan pesanan")}
+                    />
                   ))}
                 </div>
               )}
-              <p className="mt-2 text-xs text-stone-500">
-                {formatDateTime(item.createdAt)}
-                {item.isMine ? (item.isRead ? " · Dibaca ✓✓" : " · Terkirim ✓") : ""}
+              <p className="mt-2 text-xs text-stone-600">
+                {formatDateTime(item.createdAt, locale)}
+                {item.isMine
+                  ? item.isRead
+                    ? translateText(" · Dibaca ✓✓")
+                    : translateText(" · Terkirim ✓")
+                  : ""}
               </p>
             </article>
           ))}
         </div>
       )}
       {!canSend && resource.data && (
-        <p className="text-sm text-stone-500">
-          {closedReason ??
-            (closed
-              ? "Pesanan telah ditutup. Riwayat percakapan tetap dapat dibaca."
-              : "Percakapan ini hanya dapat dibaca. Pengiriman pesan tidak tersedia untuk status pesanan atau peran Anda saat ini.")}
+        <p className="text-sm text-stone-600">
+          {closedReason
+            ? translateText(closedReason)
+            : closed
+              ? translateText("Pesanan telah ditutup. Riwayat percakapan tetap dapat dibaca.")
+              : translateText(
+                  "Percakapan ini hanya dapat dibaca. Pengiriman pesan tidak tersedia untuk status pesanan atau peran Anda saat ini.",
+                )}
         </p>
       )}
       <form
@@ -172,14 +188,14 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
         }}
       >
         <AppTextarea
-          label="Pesan"
+          label={translateText("Pesan")}
           value={message}
           maxLength={2000}
           disabled={!canSend || action.loading}
           onChange={(event) => setMessage(event.target.value)}
         />
         <label className="grid gap-2 text-sm">
-          Lampiran gambar (maksimal 5, masing-masing 5 MB)
+          {translateText("Lampiran gambar (maksimal 5, masing-masing 5 MB)")}{" "}
           <input
             key={fileKey}
             type="file"
@@ -220,7 +236,7 @@ function ConversationBody({ orderId, status }: { orderId: string; status?: Order
           loading={action.loading}
           disabled={!canSend || (!message.trim() && !files.length)}
         >
-          Kirim pesan
+          {translateText("Kirim pesan")}{" "}
         </AppButton>
       </form>
     </div>

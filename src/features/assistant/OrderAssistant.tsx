@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 
 import type { AssistantContext } from "@/features/assistant/types";
 import { AppButton } from "@/shared/components/ui/AppButton";
@@ -9,6 +10,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
 export function OrderAssistant({ role }: { role: AppRole }) {
+  const { translateText } = useTranslation();
   const pathname = usePathname();
   const [question, setQuestion] = useState("");
   const context = useMemo(() => assistantContext(pathname, role), [pathname, role]);
@@ -19,12 +21,12 @@ export function OrderAssistant({ role }: { role: AppRole }) {
     <Dialog.Root>
       <Dialog.Trigger asChild>
         <button
-          aria-label="Buka asisten alur pesanan"
+          aria-label={translateText("Buka asisten alur pesanan")}
           className="fixed bottom-24 right-4 z-40 flex min-h-12 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white shadow-overlay transition hover:bg-slate-800 sm:right-6 lg:bottom-6"
           type="button"
         >
           <Sparkles size={17} />
-          <span className="hidden sm:inline">Tanya PYW AI</span>
+          <span className="hidden sm:inline">{translateText("Tanya PYW AI")}</span>
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -36,13 +38,15 @@ export function OrderAssistant({ role }: { role: AppRole }) {
             </span>
             <div className="min-w-0">
               <Dialog.Title className="font-semibold text-ink">PYW Order Assistant</Dialog.Title>
-              <Dialog.Description className="mt-0.5 text-xs leading-5 text-stone-500">
-                Pelajari status, pembayaran, dan langkah berikutnya dalam pesanan.
+              <Dialog.Description className="mt-0.5 text-xs leading-5 text-stone-600">
+                {translateText(
+                  "Pelajari status, pembayaran, dan langkah berikutnya dalam pesanan.",
+                )}{" "}
               </Dialog.Description>
             </div>
             <Dialog.Close
-              className="ml-auto grid size-9 shrink-0 place-items-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-ink"
-              aria-label="Tutup asisten"
+              className="ml-auto grid size-9 shrink-0 place-items-center rounded-xl text-stone-600 hover:bg-stone-100 hover:text-ink"
+              aria-label={translateText("Tutup asisten")}
             >
               <X size={18} />
             </Dialog.Close>
@@ -54,8 +58,9 @@ export function OrderAssistant({ role }: { role: AppRole }) {
                 <Sparkles size={16} /> UI preview
               </div>
               <p className="mt-1.5 text-xs leading-5 text-blue-700">
-                Layanan AI backend belum terhubung. Pertanyaan belum dikirim dan tidak ada data
-                pesanan yang diproses AI.
+                {translateText(
+                  "Layanan AI backend belum terhubung. Pertanyaan belum dikirim dan tidak ada data pesanan yang diproses AI.",
+                )}{" "}
               </p>
             </div>
 
@@ -65,10 +70,13 @@ export function OrderAssistant({ role }: { role: AppRole }) {
                   <MessageCircleQuestion size={18} />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-ink">Apa yang ingin Anda pahami?</p>
-                  <p className="mt-1 text-xs leading-5 text-stone-500">
-                    Saya nantinya menggunakan halaman aktif sebagai konteks, tanpa meminta Anda
-                    menyalin nomor order.
+                  <p className="text-sm font-semibold text-ink">
+                    {translateText("Apa yang ingin Anda pahami?")}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-stone-600">
+                    {translateText(
+                      "Saya nantinya menggunakan halaman aktif sebagai konteks, tanpa meminta Anda menyalin nomor order.",
+                    )}{" "}
                   </p>
                 </div>
               </div>
@@ -80,7 +88,7 @@ export function OrderAssistant({ role }: { role: AppRole }) {
                     onClick={() => setQuestion(suggestion)}
                     type="button"
                   >
-                    {suggestion}
+                    {translateText(suggestion)}
                   </button>
                 ))}
               </div>
@@ -89,29 +97,32 @@ export function OrderAssistant({ role }: { role: AppRole }) {
             <div className="mt-4 flex items-start gap-2 rounded-xl bg-stone-100 p-3 text-xs leading-5 text-stone-600">
               <ShieldCheck className="mt-0.5 shrink-0 text-emerald-600" size={16} />
               <p>
-                Asisten hanya memberi penjelasan. Verifikasi pembayaran, penolakan, dan perubahan
-                status tetap membutuhkan tindakan pengguna.
+                {translateText(
+                  "Asisten hanya memberi penjelasan. Verifikasi pembayaran, penolakan, dan perubahan status tetap membutuhkan tindakan pengguna.",
+                )}{" "}
               </p>
             </div>
           </div>
 
           <footer className="border-t bg-white p-4">
             <label className="sr-only" htmlFor="pyw-ai-question">
-              Pertanyaan untuk asisten
+              {translateText("Pertanyaan untuk asisten")}{" "}
             </label>
             <textarea
               className="min-h-24 w-full resize-none rounded-xl border bg-stone-50 px-4 py-3 text-sm outline-none focus:border-blush focus:ring-2 focus:ring-rose-100"
               id="pyw-ai-question"
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Contoh: Setelah pembayaran diverifikasi, apa langkah berikutnya?"
+              placeholder={translateText(
+                "Contoh: Setelah pembayaran diverifikasi, apa langkah berikutnya?",
+              )}
               value={question}
             />
             <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-stone-400">
-                AI dapat keliru. Status resmi selalu berasal dari sistem.
+              <p className="text-[11px] text-stone-600">
+                {translateText("AI dapat keliru. Status resmi selalu berasal dari sistem.")}{" "}
               </p>
-              <AppButton disabled title="Menunggu integrasi backend">
-                <Send size={15} /> Kirim
+              <AppButton disabled title={translateText("Menunggu integrasi backend")}>
+                <Send size={15} /> {translateText("Kirim")}{" "}
               </AppButton>
             </div>
           </footer>

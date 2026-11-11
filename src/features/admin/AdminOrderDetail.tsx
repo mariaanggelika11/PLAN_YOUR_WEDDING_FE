@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { ConfirmationDeadline } from "@/features/orders/components/ConfirmationDeadline";
 import { useOrderRefresh } from "@/features/orders/useOrderRefresh";
 import { OrderConversation } from "@/features/orders/components/OrderConversation";
@@ -14,6 +15,7 @@ import { StatusBadge } from "@/shared/components/feedback/StatusBadge";
 import { FeaturePage } from "@/shared/components/layout/FeaturePage";
 import { formatDate } from "@/shared/utils/formatDate";
 export function AdminOrderDetail({ id }: { id: string }) {
+  const { translateText, locale } = useTranslation();
   const loader = useCallback(() => getOrder(id), [id]);
   const resource = useAsyncResource(loader, { initialData: null });
   useOrderRefresh(resource.reload, resource.loading);
@@ -23,8 +25,8 @@ export function AdminOrderDetail({ id }: { id: string }) {
   if (!order) return null;
   return (
     <FeaturePage
-      title={`Pesanan ${order.orderNumber}`}
-      description="Detail transaksi dan tindak lanjut sengketa."
+      title={translateText("Pesanan {0}", { 0: order.orderNumber })}
+      description={translateText("Detail transaksi dan tindak lanjut sengketa.")}
     >
       <ConfirmationDeadline order={order} />
       <OrderOverview
@@ -32,17 +34,17 @@ export function AdminOrderDetail({ id }: { id: string }) {
           ["Customer", order.customer.fullName],
           ["Vendor", order.vendor.businessName],
           ["Paket", order.productName],
-          ["Tanggal", formatDate(order.eventDate)],
+          ["Tanggal", formatDate(order.eventDate, locale)],
           ["Lokasi", order.eventLocation],
           ["Status", <StatusBadge key="status" status={order.status} />],
         ]}
-        timeline={buildOrderTimeline(order)}
+        timeline={buildOrderTimeline(order, locale)}
         paymentSummary={<PaymentSummary order={order} />}
       />
       <OrderConversation key={order.id} orderId={order.id} status={order.status} />
       {order.rejectReason && (
         <p className="rounded-xl border bg-white p-4 text-sm">
-          Catatan pesanan: {order.rejectReason}
+          {translateText("Catatan pesanan:")} {order.rejectReason}
         </p>
       )}
       <DisputeOrder order={order} admin onChanged={resource.reload} />

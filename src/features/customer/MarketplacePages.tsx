@@ -1,4 +1,6 @@
 "use client";
+import { AttachmentImage } from "@/shared/components/ui/AttachmentImage";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { apiErrorCode, shouldReloadResource, isForbiddenResource } from "@/shared/api/errorCodes";
 import { AvailabilityCheck, localDateToday } from "@/features/marketplace/AvailabilityCheck";
 import type { Availability } from "@/features/marketplace/api";
@@ -47,8 +49,9 @@ function Page({
   description: string;
   children: ReactNode;
 }) {
+  const { translateText } = useTranslation();
   return (
-    <FeaturePage title={title} description={description} showHeader={false}>
+    <FeaturePage title={title} description={translateText(description)} showHeader={false}>
       {children}
     </FeaturePage>
   );
@@ -68,6 +71,7 @@ export function ProductDetail({
   canBook?: boolean;
   productId: string;
 }) {
+  const { translateText, locale } = useTranslation();
   const [product, setProduct] = useState<VendorProduct | null>(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -85,7 +89,10 @@ export function ProductDetail({
   useEffect(() => void load(), [load]);
   if (error)
     return (
-      <Page title="Detail Produk" description="Produk tidak dapat ditampilkan.">
+      <Page
+        title={translateText("Detail Produk")}
+        description={translateText("Produk tidak dapat ditampilkan.")}
+      >
         <ErrorState retry={() => void load()} />
       </Page>
     );
@@ -98,7 +105,10 @@ export function ProductDetail({
     product.terms ? { title: "Syarat dan ketentuan", content: product.terms } : null,
   ].filter((item): item is { title: string; content: string } => Boolean(item));
   return (
-    <Page title={product.name} description={product.description ?? "Detail paket layanan vendor."}>
+    <Page
+      title={product.name}
+      description={product.description ?? translateText("Detail paket layanan vendor.")}
+    >
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="page-stack">
           <ProductGallery attachmentIds={product.imageAttachmentIds} name={product.name} />
@@ -108,14 +118,16 @@ export function ProductDetail({
                 <Store size={20} />
               </span>
               <span className="min-w-0">
-                <span className="block text-xs text-stone-500">Disediakan oleh</span>
+                <span className="block text-xs text-stone-600">
+                  {translateText("Disediakan oleh")}
+                </span>
                 <span className="block break-words text-sm font-semibold">
                   {product.vendor.businessName}
                 </span>
               </span>
             </Link>
             <AppButton asChild variant="secondary">
-              <Link href={storeHref}>Lihat toko</Link>
+              <Link href={storeHref}>{translateText("Lihat toko")}</Link>
             </AppButton>
           </section>
           <DetailGrid
@@ -127,10 +139,15 @@ export function ProductDetail({
                 </Link>,
               ],
               ["Kategori", product.category ?? "-"],
-              ["Kapasitas", product.guestCapacity ? `${product.guestCapacity} tamu` : "-"],
+              [
+                "Kapasitas",
+                product.guestCapacity
+                  ? translateText("{0} tamu", { 0: product.guestCapacity })
+                  : "-",
+              ],
               ["Durasi", product.duration ?? "-"],
               ["Area layanan", product.serviceArea ?? "-"],
-              ["Minimum DP", formatCurrency(product.minimumDp ?? 0)],
+              ["Minimum DP", formatCurrency(product.minimumDp ?? 0, locale)],
             ]}
           />
           {detailItems.length > 0 && <Accordion items={detailItems} />}
@@ -138,11 +155,11 @@ export function ProductDetail({
         </div>
         <aside className="h-fit rounded-xl border bg-white p-5 shadow-soft lg:sticky lg:top-20">
           <p className="text-xs font-semibold uppercase tracking-wide text-blush">
-            {product.category ?? "Layanan wedding"}
+            {product.category ?? translateText("Layanan wedding")}
           </p>
           <h2 className="mt-2 text-2xl font-semibold leading-tight text-ink">{product.name}</h2>
           <Link href={storeHref} className="mt-2 inline-block text-sm text-blush hover:underline">
-            oleh {product.vendor.businessName}
+            {translateText("oleh")} {product.vendor.businessName}
           </Link>
           {product.description && (
             <p className="mt-4 line-clamp-3 text-sm leading-6 text-stone-600">
@@ -154,11 +171,13 @@ export function ProductDetail({
           </div>
           {canBook ? (
             <AppButton asChild className="mt-3 w-full">
-              <Link href={ROUTES.customer.checkout(product.id)}>Booking sekarang</Link>
+              <Link href={ROUTES.customer.checkout(product.id)}>
+                {translateText("Booking sekarang")}
+              </Link>
             </AppButton>
           ) : (
             <p className="mt-3 rounded-xl bg-blue-50 p-3 text-center text-sm text-blue-700">
-              Mode lihat marketplace vendor
+              {translateText("Mode lihat marketplace vendor")}{" "}
             </p>
           )}
         </aside>
@@ -168,6 +187,7 @@ export function ProductDetail({
 }
 
 function ProductGallery({ attachmentIds, name }: { attachmentIds: string[]; name: string }) {
+  const { translateText } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
   useEffect(() => setActiveIndex(0), [attachmentIds]);
@@ -181,7 +201,10 @@ function ProductGallery({ attachmentIds, name }: { attachmentIds: string[]; name
   function finishSwipe(clientX: number) {
     if (touchStartX.current === null || !hasMultipleImages) return;
     const distance = clientX - touchStartX.current;
-    if (Math.abs(distance) >= 45) distance > 0 ? showPrevious() : showNext();
+    if (Math.abs(distance) >= 45) {
+      if (distance > 0) showPrevious();
+      else showNext();
+    }
     touchStartX.current = null;
   }
 
@@ -202,7 +225,7 @@ function ProductGallery({ attachmentIds, name }: { attachmentIds: string[]; name
         <CustomerProductImage
           attachmentId={attachmentIds[activeIndex]}
           className="h-64 rounded-xl sm:h-80 lg:h-[380px]"
-          name={`${name} - foto ${activeIndex + 1}`}
+          name={translateText("{0} - foto {1}", { 0: name, 1: activeIndex + 1 })}
         />
         {hasMultipleImages && (
           <>
@@ -218,7 +241,7 @@ function ProductGallery({ attachmentIds, name }: { attachmentIds: string[]; name
         <div className="flex gap-3 overflow-x-auto pb-1">
           {attachmentIds.map((id, index) => (
             <button
-              aria-label={`Tampilkan foto ${index + 1}`}
+              aria-label={translateText("Tampilkan foto {0}", { 0: index + 1 })}
               className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-18 sm:w-24 ${activeIndex === index ? "border-blush ring-2 ring-rose-100" : "border-transparent opacity-70 hover:opacity-100"}`}
               key={id}
               onClick={() => setActiveIndex(index)}
@@ -240,10 +263,15 @@ function GalleryNavigationButton({
   direction: "previous" | "next";
   onClick: () => void;
 }) {
+  const { translateText } = useTranslation();
   const Icon = direction === "previous" ? ChevronLeft : ChevronRight;
   return (
     <button
-      aria-label={direction === "previous" ? "Foto sebelumnya" : "Foto berikutnya"}
+      aria-label={
+        direction === "previous"
+          ? translateText("Foto sebelumnya")
+          : translateText("Foto berikutnya")
+      }
       className={`absolute top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink opacity-90 shadow-soft backdrop-blur transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 ${direction === "previous" ? "left-3" : "right-3"}`}
       onClick={onClick}
       type="button"
@@ -262,6 +290,7 @@ function CustomerProductImage({
   className: string;
   name: string;
 }) {
+  const { translateText } = useTranslation();
   const load = useCallback(
     () => (attachmentId ? getAttachmentBlob(attachmentId) : Promise.resolve(null)),
     [attachmentId],
@@ -274,9 +303,9 @@ function CustomerProductImage({
   return (
     <div className={`grid place-items-center overflow-hidden bg-stone-100 ${className}`}>
       {image.previewUrl ? (
-        <img alt={name} className="size-full object-cover" src={image.previewUrl} />
+        <AttachmentImage alt={name} className="size-full object-cover" src={image.previewUrl} />
       ) : (
-        <span className="text-xs text-stone-400">Belum ada gambar</span>
+        <span className="text-xs text-stone-600">{translateText("Belum ada gambar")}</span>
       )}
     </div>
   );
@@ -293,6 +322,7 @@ function PaymentTypeCards({
   price: number;
   value: "DP" | "FULL" | "";
 }) {
+  const { translateText, locale } = useTranslation();
   const choices = [
     {
       description: "Minimum untuk mengamankan pesanan",
@@ -310,10 +340,10 @@ function PaymentTypeCards({
 
   return (
     <fieldset className="rounded-xl border bg-white p-5 shadow-sm sm:p-7">
-      <legend className="sr-only">Pilih pembayaran</legend>
-      <h2 className="text-xl font-semibold text-ink">Pilih pembayaran</h2>
-      <p className="mt-1 text-sm text-stone-500">
-        Pilih pembayaran DP minimum atau langsung lunas untuk melanjutkan.
+      <legend className="sr-only">{translateText("Pilih pembayaran")}</legend>
+      <h2 className="text-xl font-semibold text-ink">{translateText("Pilih pembayaran")}</h2>
+      <p className="mt-1 text-sm text-stone-600">
+        {translateText("Pilih pembayaran DP minimum atau langsung lunas untuk melanjutkan.")}{" "}
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {choices.map((choice) => {
@@ -332,18 +362,22 @@ function PaymentTypeCards({
                 type="radio"
                 value={choice.type}
               />
-              <span className="block text-sm font-semibold text-ink">{choice.label}</span>
+              <span className="block text-sm font-semibold text-ink">
+                {translateText(choice.label)}
+              </span>
               <strong className="mt-3 block text-xl text-ink">
-                {formatCurrency(choice.amount)}
+                {formatCurrency(choice.amount, locale)}
               </strong>
-              <span className="mt-1 block text-xs text-stone-500">{choice.description}</span>
+              <span className="mt-1 block text-xs text-stone-600">
+                {translateText(choice.description)}
+              </span>
             </label>
           );
         })}
       </div>
       {!value && (
         <p className="mt-3 text-xs font-medium text-amber-700">
-          Pilih salah satu metode pembayaran.
+          {translateText("Pilih salah satu metode pembayaran.")}{" "}
         </p>
       )}
     </fieldset>
@@ -351,6 +385,7 @@ function PaymentTypeCards({
 }
 
 export function CheckoutPage({ productId }: { productId: string }) {
+  const { translateText, locale } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
@@ -393,40 +428,49 @@ export function CheckoutPage({ productId }: { productId: string }) {
   );
 
   return (
-    <Page title="Checkout" description="Lengkapi detail acara untuk membuat pesanan.">
-      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
+    <Page
+      title="Checkout"
+      description={translateText("Lengkapi detail acara untuk membuat pesanan.")}
+    >
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-600">
         <span className="rounded-full bg-blush px-3 py-1.5 text-white">
-          1 · Detail & konfirmasi
+          {translateText("1 · Detail & konfirmasi")}{" "}
         </span>
         <span aria-hidden="true">—</span>
-        <span className="rounded-full bg-stone-100 px-3 py-1.5">2 · Pembayaran</span>
+        <span className="rounded-full bg-stone-100 px-3 py-1.5">
+          {translateText("2 · Pembayaran")}
+        </span>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="grid gap-3">
           {filledFromProfile ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
               <div>
-                <p className="font-semibold">Detail acara diisi dari Profil Wedding</p>
+                <p className="font-semibold">
+                  {translateText("Detail acara diisi dari Profil Wedding")}
+                </p>
                 <p className="mt-0.5 text-xs text-emerald-700">
-                  Perubahan di sini hanya berlaku untuk pesanan ini.
+                  {translateText("Perubahan di sini hanya berlaku untuk pesanan ini.")}{" "}
                 </p>
               </div>
               <Link className="text-xs font-semibold underline" href={ROUTES.customer.profile}>
-                Edit profil
+                {translateText("Edit profil")}{" "}
               </Link>
             </div>
           ) : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Isi detail acara di bawah. Anda juga dapat melengkapinya sekali di{" "}
+              {translateText("Isi detail acara di bawah. Anda juga dapat melengkapinya sekali di")}{" "}
               <Link className="font-semibold underline" href={ROUTES.customer.profile}>
-                Profil Wedding
+                {translateText("Profil Wedding")}{" "}
               </Link>{" "}
-              agar checkout berikutnya lebih cepat.
+              {translateText("agar checkout berikutnya lebih cepat.")}{" "}
             </div>
           )}
           {customer.error && (
             <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-              Profil tidak berhasil dimuat. Anda tetap dapat mengisi detail acara secara manual.
+              {translateText(
+                "Profil tidak berhasil dimuat. Anda tetap dapat mengisi detail acara secara manual.",
+              )}{" "}
             </p>
           )}
           <EntityForm
@@ -457,7 +501,9 @@ export function CheckoutPage({ productId }: { productId: string }) {
               availability.eventDate !== (selectedDate ?? initialValues.date)
             }
             initialValues={initialValues}
-            note="Pastikan tanggal, lokasi, dan jumlah tamu sesuai kebutuhan vendor."
+            note={translateText(
+              "Pastikan tanggal, lokasi, dan jumlah tamu sesuai kebutuhan vendor.",
+            )}
             showDraft={false}
             loading={action.loading}
             submitLabel="Buat pesanan & lanjut pembayaran"
@@ -493,9 +539,9 @@ export function CheckoutPage({ productId }: { productId: string }) {
           >
             {duplicateOrder && (
               <p className="text-sm text-amber-800">
-                Anda sudah memiliki pesanan untuk produk dan tanggal ini.{" "}
+                {translateText("Anda sudah memiliki pesanan untuk produk dan tanggal ini.")}{" "}
                 <Link href={ROUTES.customer.orders} className="font-semibold underline">
-                  Lihat pesanan saya
+                  {translateText("Lihat pesanan saya")}{" "}
                 </Link>
               </p>
             )}
@@ -508,13 +554,16 @@ export function CheckoutPage({ productId }: { productId: string }) {
               value={paymentType}
             />
           </EntityForm>
-          <p className="px-2 text-center text-xs leading-5 text-stone-500">
-            Anda belum dikenakan pembayaran pada tahap ini. Pesanan dibuat terlebih dahulu sebelum
-            instruksi pembayaran ditampilkan.
+          <p className="px-2 text-center text-xs leading-5 text-stone-600">
+            {translateText(
+              "Anda belum dikenakan pembayaran pada tahap ini. Pesanan dibuat terlebih dahulu sebelum instruksi pembayaran ditampilkan.",
+            )}{" "}
           </p>
         </div>
         <aside className="order-first h-fit rounded-xl border bg-white p-5 shadow-soft lg:order-none lg:sticky lg:top-24">
-          <p className="mb-4 text-sm font-semibold text-ink">Ringkasan pesanan</p>
+          <p className="mb-4 text-sm font-semibold text-ink">
+            {translateText("Ringkasan pesanan")}
+          </p>
           <div className="flex gap-3">
             <CustomerProductImage
               attachmentId={product.imageAttachmentIds[0]}
@@ -522,39 +571,45 @@ export function CheckoutPage({ productId }: { productId: string }) {
               name={product.name}
             />
             <div>
-              <p className="text-xs text-stone-400">{product.vendor.businessName}</p>
+              <p className="text-xs text-stone-600">{product.vendor.businessName}</p>
               <h3 className="mt-0.5 text-sm font-semibold">{product.name}</h3>
               {product.category && (
-                <p className="mt-1 text-xs text-stone-500">{product.category}</p>
+                <p className="mt-1 text-xs text-stone-600">{product.category}</p>
               )}
             </div>
           </div>
           <div className="mt-5 grid gap-3 border-y py-4 text-sm">
             {product.guestCapacity && (
               <div className="flex justify-between gap-3">
-                <span className="text-stone-500">Kapasitas</span>
-                <span>{product.guestCapacity} tamu</span>
+                <span className="text-stone-600">{translateText("Kapasitas")}</span>
+                <span>
+                  {product.guestCapacity} {translateText("tamu")}
+                </span>
               </div>
             )}
             {product.duration && (
               <div className="flex justify-between gap-3">
-                <span className="text-stone-500">Durasi</span>
+                <span className="text-stone-600">{translateText("Durasi")}</span>
                 <span>{product.duration}</span>
               </div>
             )}
             {product.minimumDp != null && (
               <div className="flex justify-between gap-3">
-                <span className="text-stone-500">Minimum DP</span>
-                <span>{formatCurrency(product.minimumDp)}</span>
+                <span className="text-stone-600">{translateText("Minimum DP")}</span>
+                <span>{formatCurrency(product.minimumDp, locale)}</span>
               </div>
             )}
           </div>
           <div className="mt-4 flex items-end justify-between gap-3">
-            <span className="text-sm text-stone-500">Harga paket</span>
-            <span className="text-xl font-semibold text-ink">{formatCurrency(product.price)}</span>
+            <span className="text-sm text-stone-600">{translateText("Harga paket")}</span>
+            <span className="text-xl font-semibold text-ink">
+              {formatCurrency(product.price, locale)}
+            </span>
           </div>
-          <p className="mt-2 text-xs leading-5 text-stone-500">
-            Biaya tambahan, jika ada, harus ditampilkan dan dikonfirmasi sebelum pembayaran.
+          <p className="mt-2 text-xs leading-5 text-stone-600">
+            {translateText(
+              "Biaya tambahan, jika ada, harus ditampilkan dan dikonfirmasi sebelum pembayaran.",
+            )}{" "}
           </p>
         </aside>
       </div>
@@ -562,6 +617,7 @@ export function CheckoutPage({ productId }: { productId: string }) {
   );
 }
 export function PaymentPage({ orderId }: { orderId: string }) {
+  const { translateText, locale } = useTranslation();
   const router = useRouter();
   const popup = usePopup();
   const action = useAsyncAction();
@@ -583,9 +639,12 @@ export function PaymentPage({ orderId }: { orderId: string }) {
   useEffect(() => void load(), [load]);
   if (error) {
     return forbidden ? (
-      <Page title="Akses ditolak" description="Order ini bukan milik akun Anda.">
+      <Page
+        title={translateText("Akses ditolak")}
+        description={translateText("Order ini bukan milik akun Anda.")}
+      >
         <p className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">
-          Anda tidak memiliki akses ke pembayaran order ini.
+          {translateText("Anda tidak memiliki akses ke pembayaran order ini.")}{" "}
         </p>
       </Page>
     ) : (
@@ -596,9 +655,14 @@ export function PaymentPage({ orderId }: { orderId: string }) {
   const payment = getCurrentPayment(order.payments);
   if (!payment)
     return (
-      <Page title="Pembayaran" description="Instruksi pembayaran belum tersedia.">
+      <Page
+        title={translateText("Pembayaran")}
+        description={translateText("Instruksi pembayaran belum tersedia.")}
+      >
         <p className="rounded-xl bg-amber-50 p-5 text-amber-800">
-          Instruksi pembayaran belum tersedia. Silakan muat ulang beberapa saat lagi.
+          {translateText(
+            "Instruksi pembayaran belum tersedia. Silakan muat ulang beberapa saat lagi.",
+          )}{" "}
         </p>
       </Page>
     );
@@ -623,35 +687,43 @@ export function PaymentPage({ orderId }: { orderId: string }) {
   }
   return (
     <Page
-      title={`Pembayaran ${order.orderNumber}`}
-      description="Transfer sesuai instruksi rekening yang dikunci saat order dibuat."
+      title={translateText("Pembayaran {0}", { 0: order.orderNumber })}
+      description={translateText(
+        "Transfer sesuai instruksi rekening yang dikunci saat order dibuat.",
+      )}
     >
       {payment.rejectReason && (
         <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Bukti sebelumnya ditolak:</strong> {payment.rejectReason}
+          <strong>{translateText("Bukti sebelumnya ditolak:")}</strong> {payment.rejectReason}
         </p>
       )}
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section className="rounded-xl border bg-white p-6 shadow-sm">
           <SectionHeader
-            title="Instruksi pembayaran"
-            description={`${paymentInstallmentLabel(payment.installment)} untuk order ini.`}
+            title={translateText("Instruksi pembayaran")}
+            description={translateText("{0} untuk order ini.", {
+              0: paymentInstallmentLabel(payment.installment, locale),
+            })}
           />
           <div className="mt-5 rounded-xl bg-stone-50 p-5">
-            <p className="text-xs text-stone-500">Transfer ke {payment.bankName}</p>
+            <p className="text-xs text-stone-600">
+              {translateText("Transfer ke")} {payment.bankName}
+            </p>
             <p className="mt-2 text-xl font-semibold">{payment.accountNumber}</p>
-            <p className="text-sm text-stone-500">a.n. {payment.accountHolderName}</p>
+            <p className="text-sm text-stone-600">
+              {translateText("a.n.")} {payment.accountHolderName}
+            </p>
             <AppButton
               className="mt-4"
               onClick={() => void navigator.clipboard.writeText(payment.accountNumber)}
               variant="secondary"
             >
-              <Copy size={15} /> Salin nomor rekening
+              <Copy size={15} /> {translateText("Salin nomor rekening")}{" "}
             </AppButton>
           </div>
           <div className="mt-5 flex items-end justify-between">
-            <span className="text-stone-500">Nominal transfer</span>
-            <strong className="text-2xl">{formatCurrency(payment.amount)}</strong>
+            <span className="text-stone-600">{translateText("Nominal transfer")}</span>
+            <strong className="text-2xl">{formatCurrency(payment.amount, locale)}</strong>
           </div>
           <div className="mt-6 border-t pt-6">
             <label className="grid cursor-pointer place-items-center rounded-xl border-2 border-dashed bg-stone-50 p-8 text-center">
@@ -663,9 +735,11 @@ export function PaymentPage({ orderId }: { orderId: string }) {
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
               <span className="text-sm font-semibold">
-                {file?.name ?? "Klik untuk memilih bukti pembayaran"}
+                {file?.name ?? translateText("Klik untuk memilih bukti pembayaran")}
               </span>
-              <span className="mt-1 text-xs text-stone-500">JPG, PNG, atau PDF maksimal 5 MB</span>
+              <span className="mt-1 text-xs text-stone-600">
+                {translateText("JPG, PNG, atau PDF maksimal 5 MB")}
+              </span>
             </label>
             <AppButton
               className="mt-5 w-full"
@@ -673,18 +747,20 @@ export function PaymentPage({ orderId }: { orderId: string }) {
               loading={action.loading}
               onClick={() => void uploadProof()}
             >
-              {payment.status === "REJECTED" ? "Upload ulang bukti" : "Kirim bukti pembayaran"}
+              {payment.status === "REJECTED"
+                ? translateText("Upload ulang bukti")
+                : translateText("Kirim bukti pembayaran")}
             </AppButton>
           </div>
         </section>
         <aside className="h-fit rounded-xl border bg-white p-5 shadow-soft">
-          <p className="text-sm font-semibold">Detail order</p>
+          <p className="text-sm font-semibold">{translateText("Detail order")}</p>
           <DetailGrid
             items={[
               ["Nomor", order.orderNumber],
               ["Vendor", order.vendor.businessName],
               ["Paket", order.productName],
-              ["Tanggal", formatDate(order.eventDate)],
+              ["Tanggal", formatDate(order.eventDate, locale)],
               ["Lokasi", order.eventLocation],
               ["Status pembayaran", <StatusBadge key="payment" status={payment.status} />],
             ]}

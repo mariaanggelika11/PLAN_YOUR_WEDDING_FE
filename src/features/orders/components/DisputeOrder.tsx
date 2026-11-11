@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { shouldReloadResource } from "@/shared/api/errorCodes";
 import type { Order } from "../types";
 import { authenticatedDataRequest } from "@/shared/api/authenticatedApiClient";
@@ -16,6 +17,7 @@ export function DisputeOrder({
   admin?: boolean;
   onChanged: () => Promise<unknown>;
 }) {
+  const { translateText } = useTranslation();
   const popup = usePopup();
   const action = useAsyncAction();
   if (
@@ -29,7 +31,10 @@ export function DisputeOrder({
     const confirmed = await popup.confirm({
       title: admin ? "Selesaikan sengketa?" : "Ajukan sengketa?",
       message: admin
-        ? `Pesanan akan diubah menjadi ${status}. Pastikan hasil mediasi sudah disepakati.`
+        ? translateText(
+            "Pesanan akan diubah menjadi {0}. Pastikan hasil mediasi sudah disepakati.",
+            { 0: String(status) },
+          )
         : "Jelaskan masalah pesanan untuk ditinjau admin.",
       requireReason: true,
       reasonLabel: admin ? "Catatan mediasi" : "Alasan sengketa",
@@ -60,19 +65,19 @@ export function DisputeOrder({
             loading={action.loading}
             onClick={() => void submit("COMPLETED")}
           >
-            Tutup sengketa: pesanan selesai
+            {translateText("Tutup sengketa: pesanan selesai")}{" "}
           </AppButton>
           <AppButton
             variant="secondary"
             disabled={action.loading}
             onClick={() => void submit("CANCELLED")}
           >
-            Tutup sengketa: pesanan dibatalkan
+            {translateText("Tutup sengketa: pesanan dibatalkan")}{" "}
           </AppButton>
         </>
       ) : (
         <AppButton variant="secondary" loading={action.loading} onClick={() => void submit()}>
-          Ajukan sengketa
+          {translateText("Ajukan sengketa")}{" "}
         </AppButton>
       )}
     </div>

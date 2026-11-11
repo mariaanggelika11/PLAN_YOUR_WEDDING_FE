@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "@/shared/i18n/useTranslation";
 import { shouldReloadResource } from "@/shared/api/errorCodes";
 import { cancelOrder } from "../repository";
 import { canCancelOrder } from "../rules";
@@ -13,6 +14,7 @@ export function CancelOrder({
   order: Order;
   onCancelled: () => Promise<unknown>;
 }) {
+  const { translateText } = useTranslation();
   const action = useAsyncAction();
   const popup = usePopup();
   if (!canCancelOrder(order)) return null;
@@ -39,7 +41,7 @@ export function CancelOrder({
       loading={action.loading}
       onClick={() => void cancel()}
     >
-      Batalkan pesanan
+      {translateText("Batalkan pesanan")}{" "}
     </AppButton>
   );
 }
