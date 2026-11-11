@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Plan Your Wedding",
+    "slug": "plan-your-wedding",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.planyourwedding.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FAF9F6"
+      },
+      "predictiveBackGestureEnabled": true,
+      "package": "com.planyourwedding.app",
+      "versionCode": 1,
+      "allowBackup": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen"
+    ],
+    "scheme": "planyourwedding"
+  }
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="220" fill="#FAF9F6"/>
+  <circle cx="448" cy="440" r="155" fill="none" stroke="#945565" stroke-width="24"/>
+  <circle cx="580" cy="440" r="155" fill="none" stroke="#B99164" stroke-width="24"/>
+  <path d="M512 336c-70-74-161 17 0 122 161-105 70-196 0-122" fill="#945565"/>
+  <text x="512" y="735" text-anchor="middle" font-family="Georgia,serif" font-size="135" fill="#292524" letter-spacing="18">PYW</text>
+</svg>
