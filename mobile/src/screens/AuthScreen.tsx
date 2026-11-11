@@ -15,13 +15,12 @@ import {
   H1,
   P,
   Screen,
-  Toggle,
   styles,
   Loading,
   colors,
 } from "../components/ui";
 import { PublicHeader } from "../components/NavigationChrome";
-import { Terms } from "../components/Terms";
+import { RegistrationTerms, TermsCheckbox } from "../components/Terms";
 import { useAction } from "../components/hooks";
 
 type Flow = "login" | "customer" | "vendor" | "reset" | "verify" | "newPassword";
@@ -260,6 +259,11 @@ export function AuthScreen({
             <Card style={{ padding: 20, gap: 18 }}>
               {fields.map((key) => (
                 <Field
+                  guide={
+                    key === "password" && (flow === "customer" || flow === "vendor")
+                      ? "Create password"
+                      : labels[key]
+                  }
                   key={key}
                   label={t(labels[key])}
                   required
@@ -342,7 +346,7 @@ export function AuthScreen({
                 <>
                   <P muted>{t("Read the terms before continuing.")}</P>
                   {terms ? (
-                    <Terms document={terms} />
+                    <RegistrationTerms key={`${terms.id}-${terms.version}`} document={terms} />
                   ) : termsError ? (
                     <Feedback
                       error={termsError}
@@ -351,10 +355,10 @@ export function AuthScreen({
                   ) : (
                     <Loading />
                   )}
-                  <Toggle
-                    label={t("I agree to the terms and conditions")}
-                    value={consent}
+                  <TermsCheckbox
+                    checked={consent}
                     onChange={setConsent}
+                    disabled={!terms || action.busy}
                   />
                 </>
               )}

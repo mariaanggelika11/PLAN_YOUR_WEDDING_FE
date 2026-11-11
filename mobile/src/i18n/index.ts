@@ -3,6 +3,7 @@ import { initReactI18next, useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { id, enErrors, enStatuses } from "./messages";
 import { experienceId } from "./experience";
+import { formHintsId } from "./formGuidance";
 export const languageReady = i18n.use(initReactI18next).init({
   lng: "id",
   fallbackLng: "en",
@@ -10,10 +11,12 @@ export const languageReady = i18n.use(initReactI18next).init({
   nsSeparator: false,
   interpolation: { escapeValue: false },
   resources: {
-    id: { translation: { ...id, ...experienceId } },
+    id: { translation: { ...id, ...experienceId, ...formHintsId } },
     en: {
       translation: {
-        ...Object.fromEntries(Object.keys({ ...id, ...experienceId }).map((key) => [key, key])),
+        ...Object.fromEntries(
+          Object.keys({ ...id, ...experienceId, ...formHintsId }).map((key) => [key, key]),
+        ),
         ...enErrors,
         ...enStatuses,
       },

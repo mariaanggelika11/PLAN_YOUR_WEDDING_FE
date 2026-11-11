@@ -66,6 +66,7 @@ export function OrdersScreen({ disputes = false }: { disputes?: boolean }) {
     >
       <H1>{t(disputes ? "Disputes" : "Orders")}</H1>
       <Field
+        guide="Search"
         label={t("Search")}
         value={search}
         onChangeText={setSearch}
@@ -260,7 +261,14 @@ export function OrderScreen({ id }: { id: string }) {
           {reasonFor === "cancel" && (
             <P muted>{t("A cancellation does not automatically refund payments.")}</P>
           )}
-          <Field label={t("Reason")} required multiline value={reason} onChangeText={setReason} />
+          <Field
+            guide="Reason"
+            label={t("Reason")}
+            required
+            multiline
+            value={reason}
+            onChangeText={setReason}
+          />
           <Button
             title={t("Confirm")}
             disabled={!reason.trim()}
@@ -379,7 +387,14 @@ function PaymentCard({
         )}
       {rejecting && (
         <>
-          <Field required label={t("Reason")} value={reason} onChangeText={setReason} multiline />
+          <Field
+            guide="Reason"
+            required
+            label={t("Reason")}
+            value={reason}
+            onChangeText={setReason}
+            multiline
+          />
           <Button
             title={t("Confirm")}
             disabled={!reason.trim()}
@@ -476,6 +491,7 @@ export function PaymentsScreen({ id }: { id?: string }) {
           {rejecting && (
             <Card>
               <Field
+                guide="Reason"
                 label={t("Reason")}
                 value={reason}
                 onChangeText={setReason}
@@ -577,7 +593,13 @@ export function MessagesScreen({ id }: { id: string }) {
           />
           {resource.data?.canSend && (
             <Card>
-              <Field label={t("Message")} multiline value={message} onChangeText={setMessage} />
+              <Field
+                guide="Message"
+                label={t("Message")}
+                multiline
+                value={message}
+                onChangeText={setMessage}
+              />
               <Button
                 title={image?.name || t("Add photo")}
                 variant="secondary"
@@ -636,7 +658,13 @@ export function ReviewScreen({ id }: { id: string }) {
               label: `${value} / 5`,
             }))}
           />
-          <Field label={t("Comment")} multiline value={comment} onChangeText={setComment} />
+          <Field
+            guide="Comment"
+            label={t("Comment")}
+            multiline
+            value={comment}
+            onChangeText={setComment}
+          />
           <Feedback error={action.error} />
           <Button
             title={t("Submit review")}

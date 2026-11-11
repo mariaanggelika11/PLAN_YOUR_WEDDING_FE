@@ -1,17 +1,14 @@
 import React from "react";
 import { useAuth } from "../auth/Provider";
 import { useI18n } from "../i18n";
-import type { TermsStatus } from "../domain/contracts";
-import { jsonBody } from "../api/client";
-import { Screen, Button, Loading, Feedback, H1, Toggle, Card } from "./ui";
-import { Terms } from "./Terms";
+import type { TermsDocument, TermsStatus } from "../domain/contracts";
+import { ApiError, jsonBody } from "../api/client";
+import { Screen, Button, Loading, Feedback } from "./ui";
+import { TermsCheckbox, TermsDialog } from "./Terms";
 import { useAction, useResource } from "./hooks";
 
 export function ConsentGate({ children }: { children: React.ReactNode }) {
   const { api, session } = useAuth();
-  const { t } = useI18n();
-  const action = useAction();
-  const [checked, setChecked] = React.useState(false);
   const resource = useResource(
     async () =>
       session!.user.role === "ADMIN"
@@ -41,31 +38,69 @@ export function ConsentGate({ children }: { children: React.ReactNode }) {
   if (!resource.data.requiresAcceptance) return children;
   const document = resource.data.pending[0];
   return (
-    <Screen top>
-      <H1>{t("Terms and conditions")}</H1>
-      <Terms document={document} />
-      <Card>
-        <Toggle
-          label={t("I agree to the terms and conditions")}
-          value={checked}
-          onChange={setChecked}
-        />
-        <Feedback error={action.error} />
-        <Button
-          title={t("Accept and continue")}
-          disabled={!checked}
-          busy={action.busy}
-          onPress={() =>
-            void action.run(
-              () => api("/terms/accept", jsonBody({ termsVersionId: document.id })),
-              async () => {
+    <UpdatedTerms
+      key={`${document.id}-${document.version}-${document.contentHash}`}
+      document={document}
+      reload={resource.reload}
+    />
+  );
+}
+
+function UpdatedTerms({
+  document,
+  reload,
+}: {
+  document: TermsDocument;
+  reload: () => Promise<void>;
+}) {
+  const { api, logout } = useAuth();
+  const { t } = useI18n();
+  const action = useAction();
+  const [checked, setChecked] = React.useState(false);
+  return (
+    <TermsDialog
+      document={document}
+      visible
+      description={t(
+        "We have updated our terms and conditions. Read and agree to the latest version to continue using Plan Your Wedding.",
+      )}
+      footer={
+        <>
+          <TermsCheckbox
+            label={t("I have read and agree to the latest terms and conditions.")}
+            checked={checked}
+            onChange={setChecked}
+            disabled={action.busy}
+          />
+          <Feedback error={action.error} />
+          <Button
+            title={t("Accept and continue")}
+            disabled={!checked}
+            busy={action.busy}
+            onPress={() =>
+              void action.run(async () => {
+                try {
+                  await api("/terms/accept", jsonBody({ termsVersionId: document.id }));
+                } catch (error) {
+                  if (error instanceof ApiError && error.code === "TERMS_OUTDATED") {
+                    setChecked(false);
+                    await reload();
+                  }
+                  throw error;
+                }
                 setChecked(false);
-                await resource.reload();
-              },
-            )
-          }
-        />
-      </Card>
-    </Screen>
+                await reload();
+              })
+            }
+          />
+          <Button
+            title={t("Sign out")}
+            variant="text"
+            disabled={action.busy}
+            onPress={() => void action.run(logout)}
+          />
+        </>
+      }
+    />
   );
 }

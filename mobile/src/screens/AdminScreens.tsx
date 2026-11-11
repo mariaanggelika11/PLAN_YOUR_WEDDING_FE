@@ -49,7 +49,7 @@ export function UsersScreen() {
       refreshing={resource.loading && Boolean(resource.data)}
     >
       <H1>{t("Users")}</H1>
-      <Field label={t("Search")} value={search} onChangeText={setSearch} />
+      <Field guide="Search" label={t("Search")} value={search} onChangeText={setSearch} />
       <Button
         title={t("Search")}
         variant="secondary"
@@ -125,7 +125,7 @@ export function VendorsScreen({ pendingOnly = false }: { pendingOnly?: boolean }
       refreshing={resource.loading && Boolean(resource.data)}
     >
       <H1>{t(pendingOnly ? "Vendor verification" : "Vendors")}</H1>
-      <Field label={t("Search")} value={search} onChangeText={setSearch} />
+      <Field guide="Search" label={t("Search")} value={search} onChangeText={setSearch} />
       <Button
         title={t("Search")}
         variant="secondary"
@@ -259,6 +259,7 @@ export function VendorDetailScreen({ id }: { id: string }) {
             {rejecting && (
               <Card>
                 <Field
+                  guide="Reason"
                   label={t("Reason")}
                   multiline
                   required
@@ -393,17 +394,24 @@ function ParameterForm({ parameter }: { parameter: SystemParameter | null }) {
   return (
     <Card>
       <Field
+        guide="Code"
         label={t("Code")}
         value={code}
         onChangeText={setCode}
         autoCapitalize="characters"
         required
       />
-      <Field label={t("Description")} value={description} onChangeText={setDescription} />
+      <Field
+        guide="Parameter description"
+        label={t("Description")}
+        value={description}
+        onChangeText={setDescription}
+      />
       <Toggle label={t("Active")} value={active} onChange={setActive} />
       {details.map((detail, index) => (
         <Card key={detail.id || `new-${index}`}>
           <Field
+            guide="Code"
             label={t("Code")}
             value={detail.code}
             onChangeText={(value) =>
@@ -413,6 +421,7 @@ function ParameterForm({ parameter }: { parameter: SystemParameter | null }) {
             }
           />
           <Field
+            guide="Parameter description"
             label={t("Description")}
             value={detail.description || ""}
             onChangeText={(value) =>
@@ -529,9 +538,16 @@ export function TermsScreen({ edit = false }: { edit?: boolean }) {
               { value: "VENDOR", label: t("Vendor") },
             ]}
           />
-          <Field label={t("Version")} required value={version} onChangeText={setVersion} />
-          <Field label={t("Title")} required value={title} onChangeText={setTitle} />
           <Field
+            guide="Version"
+            label={t("Version")}
+            required
+            value={version}
+            onChangeText={setVersion}
+          />
+          <Field guide="Title" label={t("Title")} required value={title} onChangeText={setTitle} />
+          <Field
+            guide="Content"
             label={t("Content")}
             required
             value={content}

@@ -214,6 +214,7 @@ function ProfileForm({ profile, reload }: { profile: Profile; reload: () => Prom
           />
         ) : (
           <Field
+            guide={key === "categories" ? "Categories" : label}
             key={key}
             editable={canEdit}
             label={t(label)}
@@ -309,6 +310,7 @@ function VendorCollections({
               accountHolderName: "Account holder",
             }).map(([key, label]) => (
               <Field
+                guide={label}
                 key={key}
                 label={t(label)}
                 value={bank[key as keyof typeof bank]}
@@ -359,6 +361,13 @@ function VendorCollections({
               }))}
             />
             <Field
+              guide={
+                contactType === "WhatsApp"
+                  ? "Phone number"
+                  : contactType === "Website"
+                    ? "Website"
+                    : "Social media handle"
+              }
               label={t("Contact value")}
               value={contactValue}
               onChangeText={setContactValue}
@@ -405,12 +414,14 @@ function VendorCollections({
         {canEdit && (
           <>
             <Field
+              guide="Document type"
               label={t("Document type")}
               required
               value={documentType}
               onChangeText={setDocumentType}
             />
             <Field
+              guide="Document number"
               label={t("Document number")}
               value={documentNumber}
               onChangeText={setDocumentNumber}

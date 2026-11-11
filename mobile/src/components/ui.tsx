@@ -22,6 +22,7 @@ import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Eye, EyeOff, ChevronRight } from "lucide-react-native";
 import { useI18n, errorKey, dateLabel } from "../i18n";
+import { fieldGuides } from "../i18n/formGuidance";
 
 export const colors = {
   background: "#FAF9F6",
@@ -233,9 +234,16 @@ export function Field({
   required,
   secureTextEntry,
   multiline,
+  guide,
+  helperText,
   ...props
-}: TextInputProps & { label: string; required?: boolean }) {
+}: TextInputProps & { label: string; required?: boolean; guide?: string; helperText?: string }) {
   const { t } = useI18n();
+  const guidance = guide ? fieldGuides[guide] : undefined;
+  const placeholder =
+    props.placeholder ??
+    (guidance ? t(guidance.placeholder) : t("Enter {{field}}", { field: label }));
+  const helper = helperText ?? (guidance?.helper ? t(guidance.helper) : undefined);
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   return (
@@ -248,7 +256,13 @@ export function Field({
         <TextInput
           {...props}
           accessibilityLabel={label}
-          accessibilityHint={required ? t("This field is required") : undefined}
+          accessibilityHint={
+            props.accessibilityHint ??
+            [required ? t("This field is required") : "", helper ?? placeholder]
+              .filter(Boolean)
+              .join(". ")
+          }
+          placeholder={placeholder}
           style={[
             styles.input,
             focused && { borderColor: colors.primary },
@@ -293,6 +307,7 @@ export function Field({
           </Pressable>
         )}
       </View>
+      {helper && <Text style={styles.muted}>{helper}</Text>}
     </View>
   );
 }
@@ -363,7 +378,7 @@ export function DateField({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const date = value ? new Date(`${value.slice(0, 10)}T12:00:00`) : new Date();
   return (
@@ -371,11 +386,13 @@ export function DateField({
       <Text style={styles.label}>{label}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${dateLabel(value, locale)}`}
+        accessibilityLabel={`${label}: ${value ? dateLabel(value, locale) : t("Select a date")}`}
         style={styles.input}
         onPress={() => setOpen(true)}
       >
-        <Text style={styles.text}>{value ? dateLabel(value, locale) : "—"}</Text>
+        <Text style={[styles.text, !value && { color: colors.muted }]}>
+          {value ? dateLabel(value, locale) : t("Select a date")}
+        </Text>
       </Pressable>
       {open && (
         <DateTimePicker

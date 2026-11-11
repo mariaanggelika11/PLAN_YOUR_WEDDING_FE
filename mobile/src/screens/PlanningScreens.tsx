@@ -209,8 +209,20 @@ function TaskForm({ task }: { task: ApiWeddingTask | null }) {
     <>
       <H1>{t(task ? "Edit task" : "Add task")}</H1>
       <Card>
-        <Field label={t("Task title")} required value={title} onChangeText={setTitle} />
-        <Field label={t("Category")} required value={category} onChangeText={setCategory} />
+        <Field
+          guide="Task title"
+          label={t("Task title")}
+          required
+          value={title}
+          onChangeText={setTitle}
+        />
+        <Field
+          guide="Task category"
+          label={t("Category")}
+          required
+          value={category}
+          onChangeText={setCategory}
+        />
         <DateField
           label={t("Due date")}
           value={dueDate}
@@ -230,13 +242,14 @@ function TaskForm({ task }: { task: ApiWeddingTask | null }) {
             label: t(value),
           }))}
         />
-        <Field label={t("Assignee")} value={assignee} onChangeText={setAssignee} />
+        <Field guide="Assignee" label={t("Assignee")} value={assignee} onChangeText={setAssignee} />
         <Field
+          guide="External vendor"
           label={t("External vendor")}
           value={externalVendor}
           onChangeText={setExternalVendor}
         />
-        <Field label={t("Notes")} multiline value={notes} onChangeText={setNotes} />
+        <Field guide="Notes" label={t("Notes")} multiline value={notes} onChangeText={setNotes} />
         <Toggle label={t("Important")} value={important} onChange={setImportant} />
         {progress.subtasks.map((subtask, index) => (
           <Toggle

@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Dimensions } from "react-native";
+import { Alert, Dimensions, Text } from "react-native";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
 import i18n from "i18next";
 import { createApi } from "../src/api/client";
@@ -7,13 +7,15 @@ import { languageReady } from "../src/i18n";
 import { AuthScreen } from "../src/screens/AuthScreen";
 import { LandingScreen } from "../src/screens/LandingScreen";
 import { NavigationShell, WorkspaceHeader } from "../src/components/NavigationChrome";
+import { ConsentGate } from "../src/components/ConsentGate";
+import { Terms } from "../src/components/Terms";
 import { DashboardScreen } from "../src/screens/DashboardScreen";
 import { MoreScreen } from "../src/screens/MoreScreen";
 import { OrderScreen, PaymentsScreen } from "../src/screens/OrderScreens";
 import { TaskScreen, PlanningSettingsScreen } from "../src/screens/PlanningScreens";
 import { VendorDetailScreen } from "../src/screens/AdminScreens";
 import { CheckoutScreen } from "../src/screens/ProductScreens";
-import type { Order, Role, Session } from "../src/domain/contracts";
+import type { Order, Role, Session, TermsDocument } from "../src/domain/contracts";
 import { canVisit } from "../src/navigation";
 
 let mockRole: Role = "CUSTOMER";
@@ -21,6 +23,8 @@ let mockOrderStatus: Order["status"] = "WAITING_VENDOR_CONFIRMATION";
 let mockPaymentStatus = "WAITING_VERIFICATION";
 let mockVendorStatus = 2;
 let mockProfileStatus = 200;
+let mockPendingTerms: TermsDocument[] = [];
+let mockTermsAcceptFailure = 0;
 const mockNavigate = jest.fn();
 const mockAuthenticate = jest.fn();
 const mockLogout = jest.fn();
@@ -114,6 +118,24 @@ const mockApi = createApi({
         contentHash: "fixture",
         content: [{ kind: "paragraph", text: "Fixture terms body" }],
       };
+    else if (url.pathname === "/terms/me/status")
+      data = { requiresAcceptance: mockPendingTerms.length > 0, pending: mockPendingTerms };
+    else if (url.pathname === "/terms/accept") {
+      if (mockTermsAcceptFailure) {
+        const status = mockTermsAcceptFailure;
+        if (status === 409) mockPendingTerms = [pendingTerms(2)];
+        mockTermsAcceptFailure = 0;
+        return {
+          ok: false,
+          status,
+          text: async () =>
+            JSON.stringify({ code: status === 409 ? "TERMS_OUTDATED" : "REQUEST_FAILED" }),
+        } as Response;
+      }
+      mockPendingTerms = mockPendingTerms.filter((document) => document.id !== body.termsVersionId);
+      data = {};
+    } else if (url.pathname === "/register/customer" || url.pathname === "/register/vendor")
+      data = { id: 1 };
     else if (url.pathname === "/order-payments/201/verify") {
       mockPaymentStatus = "PAID";
       data = {};
@@ -204,6 +226,8 @@ beforeEach(async () => {
   mockPaymentStatus = "WAITING_VERIFICATION";
   mockVendorStatus = 2;
   mockProfileStatus = 200;
+  mockPendingTerms = [];
+  mockTermsAcceptFailure = 0;
   mockCalls.length = 0;
   jest.clearAllMocks();
   await act(async () =>
@@ -341,15 +365,244 @@ test("the remember-me checkbox still controls session persistence", async () => 
   await waitFor(() => expect(mockAuthenticate).toHaveBeenCalledWith(expect.anything(), false));
 });
 
+test("registration examples remain placeholders and cannot be submitted as user data", async () => {
+  await render(<AuthScreen initialFlow="vendor" />);
+  await screen.findByRole("button", { name: "Vendor terms and conditions" });
+  for (const placeholder of [
+    "e.g. Ayu Putri",
+    "e.g. Laras Wedding",
+    "name@example.com",
+    "e.g. 081234567890",
+    "e.g. Jl. Melati No. 10",
+  ]) {
+    expect(screen.getByPlaceholderText(placeholder).props.value).toBe("");
+  }
+  await fireEvent.press(
+    screen.getByRole("checkbox", { name: "I agree to the terms and conditions" }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Create account" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled());
+  expect(mockCalls.filter((call) => call.method !== "GET")).toHaveLength(0);
+  expect(screen.getByLabelText("Owner name").props.value).toBe("");
+});
+
+test("field examples switch language without losing a draft and password guidance stays visible", async () => {
+  await i18n.changeLanguage("id");
+  await render(<AuthScreen initialFlow="vendor" />);
+  await screen.findByRole("button", { name: "Syarat dan ketentuan mitra vendor" });
+  expect(screen.getByPlaceholderText("Contoh: Ayu Putri")).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText("Nama pemilik"), "Ayu draft");
+  await fireEvent.changeText(screen.getByLabelText("Password"), "DraftPass1!");
+  await fireEvent.press(screen.getByRole("button", { name: "ID" }));
+  await screen.findByPlaceholderText("e.g. Laras Wedding");
+  expect(screen.getByDisplayValue("Ayu draft")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "At least 8 characters, including an uppercase letter, a number, and a symbol.",
+    ),
+  ).toBeTruthy();
+  expect(mockCalls.every((call) => call.method === "GET")).toBe(true);
+});
+
 for (const mode of ["customer", "vendor"] as const) {
   test(`direct ${mode} registration retains mandatory terms consent`, async () => {
     await render(<AuthScreen initialFlow={mode} />);
+    const trigger = await screen.findByRole("button", {
+      name: mode === "customer" ? "Customer terms and conditions" : "Vendor terms and conditions",
+    });
+    expect(screen.queryByText("Fixture terms body")).toBeNull();
+    const field = mode === "customer" ? "Full name" : "Business name";
+    await fireEvent.changeText(screen.getByLabelText(field), "Saved draft");
+    await fireEvent.press(trigger);
     await screen.findByText("Fixture terms body");
-    expect(screen.getByLabelText(mode === "customer" ? "Full name" : "Business name")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Back to registration" }));
+    expect(screen.queryByText("Fixture terms body")).toBeNull();
+    expect(screen.getByDisplayValue("Saved draft")).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: "I agree to the terms and conditions" }),
+    ).not.toBeChecked();
     expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
     expect(mockCalls.filter((call) => call.method !== "GET")).toHaveLength(0);
   });
 }
+
+test("registration document closes using Android Back without giving consent", async () => {
+  await render(<AuthScreen initialFlow="customer" />);
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Customer terms and conditions" }),
+  );
+  await screen.findByText("Fixture terms body");
+  await fireEvent(screen.getByTestId("terms-dialog"), "requestClose");
+  expect(screen.queryByText("Fixture terms body")).toBeNull();
+  expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
+});
+
+test("registration keeps checkbox consent separate and submits the API terms version", async () => {
+  await render(<AuthScreen initialFlow="customer" />);
+  await screen.findByRole("button", { name: "Customer terms and conditions" });
+  for (const [field, value] of [
+    ["Full name", "Test User"],
+    ["Email", "test@example.com"],
+    ["Phone number", "08123456789"],
+    ["Password", "Password1!"],
+    ["Confirm password", "Password1!"],
+  ]) {
+    await fireEvent.changeText(screen.getByLabelText(field), value);
+  }
+  await fireEvent.press(
+    screen.getByRole("checkbox", { name: "I agree to the terms and conditions" }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Create account" }));
+  await screen.findByRole("button", { name: "Verify OTP" });
+  expect(mockCalls.find((call) => call.path === "/register/customer")?.body).toMatchObject({
+    acceptedTerms: true,
+    termsVersionId: 1,
+    password: "cipher",
+    confirmPassword: "cipher",
+  });
+});
+
+const pendingTerms = (id: number): TermsDocument => ({
+  id,
+  termsType: "CUSTOMER",
+  title: `Updated terms ${id}`,
+  version: `v${id}`,
+  contentHash: `hash-${id}`,
+  effectiveAt: "2026-11-11",
+  isActive: true,
+  createdAt: "2026-11-11",
+  content: [{ kind: "paragraph", text: `Document body ${id}` }],
+});
+
+for (const viewport of [
+  { width: 320, fontScale: 1.5 },
+  { width: 1024, fontScale: 1 },
+]) {
+  test(`terms preserve every table cell and clause at ${viewport.width}dp and ${viewport.fontScale} font scale`, async () => {
+    await act(async () =>
+      Dimensions.set({
+        window: { width: viewport.width, height: 914, scale: 1, fontScale: viewport.fontScale },
+        screen: { width: viewport.width, height: 914, scale: 1, fontScale: viewport.fontScale },
+      }),
+    );
+    const document: TermsDocument = {
+      ...pendingTerms(1),
+      content: [
+        { kind: "paragraph", text: "B. Pembatalan atau kegagalan oleh Vendor" },
+        { kind: "paragraph", text: "1.1.2 Hak customer tetap mengikuti dokumen asli." },
+        {
+          kind: "table",
+          rows: [
+            ["Keadaan", "Hak Customer"],
+            [
+              "Vendor membatalkan, kapan pun",
+              "Pengembalian 100% atas seluruh pembayaran, termasuk Biaya Layanan Platform, ditambah bantuan pencarian Vendor pengganti.",
+            ],
+            [
+              "Vendor tidak hadir atau gagal melaksanakan jasa",
+              "Pengembalian 100% atas bagian yang tidak dilaksanakan.",
+              "Catatan tambahan dari API",
+            ],
+          ],
+        },
+      ],
+    };
+    await render(<Terms document={document} articleOnly />);
+    expect(screen.getByText("B. Pembatalan atau kegagalan oleh Vendor")).toBeTruthy();
+    expect(screen.getByText("1.1.2")).toBeTruthy();
+    expect(screen.getByText("Hak customer tetap mengikuti dokumen asli.")).toBeTruthy();
+    for (const value of document.content[2].rows!.slice(1).flat())
+      expect(screen.getByText(value)).toBeTruthy();
+    expect(screen.getAllByText("Keadaan").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Hak Customer").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Column 3").length).toBeGreaterThan(0);
+  });
+}
+
+test("updated terms cannot be dismissed or bypassed and require consent for each version", async () => {
+  mockPendingTerms = [pendingTerms(1), pendingTerms(2)];
+  await render(
+    <ConsentGate>
+      <Text>Protected content</Text>
+    </ConsentGate>,
+  );
+  await screen.findByText("Document body 1");
+  expect(screen.queryByText("Protected content")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Close terms and conditions" })).toBeNull();
+  await fireEvent(screen.getByTestId("terms-dialog"), "requestClose");
+  expect(screen.getByText("Document body 1")).toBeTruthy();
+  const accept = screen.getByRole("button", { name: "Accept and continue" });
+  expect(accept).toBeDisabled();
+  await fireEvent.press(
+    screen.getByRole("checkbox", {
+      name: "I have read and agree to the latest terms and conditions.",
+    }),
+  );
+  await fireEvent.press(accept);
+  await screen.findByText("Document body 2");
+  expect(screen.getByRole("button", { name: "Accept and continue" })).toBeDisabled();
+  await fireEvent.press(
+    screen.getByRole("checkbox", {
+      name: "I have read and agree to the latest terms and conditions.",
+    }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Accept and continue" }));
+  await screen.findByText("Protected content");
+  expect(
+    mockCalls.filter((call) => call.path === "/terms/accept").map((call) => call.body),
+  ).toEqual([{ termsVersionId: 1 }, { termsVersionId: 2 }]);
+});
+
+test("users can sign out of mandatory updated terms without accepting them", async () => {
+  mockPendingTerms = [pendingTerms(1)];
+  await render(
+    <ConsentGate>
+      <Text>Protected content</Text>
+    </ConsentGate>,
+  );
+  await fireEvent.press(await screen.findByRole("button", { name: "Sign out" }));
+  await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+  expect(mockCalls.filter((call) => call.method !== "GET")).toHaveLength(0);
+});
+
+test("failed acceptance keeps the dialog blocking protected content and never retries automatically", async () => {
+  mockPendingTerms = [pendingTerms(1)];
+  mockTermsAcceptFailure = 503;
+  await render(
+    <ConsentGate>
+      <Text>Protected content</Text>
+    </ConsentGate>,
+  );
+  await fireEvent.press(
+    await screen.findByRole("checkbox", {
+      name: "I have read and agree to the latest terms and conditions.",
+    }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Accept and continue" }));
+  await screen.findByText("The request failed. Check your entries and try again.");
+  expect(screen.queryByText("Protected content")).toBeNull();
+  expect(mockCalls.filter((call) => call.path === "/terms/accept")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Accept and continue" })).toBeEnabled();
+});
+
+test("outdated terms reload the latest document and clear consent before another acceptance", async () => {
+  mockPendingTerms = [pendingTerms(1)];
+  mockTermsAcceptFailure = 409;
+  await render(
+    <ConsentGate>
+      <Text>Protected content</Text>
+    </ConsentGate>,
+  );
+  await fireEvent.press(
+    await screen.findByRole("checkbox", {
+      name: "I have read and agree to the latest terms and conditions.",
+    }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Accept and continue" }));
+  await screen.findByText("Document body 2");
+  expect(screen.getByRole("button", { name: "Accept and continue" })).toBeDisabled();
+  expect(mockCalls.filter((call) => call.path === "/terms/accept")).toHaveLength(1);
+});
 
 test("a missing wedding profile does not hide orders and offers profile completion", async () => {
   mockProfileStatus = 404;

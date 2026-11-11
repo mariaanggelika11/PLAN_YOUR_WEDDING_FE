@@ -86,6 +86,7 @@ export function ProductsScreen({ marketplace = false }: { marketplace?: boolean 
         />
       )}
       <Field
+        guide="Search"
         label={t("Search")}
         value={search}
         onChangeText={setSearch}
@@ -115,6 +116,7 @@ export function ProductsScreen({ marketplace = false }: { marketplace?: boolean 
             options={Object.entries(sorts).map(([value, label]) => ({ value, label: t(label) }))}
           />
           <Field
+            guide="Category"
             label={t("Category")}
             value={category}
             onChangeText={(value) => {
@@ -123,6 +125,7 @@ export function ProductsScreen({ marketplace = false }: { marketplace?: boolean 
             }}
           />
           <Field
+            guide="Location"
             label={t("Location")}
             value={location}
             onChangeText={(value) => {
@@ -383,14 +386,21 @@ function CheckoutForm({
         />
         <Feedback error={check.error} />
         {availability && <Badge value={availability.available ? "Available" : "Unavailable"} />}
-        <Field label={t("Event location")} required value={location} onChangeText={setLocation} />
         <Field
+          guide="Event location"
+          label={t("Event location")}
+          required
+          value={location}
+          onChangeText={setLocation}
+        />
+        <Field
+          guide="Guest count"
           label={t("Guest count")}
           value={guests}
           onChangeText={setGuests}
           keyboardType="number-pad"
         />
-        <Field label={t("Notes")} value={notes} onChangeText={setNotes} multiline />
+        <Field guide="Notes" label={t("Notes")} value={notes} onChangeText={setNotes} multiline />
         <Select
           label={t("Payment type")}
           value={paymentType}
@@ -514,6 +524,7 @@ function ProductForm({
     <Card>
       {Object.entries(fields).map(([key, label]) => (
         <Field
+          guide={label}
           key={key}
           label={t(label)}
           value={values[key]}

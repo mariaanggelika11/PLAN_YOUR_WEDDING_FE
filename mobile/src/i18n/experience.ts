@@ -1,4 +1,21 @@
 export const experienceId = {
+  "Column {{number}}": "Kolom {{number}}",
+  "Customer terms and conditions": "Syarat dan ketentuan pengguna",
+  "Vendor terms and conditions": "Syarat dan ketentuan mitra vendor",
+  "Open the terms and conditions document": "Buka dokumen syarat dan ketentuan",
+  "Terms and conditions document": "Dokumen syarat dan ketentuan",
+  "Close terms and conditions": "Tutup syarat dan ketentuan",
+  "Read these terms before agreeing and continuing registration.":
+    "Baca ketentuan berikut sebelum menyetujui dan melanjutkan pendaftaran.",
+  "Consent is given using the checkbox on the registration form.":
+    "Persetujuan diberikan melalui checkbox pada formulir pendaftaran.",
+  "Back to registration": "Kembali ke pendaftaran",
+  "Effective from {{date}}": "Berlaku sejak {{date}}",
+  "Terms table {{number}}": "Tabel ketentuan {{number}}",
+  "We have updated our terms and conditions. Read and agree to the latest version to continue using Plan Your Wedding.":
+    "Kami telah memperbarui syarat dan ketentuan. Baca dan setujui versi terbaru untuk melanjutkan menggunakan Plan Your Wedding.",
+  "I have read and agree to the latest terms and conditions.":
+    "Saya telah membaca dan menyetujui syarat dan ketentuan terbaru.",
   "Celebrate with confidence": "Rayakan dengan percaya diri",
   "Trusted wedding marketplace in Indonesia": "Marketplace wedding terpercaya di Indonesia",
   "Your special day starts with a plan that feels easy.":
